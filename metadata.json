@@ -1,0 +1,6 @@
+{
+  "name": "AI-Powered Multimodal Interview Learning & Assessment System",
+  "description": "A comprehensive, intelligent interview preparation and qualification platform combining progressive 4-topic aptitude learning, multimodal AI technical and HR interviews, voice interaction, and personalized feedback.",
+  "requestFramePermissions": ["microphone", "camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
