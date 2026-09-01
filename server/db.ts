@@ -25,7 +25,10 @@ import { generateDefaultQuestionBank, TOPICS_META, CONCEPT_TIPS, normalizeQuesti
 import { generateAITechnicalQuestions, evaluateTechnicalAnswer, evaluateHREvaluation, generateFinalAIFeedback, DOMAIN_DEFAULTS } from './ai';
 import { getCuratedDomainQuestions } from './domainCuratedQuestions';
 
-const DB_FILE = path.join(process.cwd(), 'database_store.json');
+const DB_FILE = process.env.VERCEL
+  ? path.join('/tmp', 'database_store.json')
+  : path.join(process.cwd(), 'database_store.json');
+const SEED_DB_FILE = path.join(process.cwd(), 'database_store.json');
 
 export interface UserProgressData {
   user_id: string;
@@ -92,8 +95,9 @@ class Database {
 
   private loadDatabase(): DatabaseSchema {
     try {
-      if (fs.existsSync(DB_FILE)) {
-        const raw = fs.readFileSync(DB_FILE, 'utf-8');
+      const targetFile = fs.existsSync(DB_FILE) ? DB_FILE : fs.existsSync(SEED_DB_FILE) ? SEED_DB_FILE : null;
+      if (targetFile && fs.existsSync(targetFile)) {
+        const raw = fs.readFileSync(targetFile, 'utf-8');
         const parsed = JSON.parse(raw);
         // Refresh question bank with the full, deduplicated dataset
         parsed.questions = generateDefaultQuestionBank();
