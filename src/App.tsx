@@ -53,15 +53,26 @@ export default function App() {
   const [activeTestNumber, setActiveTestNumber] = useState<1 | 2>(1);
 
   // Fetch Dashboard State
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const loadDashboard = async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const state = await ApiService.getDashboardState();
       setDashboard(state);
       if (state.user) {
         setCurrentUser(state.user);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load dashboard state:', err);
+      // If unauthorized, clear stored auth
+      if (err.message && (err.message.includes('401') || err.message.includes('404') || err.message.includes('not found') || err.message.includes('User not found'))) {
+        ApiService.logout();
+        setCurrentUser(null);
+      } else {
+        setLoadError(err.message || 'Failed to connect to backend server');
+      }
     } finally {
       setLoading(false);
     }
@@ -140,14 +151,43 @@ export default function App() {
 
   if (loading || !dashboard) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center space-y-4">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        <div className="text-center space-y-1">
-          <p className="text-sm font-bold text-white tracking-wide">
-            AI Multimodal Interview Assessment System
-          </p>
-          <p className="text-xs text-slate-400">Loading candidate progress and diagnostic engines...</p>
-        </div>
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 space-y-4">
+        {loadError ? (
+          <div className="max-w-md w-full p-6 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-4 shadow-xl">
+            <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-400 mx-auto flex items-center justify-center border border-rose-500/20">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">Connection Error</h3>
+              <p className="text-xs text-slate-400 mt-1">{loadError}</p>
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                onClick={loadDashboard}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-indigo-600/20"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Retry Connection</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Sign In Again
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <div className="text-center space-y-1">
+              <p className="text-sm font-bold text-white tracking-wide">
+                AI Multimodal Interview Assessment System
+              </p>
+              <p className="text-xs text-slate-400">Loading candidate progress and diagnostic engines...</p>
+            </div>
+          </>
+        )}
       </div>
     );
   }
