@@ -39,9 +39,16 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
         
         {/* Left Side: Product Branding & Overview */}
         <div className="lg:col-span-7 space-y-6 text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-            <GraduationCap className="w-4 h-4 text-cyan-400" />
-            <span>Campus Placement Preparation Portal</span>
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden shadow-xl shadow-indigo-500/20 border-2 border-indigo-500/30 shrink-0">
+              <img src="/logo.png" alt="Mock Sphere" className="w-full h-full object-cover" />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <span>Campus Placement Preparation Portal</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">Official AI Assessment Suite</p>
+            </div>
           </div>
 
           <div className="space-y-2">

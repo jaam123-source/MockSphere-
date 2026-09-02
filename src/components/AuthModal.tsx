@@ -35,14 +35,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           </button>
 
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Google Authentication</span>
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-xl overflow-hidden shadow-md shadow-indigo-500/20 border border-indigo-500/30 shrink-0">
+                <img src="/logo.png" alt="Mock Sphere" className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Google Authentication</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                  Sign In to Mock-Sphere
+                </h2>
+              </div>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              Sign In to Candidate Portal
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-400 mt-2">
               Your test performance, diagnostic aptitude scores, and AI interview records will be synchronized.
             </p>
           </div>
