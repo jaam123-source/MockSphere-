@@ -57,6 +57,127 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Get Google OAuth Client ID config (safe for frontend)
+app.get('/api/auth/config', (req, res) => {
+  res.json({
+    clientId: process.env.GOOGLE_CLIENT_ID || '866683821439-rwus45cfiomfvtyer4atma.apps.googleusercontent.com',
+  });
+});
+
+// Google OAuth Authorization Code Callback (Production Vercel & general support)
+app.get('/api/auth/callback/google', async (req, res) => {
+  try {
+    const code = req.query.code as string;
+    if (!code) {
+      return res.status(400).send('Missing authorization code from Google.');
+    }
+
+    const clientId = process.env.GOOGLE_CLIENT_ID || '866683821439-rwus45cfiomfvtyer4atma.apps.googleusercontent.com';
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      return res.status(500).send('Google OAuth server credentials (GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET) are not configured.');
+    }
+
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const redirectUri = host?.includes('mock-sphere.vercel.app')
+      ? 'https://mock-sphere.vercel.app/api/auth/callback/google'
+      : `${protocol}://${host}/api/auth/callback/google`;
+
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      const errText = await tokenRes.text();
+      console.error('[Server] Google token exchange failed:', errText);
+      return res.status(400).send(`Google authentication failed: ${errText}`);
+    }
+
+    const tokenData = await tokenRes.json();
+    const accessToken = tokenData.access_token;
+
+    if (!accessToken) {
+      return res.status(400).send('Failed to obtain access token from Google.');
+    }
+
+    const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!userInfoRes.ok) {
+      return res.status(400).send('Failed to retrieve user profile from Google.');
+    }
+
+    const userInfo = await userInfoRes.json();
+    const email = userInfo.email;
+    const name = userInfo.name || email.split('@')[0];
+    const picture = userInfo.picture;
+    const googleId = userInfo.sub;
+
+    if (!email) {
+      return res.status(400).send('Google account did not provide an email address.');
+    }
+
+    const result = db.loginOrRegisterGoogleUser(email, name, picture, googleId);
+
+    if (result.isNewUser) {
+      try {
+        await sendRegistrationWelcomeEmail({
+          to: result.user.email,
+          userName: result.user.name,
+          appUrl: process.env.APP_URL,
+        });
+      } catch (e) {
+        console.warn('[Server] Welcome email warning:', e);
+      }
+    }
+
+    const htmlResponse = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Authenticating with Google - Mock-Sphere</title>
+          <style>
+            body { background: #020617; color: #f8fafc; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+            .card { background: #0f172a; border: 1px solid #1e293b; padding: 32px; border-radius: 16px; text-align: center; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5); }
+            .spinner { width: 40px; height: 40px; border: 4px solid #3b82f6; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+            @keyframes spin { to { transform: rotate(360deg); } }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="spinner"></div>
+            <h2>Successfully Authenticated with Google!</h2>
+            <p>Signing you in as ${result.user.name} (${result.user.email})...</p>
+          </div>
+          <script>
+            try {
+              localStorage.setItem('auth_token', ${JSON.stringify(result.token)});
+              localStorage.setItem('auth_user', ${JSON.stringify(JSON.stringify(result.user))});
+            } catch (e) {}
+            window.location.href = '/';
+          </script>
+        </body>
+      </html>
+    `;
+    res.setHeader('Content-Type', 'text/html');
+    res.send(htmlResponse);
+  } catch (err: any) {
+    console.error('[Server] Google OAuth callback error:', err);
+    res.status(500).send(`Google OAuth error: ${err.message}`);
+  }
+});
+
 // Authentication Routes
 app.post('/api/auth/google', async (req, res) => {
   try {

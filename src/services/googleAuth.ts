@@ -30,8 +30,27 @@ declare global {
   }
 }
 
-const DEFAULT_CLIENT_ID =
-  (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '866683821439-rwus45cfiomfvtyer4atma.apps.googleusercontent.com';
+let cachedClientId: string | null = null;
+
+async function getGoogleClientId(): Promise<string> {
+  if (cachedClientId) return cachedClientId;
+  try {
+    const res = await fetch('/api/auth/config');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.clientId) {
+        cachedClientId = data.clientId;
+        return cachedClientId;
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return (
+    (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
+    '866683821439-rwus45cfiomfvtyer4atma.apps.googleusercontent.com'
+  );
+}
 
 /**
  * Wait for Google Identity Services script to be ready
@@ -79,17 +98,33 @@ async function fetchGoogleUserInfo(accessToken: string): Promise<{
 
 /**
  * Initiates the Google Sign-In Account Chooser flow.
- * If Google OAuth Client ID is configured and popup succeeds, it uses verified Google OAuth.
- * Otherwise, it alerts the caller to fall back to direct Google Account entry.
+ * Uses Google Identity Services token client with Google OAuth Client ID.
  */
 export async function promptGoogleSignIn(): Promise<{ user: User; token: string; message?: string }> {
-  if (!DEFAULT_CLIENT_ID) {
+  const clientId = await getGoogleClientId();
+  if (!clientId) {
     throw new Error('OAUTH_CLIENT_NOT_CONFIGURED');
   }
 
   const isScriptLoaded = await waitForGoogleScript();
   if (!isScriptLoaded) {
-    throw new Error('GOOGLE_SCRIPT_UNAVAILABLE');
+    // Fallback: If Google Identity Script is blocked, redirect to Google OAuth Authorization Code endpoint
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    const redirectUri = host.includes('mock-sphere.vercel.app')
+      ? 'https://mock-sphere.vercel.app/api/auth/callback/google'
+      : `${protocol}//${host}/api/auth/callback/google`;
+    
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'email profile openid',
+      prompt: 'select_account',
+    }).toString();
+
+    window.location.href = authUrl;
+    return new Promise(() => {}); // Wait for redirect
   }
 
   return new Promise((resolve, reject) => {
@@ -97,7 +132,7 @@ export async function promptGoogleSignIn(): Promise<{ user: User; token: string;
 
     try {
       const tokenClient = window.google!.accounts.oauth2.initTokenClient({
-        client_id: DEFAULT_CLIENT_ID,
+        client_id: clientId,
         scope: 'email profile openid',
         prompt: 'select_account',
         callback: async (tokenResponse) => {
@@ -106,7 +141,7 @@ export async function promptGoogleSignIn(): Promise<{ user: User; token: string;
           if (tokenResponse.error) {
             resolved = true;
             if (tokenResponse.error === 'popup_closed_by_user' || tokenResponse.error === 'access_denied') {
-              reject(new Error('Google sign-in popup was closed or cancelled.'));
+              reject(new Error('Google sign-in was cancelled.'));
             } else {
               reject(new Error(tokenResponse.error_description || tokenResponse.error));
             }
@@ -158,3 +193,4 @@ export async function promptGoogleSignIn(): Promise<{ user: User; token: string;
     }
   });
 }
+
