@@ -56,6 +56,11 @@ export default function App() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadDashboard = async () => {
+    const token = ApiService.getCurrentUser();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setLoadError(null);
     try {
@@ -66,8 +71,15 @@ export default function App() {
       }
     } catch (err: any) {
       console.error('Failed to load dashboard state:', err);
-      // If unauthorized, clear stored auth
-      if (err.message && (err.message.includes('401') || err.message.includes('404') || err.message.includes('not found') || err.message.includes('User not found'))) {
+      // If unauthorized, clear stored auth and prompt login
+      if (
+        err.message &&
+        (err.message.includes('401') ||
+          err.message.includes('404') ||
+          err.message.includes('not found') ||
+          err.message.includes('Authentication required') ||
+          err.message.includes('User not found'))
+      ) {
         ApiService.logout();
         setCurrentUser(null);
       } else {

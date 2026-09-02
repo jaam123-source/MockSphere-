@@ -24,18 +24,6 @@ declare global {
             cancel_on_tap_outside?: boolean;
           }) => void;
           prompt: (notification?: (notification: any) => void) => void;
-          renderButton: (
-            element: HTMLElement,
-            options: {
-              type?: 'standard' | 'icon';
-              theme?: 'outline' | 'filled_blue' | 'filled_black';
-              size?: 'large' | 'medium' | 'small';
-              text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
-              shape?: 'rectangular' | 'pill' | 'circle' | 'square';
-              logo_alignment?: 'left' | 'center';
-              width?: number | string;
-            }
-          ) => void;
         };
       };
     };
@@ -43,13 +31,12 @@ declare global {
 }
 
 const DEFAULT_CLIENT_ID =
-  (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
-  '1038596645312-3q78lcrn19b0d6j6tcm7f5k6p8v3t9b.apps.googleusercontent.com';
+  (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
 
 /**
  * Wait for Google Identity Services script to be ready
  */
-export async function waitForGoogleScript(timeoutMs = 5000): Promise<boolean> {
+export async function waitForGoogleScript(timeoutMs = 3000): Promise<boolean> {
   if (window.google?.accounts?.oauth2 || window.google?.accounts?.id) {
     return true;
   }
@@ -91,25 +78,44 @@ async function fetchGoogleUserInfo(accessToken: string): Promise<{
 }
 
 /**
- * Initiates the genuine Google Sign-In Account Chooser flow.
- * Uses Google Identity Services to open Google's official account selector dialog.
- * This displays only the Google accounts actually available on the user's device/browser.
+ * Authenticates directly with a Google email and optional display name.
+ */
+export async function directGoogleSignIn(email: string, name?: string): Promise<{ user: User; token: string; message?: string }> {
+  if (!email || !email.includes('@')) {
+    throw new Error('Please enter a valid Google email address.');
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanName = name && name.trim() ? name.trim() : cleanEmail.split('@')[0];
+
+  const authResult = await ApiService.googleAuth({
+    email: cleanEmail,
+    name: cleanName,
+  });
+
+  setStoredAuth(authResult.token, authResult.user);
+  return authResult;
+}
+
+/**
+ * Initiates the Google Sign-In Account Chooser flow.
+ * If Google OAuth Client ID is configured and popup succeeds, it uses verified Google OAuth.
+ * Otherwise, it alerts the caller to fall back to direct Google Account entry.
  */
 export async function promptGoogleSignIn(): Promise<{ user: User; token: string; message?: string }> {
-  const isScriptLoaded = await waitForGoogleScript();
+  if (!DEFAULT_CLIENT_ID) {
+    throw new Error('OAUTH_CLIENT_NOT_CONFIGURED');
+  }
 
+  const isScriptLoaded = await waitForGoogleScript();
   if (!isScriptLoaded) {
-    throw new Error(
-      'Google Identity Services is loading or was blocked by browser extensions. Please refresh and try again.'
-    );
+    throw new Error('GOOGLE_SCRIPT_UNAVAILABLE');
   }
 
   return new Promise((resolve, reject) => {
     let resolved = false;
 
     try {
-      // Use GIS OAuth2 token client with prompt: 'select_account'
-      // This forces Google to show the account picker listing the user's real logged-in Google accounts
       const tokenClient = window.google!.accounts.oauth2.initTokenClient({
         client_id: DEFAULT_CLIENT_ID,
         scope: 'email profile openid',
@@ -120,9 +126,9 @@ export async function promptGoogleSignIn(): Promise<{ user: User; token: string;
           if (tokenResponse.error) {
             resolved = true;
             if (tokenResponse.error === 'popup_closed_by_user' || tokenResponse.error === 'access_denied') {
-              reject(new Error('Google sign-in was cancelled.'));
+              reject(new Error('Google sign-in popup was closed or cancelled.'));
             } else {
-              reject(new Error(`Google authentication failed: ${tokenResponse.error_description || tokenResponse.error}`));
+              reject(new Error(tokenResponse.error_description || tokenResponse.error));
             }
             return;
           }
@@ -134,14 +140,11 @@ export async function promptGoogleSignIn(): Promise<{ user: User; token: string;
           }
 
           try {
-            // Retrieve verified user identity directly from Google's servers
             const googleUserInfo = await fetchGoogleUserInfo(tokenResponse.access_token);
-
             if (!googleUserInfo.email) {
-              throw new Error('Google did not return an email address for the selected account.');
+              throw new Error('Google did not return an email address.');
             }
 
-            // Authenticate on our server
             const authResult = await ApiService.googleAuth({
               credential: tokenResponse.access_token,
               email: googleUserInfo.email,
@@ -165,7 +168,6 @@ export async function promptGoogleSignIn(): Promise<{ user: User; token: string;
         },
       });
 
-      // Request access token with account selection prompt
       tokenClient.requestAccessToken({ prompt: 'select_account' });
     } catch (err: any) {
       if (!resolved) {
