@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   UserPlus,
@@ -8,6 +8,10 @@ import {
   ArrowRight,
   Sparkles,
   GraduationCap,
+  Mail,
+  User,
+  Trash2,
+  Laptop,
 } from 'lucide-react';
 import { User as UserType } from '../types';
 import { directGoogleSignIn } from '../services/googleAuth';
@@ -22,7 +26,7 @@ export interface GoogleUserProfile {
   avatarText: string;
 }
 
-export const APP_GOOGLE_USERS: GoogleUserProfile[] = [
+export const APP_CANDIDATE_USERS: GoogleUserProfile[] = [
   {
     email: 'arjun.sharma@gmail.com',
     name: 'Arjun Sharma',
@@ -59,16 +63,22 @@ export const APP_GOOGLE_USERS: GoogleUserProfile[] = [
     avatarBg: 'from-amber-500 to-orange-600',
     avatarText: 'AV',
   },
+];
+
+// Current active device / administrator Google account of the person accessing the app
+export const DEVICE_ACCESS_ACCOUNTS: GoogleUserProfile[] = [
   {
     email: 'jaammaaj123@gmail.com',
     name: 'Jaam Maaj (Admin)',
     role: 'admin',
-    department: 'Placement Cell & System Admin',
-    tag: 'System Administrator',
+    department: 'Placement Cell & System Administration',
+    tag: 'Active Device Account',
     avatarBg: 'from-indigo-600 to-purple-700',
     avatarText: 'JM',
   },
 ];
+
+const SAVED_ACCOUNTS_STORAGE_KEY = 'ai_portal_saved_device_accounts';
 
 interface GoogleAccountChooserModalProps {
   isOpen: boolean;
@@ -85,27 +95,80 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
   const [error, setError] = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<string | null>(null);
 
-  // Custom account entry mode
-  const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
+  // 'initial' = candidate list, 'another_account' = personal/device accounts & custom entry
+  const [viewMode, setViewMode] = useState<'candidates' | 'another_account'>('candidates');
   const [customEmail, setCustomEmail] = useState<string>('');
   const [customName, setCustomName] = useState<string>('');
+  const [savedDeviceAccounts, setSavedDeviceAccounts] = useState<GoogleUserProfile[]>([]);
+
+  // Load saved accounts from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SAVED_ACCOUNTS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setSavedDeviceAccounts(parsed);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSelectProfile = async (profile: GoogleUserProfile) => {
+  const handleSelectAccount = async (email: string, name?: string) => {
     setError(null);
-    setLoadingEmail(profile.email);
+    setLoadingEmail(email);
 
     try {
-      const result = await directGoogleSignIn(profile.email, profile.name);
-      setSuccessInfo(`Signed in as ${result.user.name}`);
+      const result = await directGoogleSignIn(email, name);
+      
+      // Save this account to device memory if not present
+      saveAccountToDevice({
+        email: result.user.email,
+        name: result.user.name,
+        role: result.user.role as 'admin' | 'user',
+        department: result.user.role === 'admin' ? 'Placement Cell Admin' : 'Registered Candidate',
+        tag: 'Saved Account',
+        avatarBg: result.user.role === 'admin' ? 'from-indigo-600 to-purple-700' : 'from-cyan-500 to-blue-600',
+        avatarText: result.user.name.slice(0, 2).toUpperCase(),
+      });
+
+      setSuccessInfo(`Signed in as ${result.user.name} (${result.user.email})`);
       setTimeout(() => {
         onSelectUser(result.user);
         onClose();
+        setViewMode('candidates');
       }, 350);
     } catch (err: any) {
       setError(err?.message || 'Failed to authenticate with the selected account.');
       setLoadingEmail(null);
+    }
+  };
+
+  const saveAccountToDevice = (account: GoogleUserProfile) => {
+    try {
+      const exists = savedDeviceAccounts.some((a) => a.email.toLowerCase() === account.email.toLowerCase());
+      if (!exists && account.email.toLowerCase() !== 'jaammaaj123@gmail.com') {
+        const updated = [account, ...savedDeviceAccounts];
+        setSavedDeviceAccounts(updated);
+        localStorage.setItem(SAVED_ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleRemoveSavedAccount = (e: React.MouseEvent, emailToRemove: string) => {
+    e.stopPropagation();
+    const updated = savedDeviceAccounts.filter((a) => a.email.toLowerCase() !== emailToRemove.toLowerCase());
+    setSavedDeviceAccounts(updated);
+    try {
+      localStorage.setItem(SAVED_ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
+    } catch {
+      // ignore
     }
   };
 
@@ -116,29 +179,19 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
       return;
     }
 
-    setError(null);
-    setLoadingEmail('custom');
-
-    try {
-      const result = await directGoogleSignIn(customEmail, customName);
-      setSuccessInfo(`Signed in as ${result.user.name} (${result.user.email})`);
-      setTimeout(() => {
-        onSelectUser(result.user);
-        onClose();
-      }, 350);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to authenticate account.');
-      setLoadingEmail(null);
-    }
+    await handleSelectAccount(customEmail, customName);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative space-y-5 text-left">
         
         {/* Close button */}
         <button
-          onClick={onClose}
+          onClick={() => {
+            onClose();
+            setViewMode('candidates');
+          }}
           disabled={!!loadingEmail}
           className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50"
         >
@@ -169,7 +222,9 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
               </svg>
             </div>
           </div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Choose an account</h2>
+          <h2 className="text-xl font-bold text-white tracking-tight">
+            {viewMode === 'candidates' ? 'Choose a Google account' : 'Select or Enter Your Google Account'}
+          </h2>
           <p className="text-xs text-slate-400">
             to continue to <span className="font-semibold text-slate-200">Placement Assessment Portal</span>
           </p>
@@ -177,41 +232,39 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
 
         {/* Notifications */}
         {error && (
-          <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+          <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2 animate-fadeIn">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{error}</span>
           </div>
         )}
 
         {successInfo && (
-          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2 animate-fadeIn">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{successInfo}</span>
           </div>
         )}
 
-        {/* User Account List */}
-        {!isCustomMode ? (
+        {/* View 1: Main Candidates List */}
+        {viewMode === 'candidates' ? (
           <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
-            {APP_GOOGLE_USERS.map((profile) => {
+            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-1">
+              Registered Portal Accounts
+            </div>
+
+            {APP_CANDIDATE_USERS.map((profile) => {
               const isSelectedLoading = loadingEmail === profile.email;
-              const isAdmin = profile.role === 'admin';
 
               return (
                 <button
                   key={profile.email}
                   type="button"
-                  id={`account-select-${profile.email.split('@')[0]}`}
-                  onClick={() => handleSelectProfile(profile)}
+                  id={`candidate-select-${profile.email.split('@')[0]}`}
+                  onClick={() => handleSelectAccount(profile.email, profile.name)}
                   disabled={!!loadingEmail}
-                  className={`w-full p-3.5 rounded-2xl border transition-all flex items-center justify-between text-left group cursor-pointer ${
-                    isAdmin
-                      ? 'bg-indigo-950/30 hover:bg-indigo-900/40 border-indigo-500/30 hover:border-indigo-400'
-                      : 'bg-slate-950/60 hover:bg-slate-800/80 border-slate-800 hover:border-slate-700'
-                  } disabled:opacity-60`}
+                  className="w-full p-3.5 rounded-2xl border transition-all flex items-center justify-between text-left group cursor-pointer bg-slate-950/60 hover:bg-slate-800/80 border-slate-800 hover:border-slate-700 disabled:opacity-60"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
-                    {/* Avatar */}
                     <div
                       className={`w-10 h-10 rounded-full bg-gradient-to-tr ${profile.avatarBg} flex items-center justify-center font-bold text-white text-xs shadow-md shrink-0`}
                     >
@@ -222,18 +275,9 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
                       )}
                     </div>
 
-                    {/* Account Details */}
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-100 truncate group-hover:text-white">
-                          {profile.name}
-                        </span>
-                        {isAdmin && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                            <ShieldCheck className="w-3 h-3 text-cyan-400" />
-                            <span>Admin</span>
-                          </span>
-                        )}
+                      <div className="text-sm font-semibold text-slate-100 truncate group-hover:text-white">
+                        {profile.name}
                       </div>
                       <div className="text-xs text-slate-400 truncate">{profile.email}</div>
                       <div className="text-[11px] text-slate-500 truncate mt-0.5">
@@ -247,87 +291,208 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
               );
             })}
 
-            {/* Use Another Account Button */}
+            {/* Use Another Google Account Button */}
             <button
               type="button"
               id="btn-use-another-account"
-              onClick={() => setIsCustomMode(true)}
+              onClick={() => setViewMode('another_account')}
               disabled={!!loadingEmail}
-              className="w-full p-3 rounded-2xl border border-dashed border-slate-700 hover:border-indigo-500/60 bg-slate-950/30 hover:bg-slate-900/60 text-slate-300 hover:text-white transition-all flex items-center gap-3 text-xs font-semibold cursor-pointer"
+              className="w-full p-3.5 rounded-2xl border border-dashed border-indigo-500/40 hover:border-indigo-400 bg-indigo-950/20 hover:bg-indigo-950/40 text-indigo-300 hover:text-white transition-all flex items-center justify-between text-xs font-semibold cursor-pointer group mt-2"
             >
-              <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-slate-400">
-                <UserPlus className="w-4 h-4" />
-              </div>
-              <div className="text-left">
-                <div className="font-semibold text-slate-200">Use another Google account</div>
-                <div className="text-[11px] text-slate-500 font-normal">
-                  Sign in with any custom student or faculty Google email
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 group-hover:text-white">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div className="text-left">
+                  <div className="font-bold text-slate-200 group-hover:text-white">
+                    Use another Google account
+                  </div>
+                  <div className="text-[11px] text-indigo-300/80 font-normal">
+                    Select your personal or administrator Google accounts
+                  </div>
                 </div>
               </div>
+              <ArrowRight className="w-4 h-4 text-indigo-400 group-hover:text-white transition-colors shrink-0" />
             </button>
           </div>
         ) : (
-          /* Custom Account Form */
-          <form onSubmit={handleCustomSubmit} className="space-y-4 pt-1">
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Google Email Address
-                </label>
-                <input
-                  type="email"
-                  id="custom-google-email"
-                  required
-                  placeholder="name@gmail.com"
-                  value={customEmail}
-                  onChange={(e) => setCustomEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                />
+          /* View 2: Device Accounts & Custom Entry */
+          <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
+            
+            {/* Detected / Device Account of the user accessing the app */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Laptop className="w-3.5 h-3.5 text-indigo-400" />
+                  Your Device Google Account
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                  Verified Access
+                </span>
+              </div>
+
+              {DEVICE_ACCESS_ACCOUNTS.map((profile) => {
+                const isSelectedLoading = loadingEmail === profile.email;
+
+                return (
+                  <button
+                    key={profile.email}
+                    type="button"
+                    id={`device-account-${profile.email.split('@')[0]}`}
+                    onClick={() => handleSelectAccount(profile.email, profile.name)}
+                    disabled={!!loadingEmail}
+                    className="w-full p-3.5 rounded-2xl border transition-all flex items-center justify-between text-left group cursor-pointer bg-gradient-to-r from-indigo-950/60 to-slate-900 border-indigo-500/40 hover:border-indigo-400 shadow-lg shadow-indigo-950/30"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div
+                        className={`w-10 h-10 rounded-full bg-gradient-to-tr ${profile.avatarBg} flex items-center justify-center font-bold text-white text-xs shadow-md shrink-0 ring-2 ring-indigo-500/40`}
+                      >
+                        {isSelectedLoading ? (
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          profile.avatarText
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-white truncate">
+                            {profile.name}
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/40">
+                            <ShieldCheck className="w-3 h-3 text-cyan-400" />
+                            <span>Admin</span>
+                          </span>
+                        </div>
+                        <div className="text-xs text-indigo-200 font-medium truncate">
+                          {profile.email}
+                        </div>
+                        <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                          {profile.department}
+                        </div>
+                      </div>
+                    </div>
+
+                    <ArrowRight className="w-4 h-4 text-indigo-300 group-hover:text-white transition-colors shrink-0 ml-2" />
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Saved Accounts on this browser/device */}
+            {savedDeviceAccounts.length > 0 && (
+              <div className="space-y-2 pt-1">
+                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-1">
+                  Recently Used on This Device
+                </div>
+                {savedDeviceAccounts.map((account) => {
+                  const isSelectedLoading = loadingEmail === account.email;
+
+                  return (
+                    <div
+                      key={account.email}
+                      onClick={() => handleSelectAccount(account.email, account.name)}
+                      className="w-full p-3 rounded-2xl border border-slate-800 hover:border-slate-700 bg-slate-950/60 hover:bg-slate-800/80 transition-all flex items-center justify-between text-left cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-8 h-8 rounded-full bg-gradient-to-tr ${account.avatarBg} flex items-center justify-center font-bold text-white text-xs shrink-0`}
+                        >
+                          {isSelectedLoading ? (
+                            <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            account.avatarText
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold text-slate-200 truncate group-hover:text-white">
+                            {account.name}
+                          </div>
+                          <div className="text-[11px] text-slate-400 truncate">
+                            {account.email}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleRemoveSavedAccount(e, account.email)}
+                        title="Remove from saved accounts"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Or Enter Any Other Google Email */}
+            <form onSubmit={handleCustomSubmit} className="space-y-3 pt-2 border-t border-slate-800">
+              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-1">
+                Or Add New Google Account
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Display Name (Optional)
-                </label>
-                <input
-                  type="text"
-                  id="custom-google-name"
-                  placeholder="e.g. Candidate Name"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                />
+                <div className="relative">
+                  <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="email"
+                    id="input-custom-email"
+                    required
+                    placeholder="Enter your Google email (e.g. name@gmail.com)"
+                    value={customEmail}
+                    onChange={(e) => setCustomEmail(e.target.value)}
+                    className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950 border border-slate-700/80 focus:border-indigo-500 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsCustomMode(false)}
-                className="w-1/3 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                disabled={loadingEmail === 'custom'}
-                className="w-2/3 py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-              >
-                {loadingEmail === 'custom' ? (
-                  <span>Signing in...</span>
-                ) : (
-                  <>
-                    <span>Continue with Account</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
+              <div>
+                <div className="relative">
+                  <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="text"
+                    id="input-custom-name"
+                    placeholder="Your Full Name (Optional)"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950 border border-slate-700/80 focus:border-indigo-500 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('candidates')}
+                  className="w-1/3 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={loadingEmail === customEmail}
+                  className="w-2/3 py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {loadingEmail === customEmail ? (
+                    <span>Signing in...</span>
+                  ) : (
+                    <>
+                      <span>Sign In & Save</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+          </div>
         )}
 
         {/* Footer info */}
-        <div className="pt-2 text-center text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
+        <div className="pt-2 text-center text-[11px] text-slate-500 flex items-center justify-center gap-1.5 border-t border-slate-800/80">
           <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
           <span>Integrated with Campus Placement & AI Assessment Suite</span>
         </div>
