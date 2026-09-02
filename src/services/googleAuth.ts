@@ -78,26 +78,6 @@ async function fetchGoogleUserInfo(accessToken: string): Promise<{
 }
 
 /**
- * Authenticates directly with a Google email and optional display name.
- */
-export async function directGoogleSignIn(email: string, name?: string): Promise<{ user: User; token: string; message?: string }> {
-  if (!email || !email.includes('@')) {
-    throw new Error('Please enter a valid Google email address.');
-  }
-
-  const cleanEmail = email.trim().toLowerCase();
-  const cleanName = name && name.trim() ? name.trim() : cleanEmail.split('@')[0];
-
-  const authResult = await ApiService.googleAuth({
-    email: cleanEmail,
-    name: cleanName,
-  });
-
-  setStoredAuth(authResult.token, authResult.user);
-  return authResult;
-}
-
-/**
  * Initiates the Google Sign-In Account Chooser flow.
  * If Google OAuth Client ID is configured and popup succeeds, it uses verified Google OAuth.
  * Otherwise, it alerts the caller to fall back to direct Google Account entry.
