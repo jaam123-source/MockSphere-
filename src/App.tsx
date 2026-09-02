@@ -194,8 +194,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
-      {/* Top Banner when in DEMO MODE */}
-      {isDemoMode && (
+      {/* Top Banner when in DEMO MODE (Admin only) */}
+      {isDemoMode && currentUser?.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
         <aside
           id="demo-mode-top-banner"
           aria-label="Demo Mode Notification"

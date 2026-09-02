@@ -123,14 +123,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <TrendingUp className="w-4 h-4 text-cyan-400" />
               <span>Timeline & Logs</span>
             </button>
-            <button
-              id="btn-quick-simulation"
-              onClick={onOpenAdmin}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold border border-indigo-500/30 flex items-center gap-2 transition-all"
-            >
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Admin & Simulation</span>
-            </button>
+            {user && user.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
+              <button
+                id="btn-quick-simulation"
+                onClick={onOpenAdmin}
+                className="px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30 flex items-center gap-2 transition-all"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Admin & Demo Controls</span>
+              </button>
+            )}
           </div>
         </div>
 

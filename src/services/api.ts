@@ -282,6 +282,14 @@ export const ApiService = {
   },
 
   // Admin
+  ADMIN_EMAIL: 'jaammaaj123@gmail.com',
+
+  isAdminAccount(user?: User | null): boolean {
+    const target = user || getStoredUser();
+    if (!target || !target.email) return false;
+    return target.email.trim().toLowerCase() === 'jaammaaj123@gmail.com';
+  },
+
   async getAdminSettings(): Promise<AdminSettings> {
     return request<AdminSettings>('/api/admin/settings');
   },
@@ -290,6 +298,13 @@ export const ApiService = {
     return request<AdminSettings>('/api/admin/settings', {
       method: 'POST',
       body: JSON.stringify(settings),
+    });
+  },
+
+  async toggleGlobalDemoMode(enabled: boolean): Promise<{ success: boolean; globalDemoMode: boolean; message: string; settings: AdminSettings }> {
+    return request<{ success: boolean; globalDemoMode: boolean; message: string; settings: AdminSettings }>('/api/admin/demo-mode/toggle-global', {
+      method: 'POST',
+      body: JSON.stringify({ enabled }),
     });
   },
 
@@ -325,8 +340,8 @@ export const ApiService = {
     });
   },
 
-  async getDemoModeStatus(): Promise<{ isDemoMode: boolean; user: User | null }> {
-    return request<{ isDemoMode: boolean; user: User | null }>('/api/admin/demo-mode/status');
+  async getDemoModeStatus(): Promise<{ isDemoMode: boolean; globalDemoMode?: boolean; user: User | null }> {
+    return request<{ isDemoMode: boolean; globalDemoMode?: boolean; user: User | null }>('/api/admin/demo-mode/status');
   },
 
   isDemoAccount(user?: User | null): boolean {

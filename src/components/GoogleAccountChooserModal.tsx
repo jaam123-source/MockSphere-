@@ -15,26 +15,30 @@ interface DemoGoogleProfile {
   email: string;
   avatar: string;
   sub: string;
+  role: 'admin' | 'user';
 }
 
 const DEFAULT_GOOGLE_PROFILES: DemoGoogleProfile[] = [
   {
+    name: 'Admin Account',
+    email: 'jaammaaj123@gmail.com',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80',
+    sub: 'g_jaammaaj123_admin',
+    role: 'admin',
+  },
+  {
     name: 'Alex Johnson',
     email: 'alex.johnson@gmail.com',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80',
+    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=120&h=120&q=80',
     sub: 'g_alex_johnson_1',
+    role: 'user',
   },
   {
     name: 'Sarah Connor',
     email: 'sarah.connor@gmail.com',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80',
     sub: 'g_sarah_connor_2',
-  },
-  {
-    name: 'Placement Candidate',
-    email: 'candidate@gmail.com',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80',
-    sub: 'g_candidate_demo_3',
+    role: 'user',
   },
 ];
 
@@ -180,15 +184,30 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
                   <div>
                     <div className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
                       <span>{profile.name}</span>
+                      {profile.email === 'jaammaaj123@gmail.com' ? (
+                        <span className="text-[9px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                          Admin
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-semibold bg-slate-800 text-slate-300 border border-slate-700 px-1.5 py-0.2 rounded-full">
+                          Candidate
+                        </span>
+                      )}
                     </div>
                     <div className="text-[11px] text-slate-400 font-mono">{profile.email}</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-semibold border border-emerald-500/20">
-                    Google
-                  </span>
+                  {profile.email === 'jaammaaj123@gmail.com' ? (
+                    <span className="text-[10px] text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full font-bold border border-amber-500/30">
+                      Administrator
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-semibold border border-emerald-500/20">
+                      User
+                    </span>
+                  )}
                   {isSelected && (
                     <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-white">
                       <Check className="w-3.5 h-3.5" />

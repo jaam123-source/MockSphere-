@@ -53,6 +53,8 @@ interface DatabaseSchema {
   user_progress: Record<string, UserProgressData>;
 }
 
+export const ADMIN_EMAIL = 'jaammaaj123@gmail.com';
+
 const DEFAULT_SETTINGS: AdminSettings = {
   levelCutoff: 70,
   testCutoff: 70,
@@ -63,6 +65,7 @@ const DEFAULT_SETTINGS: AdminSettings = {
   testTimerMinutes: 20,
   finalTestTimerMinutes: 30,
   aiModel: 'gemini-3.7-flash',
+  globalDemoMode: false,
 };
 
 const HR_QUESTIONS_BANK: HRQuestion[] = [
@@ -207,6 +210,7 @@ class Database {
     avatarUrl?: string
   ): { user: User; token: string; isNewUser: boolean } {
     const cleanEmail = email.trim().toLowerCase();
+    const isAdmin = cleanEmail === ADMIN_EMAIL.toLowerCase();
     let user = this.data.users.find((u) => u.email.toLowerCase() === cleanEmail);
     let isNewUser = false;
 
@@ -216,6 +220,7 @@ class Database {
         user_id: `usr_g_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         name: derivedName,
         email: cleanEmail,
+        role: isAdmin ? 'admin' : 'user',
         avatar_url: avatarUrl,
         auth_provider: 'google',
         created_at: new Date().toISOString(),
@@ -231,11 +236,21 @@ class Database {
       if (avatarUrl) {
         user.avatar_url = avatarUrl;
       }
+      user.role = isAdmin ? 'admin' : 'user';
       user.auth_provider = 'google';
       if (!this.data.user_progress[user.user_id]) {
         this.data.user_progress[user.user_id] = this.createDefaultUserProgress(user.user_id);
       }
     }
+
+    // Strictly enforce role integrity across all registered users
+    this.data.users.forEach((u) => {
+      if (u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        u.role = 'admin';
+      } else {
+        u.role = 'user';
+      }
+    });
 
     this.saveDatabase();
     return { user, token: `token_${user.user_id}`, isNewUser };
@@ -331,7 +346,24 @@ class Database {
     return this.data.settings;
   }
 
+  public setGlobalDemoMode(enabled: boolean): AdminSettings {
+    if (!this.data.settings) {
+      this.data.settings = { ...DEFAULT_SETTINGS };
+    }
+    this.data.settings.globalDemoMode = !!enabled;
+    this.saveDatabase();
+    return this.data.settings;
+  }
+
+  public isGlobalDemoMode(): boolean {
+    return Boolean(this.data.settings?.globalDemoMode);
+  }
+
   public isDemoUser(userId?: string): boolean {
+    // If Global Demo Mode is enabled by Admin for all users, unlock presentation mode
+    if (this.data.settings?.globalDemoMode) {
+      return true;
+    }
     if (!userId) return false;
     if (userId === Database.DEMO_USER_ID || userId === 'user_demo_presentation' || userId === 'user_demo') {
       return true;

@@ -1,6 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import { db } from './db';
+import { db, ADMIN_EMAIL } from './db';
 import { AptitudeTopicId, TechnicalDomainId } from '../src/types';
 import { TECHNICAL_DOMAINS_LIST } from './technicalQuestionBank';
 import {
@@ -24,6 +24,27 @@ export function getAuthUserId(req: express.Request): string {
   }
   // Default to demo user if no token provided
   return 'user_demo';
+}
+
+// Strict backend middleware to verify Administrator privileges (jaammaaj123@gmail.com only)
+export function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+  try {
+    const userId = getAuthUserId(req);
+    const user = db.getUserById(userId);
+    if (!user) {
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
+    const userEmail = (user.email || '').trim().toLowerCase();
+    const adminEmail = ADMIN_EMAIL.trim().toLowerCase();
+    if (userEmail !== adminEmail || user.role !== 'admin') {
+      return res.status(403).json({
+        error: `Access Denied. Only the designated administrator (${ADMIN_EMAIL}) has access to these settings.`,
+      });
+    }
+    next();
+  } catch (err: any) {
+    return res.status(403).json({ error: 'Admin authorization check failed.' });
+  }
 }
 
 // ---------------- API ROUTES ----------------
@@ -474,12 +495,12 @@ app.get('/api/history', (req, res) => {
   }
 });
 
-// Admin Configuration & Inspection
+// Admin Configuration & Inspection (Secured for jaammaaj123@gmail.com)
 app.get('/api/admin/settings', (req, res) => {
   res.json(db.getSettings());
 });
 
-app.post('/api/admin/settings', (req, res) => {
+app.post('/api/admin/settings', requireAdmin, (req, res) => {
   try {
     const updated = db.updateSettings(req.body);
     res.json(updated);
@@ -488,7 +509,7 @@ app.post('/api/admin/settings', (req, res) => {
   }
 });
 
-app.post('/api/admin/quick-unlock', (req, res) => {
+app.post('/api/admin/quick-unlock', requireAdmin, (req, res) => {
   try {
     const userId = getAuthUserId(req);
     const { milestone } = req.body;
@@ -499,7 +520,7 @@ app.post('/api/admin/quick-unlock', (req, res) => {
   }
 });
 
-app.post('/api/admin/reset-progress', (req, res) => {
+app.post('/api/admin/reset-progress', requireAdmin, (req, res) => {
   try {
     const userId = getAuthUserId(req);
     const reset = db.resetUserProgress(userId);
@@ -509,8 +530,25 @@ app.post('/api/admin/reset-progress', (req, res) => {
   }
 });
 
-// --- ADMIN DEMO MODE (College Project Presentation) ---
-app.post('/api/admin/demo-mode/enable', (req, res) => {
+// --- ADMIN DEMO MODE (Global & College Presentation) ---
+app.post('/api/admin/demo-mode/toggle-global', requireAdmin, (req, res) => {
+  try {
+    const { enabled } = req.body;
+    const updatedSettings = db.setGlobalDemoMode(enabled);
+    res.json({
+      success: true,
+      globalDemoMode: !!updatedSettings.globalDemoMode,
+      message: updatedSettings.globalDemoMode
+        ? 'Global Demo Mode ENABLED: All users can now access full testing and interview rounds.'
+        : 'Global Demo Mode DISABLED: Standard sequential qualification enforced for all candidates.',
+      settings: updatedSettings,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/demo-mode/enable', requireAdmin, (req, res) => {
   try {
     const demoData = db.getOrCreateDemoUser();
     res.json({
@@ -525,7 +563,7 @@ app.post('/api/admin/demo-mode/enable', (req, res) => {
   }
 });
 
-app.post('/api/admin/demo-mode/reset', (req, res) => {
+app.post('/api/admin/demo-mode/reset', requireAdmin, (req, res) => {
   try {
     const resetDashboard = db.resetDemoProgress();
     res.json({
@@ -542,13 +580,15 @@ app.get('/api/admin/demo-mode/status', (req, res) => {
   try {
     const userId = getAuthUserId(req);
     const user = db.getUserById(userId);
-    const isDemo = user.email.toLowerCase() === 'demo@interview.com' || userId === 'user_demo_presentation';
+    const globalDemo = db.isGlobalDemoMode();
+    const isDemo = globalDemo || (user ? db.isDemoUser(user.user_id) : false);
     res.json({
       isDemoMode: isDemo,
+      globalDemoMode: globalDemo,
       user: isDemo ? user : null,
     });
   } catch {
-    res.json({ isDemoMode: false, user: null });
+    res.json({ isDemoMode: false, globalDemoMode: false, user: null });
   }
 });
 

@@ -175,24 +175,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               )}
 
-              <button
-                id="nav-btn-admin"
-                onClick={() => onNavigate('admin')}
-                title="Admin & Progression Simulator"
-                className={`p-2 rounded-lg text-xs font-medium transition-all ${
-                  selectedView === 'admin'
-                    ? 'bg-slate-800 text-cyan-400 border border-cyan-500/30'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                }`}
-              >
-                <Settings className="w-4 h-4" />
-              </button>
+              {/* Admin Panel Button - Strictly restricted to jaammaaj123@gmail.com */}
+              {user && user.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
+                <button
+                  id="nav-btn-admin"
+                  onClick={() => onNavigate('admin')}
+                  title="Admin Settings & Global Demo Mode"
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    selectedView === 'admin'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                      : 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20'
+                  }`}
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Admin</span>
+                </button>
+              )}
 
               {user ? (
                 <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-slate-800">
-                  {user.email?.toLowerCase() === 'demo@interview.com' && (
-                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-slate-950 uppercase tracking-wider animate-pulse">
-                      DEMO
+                  {user.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      ADMIN
                     </span>
                   )}
                   <div className="hidden md:block text-right">
@@ -361,6 +365,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
               <ChevronRight className="w-3.5 h-3.5 opacity-50" />
             </button>
+
+            {user && user.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
+              <button
+                onClick={() => handleMobileNav('admin')}
+                className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-all border ${
+                  selectedView === 'admin'
+                    ? 'bg-amber-600 text-white border-amber-500 shadow-md'
+                    : 'text-amber-300 bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Settings className="w-4 h-4 text-amber-400" />
+                  <span>Admin Panel & Global Demo Mode</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 opacity-50" />
+              </button>
+            )}
           </div>
         )}
       </header>

@@ -2,6 +2,7 @@ export interface User {
   user_id: string;
   name: string;
   email: string;
+  role?: 'admin' | 'user';
   password_hash?: string;
   avatar_url?: string;
   auth_provider?: 'google' | 'password';
@@ -392,6 +393,7 @@ export interface AdminSettings {
   testTimerMinutes: number;
   finalTestTimerMinutes: number;
   aiModel: string;
+  globalDemoMode?: boolean;
 }
 
 export interface EmailNotificationLog {

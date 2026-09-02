@@ -194,16 +194,16 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
               </div>
             </div>
 
-            {/* Quick Demo Access Option */}
+            {/* Quick Profile Selection */}
             <div className="pt-3 border-t border-slate-800 flex flex-col gap-2">
               <button
                 type="button"
-                id="btn-quick-demo-login"
+                id="btn-choose-account"
                 onClick={handleOpenGoogleAuth}
                 className="w-full py-2.5 bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-xs rounded-xl border border-slate-700/80 transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Select Candidate Profile</span>
+                <span>Switch / Select Google Account</span>
               </button>
             </div>
 
