@@ -16,12 +16,16 @@ import {
   Target,
   FileCheck2,
   Play,
+  Flame,
+  Check,
 } from 'lucide-react';
 import { AptitudeTopicId, AptitudeTopicInfo, UserDashboardState } from '../types';
 
 interface DashboardViewProps {
   dashboard: UserDashboardState;
   onSelectTopic: (topicId: AptitudeTopicId) => void;
+  onStartLevel?: (topicId: AptitudeTopicId, levelId: number) => void;
+  onStartTopicTest?: (topicId: AptitudeTopicId, testNumber: 1 | 2) => void;
   onStartFinalTest: () => void;
   onStartTechnicalInterview: () => void;
   onStartHRInterview: () => void;
@@ -71,6 +75,8 @@ const TOPIC_COLORS: Record<AptitudeTopicId, { bg: string; border: string; bar: s
 export const DashboardView: React.FC<DashboardViewProps> = ({
   dashboard,
   onSelectTopic,
+  onStartLevel,
+  onStartTopicTest,
   onStartFinalTest,
   onStartTechnicalInterview,
   onStartHRInterview,
@@ -92,6 +98,140 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     },
   } = dashboard || {};
   const topicList: AptitudeTopicInfo[] = Object.values(topics);
+
+  // Compute exact next action for the user based on saved progression
+  const getNextAction = () => {
+    const topicOrder: AptitudeTopicId[] = ['quantitative', 'logical', 'verbal', 'specialized'];
+
+    // 1. Check Aptitude Topics (Stage 1)
+    for (const tid of topicOrder) {
+      const t = topics[tid];
+      if (!t) continue;
+
+      if (t.completedLevels < 10) {
+        // If 5 levels completed and Test 1 is pending
+        if (t.completedLevels >= 5 && !t.test1Passed) {
+          return {
+            stage: 'STAGE 1 • TOPIC TEST CHECKPOINT',
+            stageNumber: 1,
+            title: `${t.name}: 5-Level Test 1`,
+            description: `You cleared Levels 1–5 in ${t.name}. Complete the 20-question checkpoint test (${cutoffs.testCutoff}% cutoff) to unlock Levels 6–10.`,
+            badge: 'Test 1 Ready',
+            badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+            buttonLabel: 'Continue Preparation: Take Test 1',
+            icon: <Award className="w-5 h-5 text-amber-400" />,
+            action: () => {
+              if (onStartTopicTest) {
+                onStartTopicTest(tid, 1);
+              } else {
+                onSelectTopic(tid);
+              }
+            },
+          };
+        }
+
+        // Next Level to complete
+        return {
+          stage: 'STAGE 1 • APTITUDE MASTERY',
+          stageNumber: 1,
+          title: `${t.name}: Level ${t.currentLevel}`,
+          description: `Resume practice in ${t.name} at Level ${t.currentLevel} of 10. Pass 10 questions with ≥${cutoffs.levelCutoff}% accuracy to unlock Level ${Math.min(10, t.currentLevel + 1)}.`,
+          badge: `Level ${t.currentLevel} of 10`,
+          badgeBg: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+          buttonLabel: `Continue Preparation: Start Level ${t.currentLevel}`,
+          icon: <Play className="w-5 h-5 text-blue-400 fill-blue-400/30" />,
+          action: () => {
+            if (onStartLevel) {
+              onStartLevel(tid, t.currentLevel);
+            } else {
+              onSelectTopic(tid);
+            }
+          },
+        };
+      }
+
+      // If 10 levels completed and Test 2 is pending
+      if (!t.test2Passed) {
+        return {
+          stage: 'STAGE 1 • COMPREHENSIVE TEST CHECKPOINT',
+          stageNumber: 1,
+          title: `${t.name}: Comprehensive Test 2`,
+          description: `All 10 levels in ${t.name} completed! Clear the 20-question Test 2 checkpoint (${cutoffs.testCutoff}% cutoff) to complete this domain.`,
+          badge: 'Test 2 Ready',
+          badgeBg: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40',
+          buttonLabel: 'Continue Preparation: Take Test 2',
+          icon: <Award className="w-5 h-5 text-indigo-400" />,
+          action: () => {
+            if (onStartTopicTest) {
+              onStartTopicTest(tid, 2);
+            } else {
+              onSelectTopic(tid);
+            }
+          },
+        };
+      }
+    }
+
+    // 2. Stage 2: Final Aptitude
+    if (progression.final_aptitude_unlocked && !progression.final_aptitude_passed) {
+      return {
+        stage: 'STAGE 2 • FINAL APTITUDE QUALIFICATION',
+        stageNumber: 2,
+        title: 'Final Aptitude Assessment (25 Questions)',
+        description: `All 4 aptitude tracks completed! Take the comprehensive 25-question cross-domain assessment (≥${cutoffs.finalTestCutoff}%) to qualify for the AI Technical Round.`,
+        badge: 'Stage 2 Ready',
+        badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+        buttonLabel: 'Continue Preparation: Start Final Assessment',
+        icon: <Award className="w-5 h-5 text-amber-400" />,
+        action: onStartFinalTest,
+      };
+    }
+
+    // 3. Stage 3: Technical Round
+    if (progression.technical_unlocked && !progression.technical_passed) {
+      return {
+        stage: 'STAGE 3 • AI MULTIMODAL TECHNICAL INTERVIEW',
+        stageNumber: 3,
+        title: 'AI Technical Interview Simulation',
+        description: `Aptitude track cleared! Begin the progressive 3-level AI Technical Round (Basic → Intermediate → Practical) across your selected domain.`,
+        badge: 'Stage 3 Ready',
+        badgeBg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+        buttonLabel: 'Continue Preparation: Enter Technical Round',
+        icon: <Code2 className="w-5 h-5 text-cyan-400" />,
+        action: onStartTechnicalInterview,
+      };
+    }
+
+    // 4. Stage 4: HR Round
+    if (progression.hr_unlocked && !progression.hr_passed) {
+      return {
+        stage: 'STAGE 4 • AI HR BEHAVIORAL INTERVIEW',
+        stageNumber: 4,
+        title: 'AI HR Behavioral Round (STAR Method)',
+        description: `Technical interview qualified! Complete the 5-question situational & behavioral evaluation with real-time AI scoring.`,
+        badge: 'Stage 4 Ready',
+        badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+        buttonLabel: 'Continue Preparation: Enter HR Round',
+        icon: <Users2 className="w-5 h-5 text-emerald-400" />,
+        action: onStartHRInterview,
+      };
+    }
+
+    // 5. Stage 5: Final Placement Report
+    return {
+      stage: 'STAGE 5 • PLACEMENT READINESS REPORT',
+      stageNumber: 5,
+      title: 'Full Placement Diagnostic Dossier',
+      description: `All preparation rounds completed! Review your comprehensive readiness score, strengths/weaknesses breakdown, and AI coach action plan.`,
+      badge: 'All Stages Complete',
+      badgeBg: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+      buttonLabel: 'View Diagnostic Placement Report',
+      icon: <Trophy className="w-5 h-5 text-purple-400" />,
+      action: onViewFinalReport,
+    };
+  };
+
+  const nextAction = getNextAction();
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn px-3 sm:px-4 py-4 sm:py-6 pb-28 sm:pb-8">
@@ -118,7 +258,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               id="btn-quick-history"
               onClick={onOpenHistory}
-              className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-2 transition-all"
+              className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-2 transition-all cursor-pointer"
             >
               <TrendingUp className="w-4 h-4 text-cyan-400" />
               <span>Timeline & Logs</span>
@@ -127,7 +267,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 id="btn-quick-simulation"
                 onClick={onOpenAdmin}
-                className="px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30 flex items-center gap-2 transition-all"
+                className="px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30 flex items-center gap-2 transition-all cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-amber-400" />
                 <span>Admin & Demo Controls</span>
@@ -259,8 +399,65 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </section>
 
+      {/* PRIMARY ACTION CARD: CONTINUE PREPARATION */}
+      <section
+        id="dashboard-continue-preparation-card"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-cyan-950 border-2 border-indigo-500/40 p-6 sm:p-7 shadow-2xl shadow-indigo-950/60 transition-all hover:border-indigo-400/60"
+      >
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${nextAction.badgeBg}`}>
+                <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                <span>{nextAction.stage}</span>
+              </span>
+              <span className="text-xs font-semibold text-slate-400">
+                • Saved Progress Active
+              </span>
+            </div>
+
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+              <span>{nextAction.title}</span>
+            </h2>
+
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              {nextAction.description}
+            </p>
+
+            <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-400 font-medium">
+              <span className="flex items-center gap-1 text-cyan-300">
+                <Check className="w-4 h-4 text-cyan-400" />
+                <strong>{stats.total_levels_completed}</strong>/40 Levels Cleared
+              </span>
+              <span className="flex items-center gap-1 text-indigo-300">
+                <Check className="w-4 h-4 text-indigo-400" />
+                <strong>{stats.total_tests_passed}</strong>/8 Tests Cleared
+              </span>
+              <span className="flex items-center gap-1 text-emerald-300">
+                <strong>{stats.overall_progress}%</strong> Prep Score
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3 w-full lg:w-auto shrink-0">
+            <button
+              id="btn-primary-continue-preparation"
+              onClick={nextAction.action}
+              className="px-6 py-4 rounded-xl bg-gradient-to-r from-indigo-500 via-blue-600 to-cyan-500 hover:from-indigo-400 hover:via-blue-500 hover:to-cyan-400 text-white text-sm sm:text-base font-black shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-3 transition-all hover:scale-[1.03] cursor-pointer"
+            >
+              {nextAction.icon}
+              <span>{nextAction.buttonLabel}</span>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <div className="text-[11px] text-slate-400 text-center lg:text-right">
+              All progress is securely auto-saved to your Google account
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* STAGE PROMPT CALLOUT: Ready for Technical Round / Next Stage */}
-      {progression.technical_unlocked ? (
+      {progression.technical_unlocked && !progression.technical_passed && (
         <section
           id="dashboard-technical-ready-banner"
           className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-950/80 via-slate-900 to-blue-950/80 border border-cyan-500/40 p-6 sm:p-7 shadow-2xl shadow-cyan-950/50"
@@ -272,7 +469,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span>STAGE 3 UNLOCKED • TECHNICAL ROUND</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                {progression.technical_passed ? 'AI Technical Round Cleared' : 'Ready for the AI Technical Round'}
+                Ready for the AI Technical Round
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                 You have qualified the Aptitude Learning & Testing tracks. Advance into the multimodal AI Technical Interview featuring the top 5 trending tech domains with a 3-level progressive question flow (30 Questions Total: Basic → Intermediate → Practical) with live AI voice questioning, webcam streaming, and real-time code evaluation.
@@ -306,7 +503,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2.5 transition-all hover:scale-[1.03] cursor-pointer"
               >
                 <Code2 className="w-4 h-4" />
-                <span>{progression.technical_passed ? 'Review / Retake Technical Round' : 'Launch AI Technical Round'}</span>
+                <span>Launch AI Technical Round</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
               <div className="text-[11px] text-slate-400 text-center lg:text-right">
@@ -315,36 +512,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
         </section>
-      ) : progression.final_aptitude_unlocked ? (
-        <section
-          id="dashboard-final-aptitude-ready-banner"
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-950/80 via-slate-900 to-indigo-950/80 border border-amber-500/40 p-6 sm:p-7 shadow-2xl shadow-amber-950/40"
-        >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <div className="space-y-1.5">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold">
-                <Award className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                <span>STAGE 2 READY • APTITUDE MASTERY ACHIEVED</span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                Qualify Final Aptitude to Unlock Technical Round
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-                All 4 aptitude tracks are cleared! Take the 25-question cross-topic Final Aptitude benchmark (≥70%) to immediately enter the AI Technical Interview Round.
-              </p>
-            </div>
-            <button
-              id="btn-start-final-aptitude-prompt"
-              onClick={onStartFinalTest}
-              className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs sm:text-sm font-black shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2.5 transition-all hover:scale-[1.03] cursor-pointer shrink-0 w-full sm:w-auto"
-            >
-              <Award className="w-4 h-4" />
-              <span>Start Final Aptitude Test</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </section>
-      ) : null}
+      )}
 
       {/* 4 Parallel Aptitude Topics Grid */}
       <section id="dashboard-topics-section" className="space-y-4">
@@ -437,7 +605,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                   <button
                     id={`btn-continue-topic-${topic.id}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-white px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors group-hover:border-cyan-500/50"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-white px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors group-hover:border-cyan-500/50 cursor-pointer"
                   >
                     {topic.isCompleted ? 'Review Topic' : 'Open Level Map'}{' '}
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -451,3 +619,4 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     </div>
   );
 };
+

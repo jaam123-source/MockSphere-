@@ -250,6 +250,8 @@ export default function App() {
           <DashboardView
             dashboard={dashboard}
             onSelectTopic={handleSelectTopic}
+            onStartLevel={handleStartLevel}
+            onStartTopicTest={handleStartTopicTest}
             onStartFinalTest={() => setCurrentView('final-test')}
             onStartTechnicalInterview={() => setCurrentView('technical-interview')}
             onStartHRInterview={() => setCurrentView('hr-interview')}

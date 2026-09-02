@@ -289,22 +289,13 @@ class Database {
     return { user, token: `token_${user.user_id}` };
   }
 
-  public getUserById(userId?: string): User {
+  public getUserById(userId?: string): User | null {
+    if (!userId) return null;
     if (!this.data.users || this.data.users.length === 0) {
-      const demo: User = {
-        user_id: 'user_demo',
-        name: 'Alex Johnson',
-        email: 'candidate@example.com',
-        password_hash: this.hashPassword('Password@123'),
-        created_at: new Date().toISOString(),
-      };
-      this.data.users = [demo];
-      this.data.user_progress['user_demo'] = this.createDefaultUserProgress('user_demo');
-      this.saveDatabase();
-      return demo;
+      return null;
     }
     const found = this.data.users.find((u) => u.user_id === userId);
-    return found || this.data.users[0];
+    return found || null;
   }
 
   public updateUserProfile(userId: string, name?: string, email?: string): User {
@@ -360,20 +351,8 @@ class Database {
   }
 
   public isDemoUser(userId?: string): boolean {
-    // If Global Demo Mode is enabled by Admin for all users, unlock presentation mode
+    // Demo Mode is OFF by default. It is ONLY active if explicitly enabled globally by the Administrator.
     if (this.data.settings?.globalDemoMode) {
-      return true;
-    }
-    if (!userId) return false;
-    if (userId === Database.DEMO_USER_ID || userId === 'user_demo_presentation' || userId === 'user_demo') {
-      return true;
-    }
-    const user = this.data.users.find((u) => u.user_id === userId);
-    if (
-      user &&
-      (user.email.toLowerCase() === Database.DEMO_USER_EMAIL.toLowerCase() ||
-        user.email.toLowerCase() === 'demo@interview.com')
-    ) {
       return true;
     }
     return false;
@@ -381,7 +360,10 @@ class Database {
 
   // Dashboard Aggregator & Progression Verification
   public getDashboardState(userId: string): UserDashboardState {
-    const user = this.getUserById(userId) || this.data.users[0];
+    const user = this.getUserById(userId);
+    if (!user) {
+      throw new Error('User session not found. Please log in.');
+    }
     const prog = this.getUserProgress(user.user_id);
     const settings = this.getSettings();
     const isDemo = this.isDemoUser(user.user_id);

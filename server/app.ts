@@ -17,22 +17,25 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 
 // Helper to get authenticated user ID from Authorization header
-export function getAuthUserId(req: express.Request): string {
+export function getAuthUserId(req: express.Request): string | null {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer token_')) {
-    return authHeader.replace('Bearer token_', '');
+    const raw = authHeader.replace('Bearer token_', '').trim();
+    return raw || null;
   }
-  // Default to demo user if no token provided
-  return 'user_demo';
+  return null;
 }
 
 // Strict backend middleware to verify Administrator privileges (jaammaaj123@gmail.com only)
 export function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
   try {
     const userId = getAuthUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required. Please sign in with your Google administrator account.' });
+    }
     const user = db.getUserById(userId);
     if (!user) {
-      return res.status(401).json({ error: 'Authentication required.' });
+      return res.status(401).json({ error: 'User session not found. Please sign in again.' });
     }
     const userEmail = (user.email || '').trim().toLowerCase();
     const adminEmail = ADMIN_EMAIL.trim().toLowerCase();
@@ -178,9 +181,12 @@ app.post('/api/logout', (req, res) => {
 
 app.get('/api/me', (req, res) => {
   const userId = getAuthUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required. Please sign in with Google.' });
+  }
   const user = db.getUserById(userId);
   if (!user) {
-    return res.status(404).json({ error: 'User not found' });
+    return res.status(401).json({ error: 'User session expired or not found. Please sign in.' });
   }
   res.json({ user });
 });
@@ -188,6 +194,9 @@ app.get('/api/me', (req, res) => {
 app.post('/api/update-profile', (req, res) => {
   try {
     const userId = getAuthUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
     const { name, email } = req.body;
     const updatedUser = db.updateUserProfile(userId, name, email);
     res.json({ user: updatedUser, message: 'Profile updated successfully' });
@@ -200,10 +209,14 @@ app.post('/api/update-profile', (req, res) => {
 app.get('/api/dashboard', (req, res) => {
   try {
     const userId = getAuthUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required. Please sign in with Google.' });
+    }
     const state = db.getDashboardState(userId);
     res.json(state);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    const isAuthErr = err.message?.includes('not found') || err.message?.includes('log in');
+    res.status(isAuthErr ? 401 : 500).json({ error: err.message });
   }
 });
 
