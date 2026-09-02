@@ -2,16 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   UserPlus,
-  ShieldCheck,
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  Sparkles,
   GraduationCap,
   Mail,
   User,
   Trash2,
-  Laptop,
+  Users,
 } from 'lucide-react';
 import { User as UserType } from '../types';
 import { directGoogleSignIn } from '../services/googleAuth';
@@ -65,19 +63,6 @@ export const APP_CANDIDATE_USERS: GoogleUserProfile[] = [
   },
 ];
 
-// Current active device / administrator Google account of the person accessing the app
-export const DEVICE_ACCESS_ACCOUNTS: GoogleUserProfile[] = [
-  {
-    email: 'jaammaaj123@gmail.com',
-    name: 'Jaam Maaj (Admin)',
-    role: 'admin',
-    department: 'Placement Cell & System Administration',
-    tag: 'Active Device Account',
-    avatarBg: 'from-indigo-600 to-purple-700',
-    avatarText: 'JM',
-  },
-];
-
 const SAVED_ACCOUNTS_STORAGE_KEY = 'ai_portal_saved_device_accounts';
 
 interface GoogleAccountChooserModalProps {
@@ -95,7 +80,7 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
   const [error, setError] = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<string | null>(null);
 
-  // 'initial' = candidate list, 'another_account' = personal/device accounts & custom entry
+  // 'candidates' = candidate list, 'another_account' = personal/device accounts & custom entry
   const [viewMode, setViewMode] = useState<'candidates' | 'another_account'>('candidates');
   const [customEmail, setCustomEmail] = useState<string>('');
   const [customName, setCustomName] = useState<string>('');
@@ -125,15 +110,15 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
     try {
       const result = await directGoogleSignIn(email, name);
       
-      // Save this account to device memory if not present
+      // Save this account to device memory for this user's future logins
       saveAccountToDevice({
         email: result.user.email,
         name: result.user.name,
         role: result.user.role as 'admin' | 'user',
-        department: result.user.role === 'admin' ? 'Placement Cell Admin' : 'Registered Candidate',
+        department: 'Placement Portal User',
         tag: 'Saved Account',
-        avatarBg: result.user.role === 'admin' ? 'from-indigo-600 to-purple-700' : 'from-cyan-500 to-blue-600',
-        avatarText: result.user.name.slice(0, 2).toUpperCase(),
+        avatarBg: 'from-cyan-500 to-blue-600',
+        avatarText: (result.user.name || result.user.email).slice(0, 2).toUpperCase(),
       });
 
       setSuccessInfo(`Signed in as ${result.user.name} (${result.user.email})`);
@@ -151,7 +136,7 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
   const saveAccountToDevice = (account: GoogleUserProfile) => {
     try {
       const exists = savedDeviceAccounts.some((a) => a.email.toLowerCase() === account.email.toLowerCase());
-      if (!exists && account.email.toLowerCase() !== 'jaammaaj123@gmail.com') {
+      if (!exists) {
         const updated = [account, ...savedDeviceAccounts];
         setSavedDeviceAccounts(updated);
         localStorage.setItem(SAVED_ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
@@ -223,7 +208,7 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
             </div>
           </div>
           <h2 className="text-xl font-bold text-white tracking-tight">
-            {viewMode === 'candidates' ? 'Choose a Google account' : 'Select or Enter Your Google Account'}
+            {viewMode === 'candidates' ? 'Choose a Google account' : 'Sign In with Your Google Account'}
           </h2>
           <p className="text-xs text-slate-400">
             to continue to <span className="font-semibold text-slate-200">Placement Assessment Portal</span>
@@ -249,7 +234,7 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
         {viewMode === 'candidates' ? (
           <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
             <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-1">
-              Registered Portal Accounts
+              Registered Candidate Accounts
             </div>
 
             {APP_CANDIDATE_USERS.map((profile) => {
@@ -308,7 +293,7 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
                     Use another Google account
                   </div>
                   <div className="text-[11px] text-indigo-300/80 font-normal">
-                    Select your personal or administrator Google accounts
+                    Sign in with your personal Google email
                   </div>
                 </div>
               </div>
@@ -316,74 +301,15 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
             </button>
           </div>
         ) : (
-          /* View 2: Device Accounts & Custom Entry */
+          /* View 2: User's Own Google Account Entry & Saved Accounts */
           <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
             
-            {/* Detected / Device Account of the user accessing the app */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Laptop className="w-3.5 h-3.5 text-indigo-400" />
-                  Your Device Google Account
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
-                  Verified Access
-                </span>
-              </div>
-
-              {DEVICE_ACCESS_ACCOUNTS.map((profile) => {
-                const isSelectedLoading = loadingEmail === profile.email;
-
-                return (
-                  <button
-                    key={profile.email}
-                    type="button"
-                    id={`device-account-${profile.email.split('@')[0]}`}
-                    onClick={() => handleSelectAccount(profile.email, profile.name)}
-                    disabled={!!loadingEmail}
-                    className="w-full p-3.5 rounded-2xl border transition-all flex items-center justify-between text-left group cursor-pointer bg-gradient-to-r from-indigo-950/60 to-slate-900 border-indigo-500/40 hover:border-indigo-400 shadow-lg shadow-indigo-950/30"
-                  >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div
-                        className={`w-10 h-10 rounded-full bg-gradient-to-tr ${profile.avatarBg} flex items-center justify-center font-bold text-white text-xs shadow-md shrink-0 ring-2 ring-indigo-500/40`}
-                      >
-                        {isSelectedLoading ? (
-                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          profile.avatarText
-                        )}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-white truncate">
-                            {profile.name}
-                          </span>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/40">
-                            <ShieldCheck className="w-3 h-3 text-cyan-400" />
-                            <span>Admin</span>
-                          </span>
-                        </div>
-                        <div className="text-xs text-indigo-200 font-medium truncate">
-                          {profile.email}
-                        </div>
-                        <div className="text-[11px] text-slate-400 truncate mt-0.5">
-                          {profile.department}
-                        </div>
-                      </div>
-                    </div>
-
-                    <ArrowRight className="w-4 h-4 text-indigo-300 group-hover:text-white transition-colors shrink-0 ml-2" />
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Saved Accounts on this browser/device */}
+            {/* Previously saved accounts on this device */}
             {savedDeviceAccounts.length > 0 && (
-              <div className="space-y-2 pt-1">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-1">
-                  Recently Used on This Device
+              <div className="space-y-2">
+                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-1 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-indigo-400" />
+                  Your Saved Google Accounts
                 </div>
                 {savedDeviceAccounts.map((account) => {
                   const isSelectedLoading = loadingEmail === account.email;
@@ -414,34 +340,40 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={(e) => handleRemoveSavedAccount(e, account.email)}
-                        title="Remove from saved accounts"
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors shrink-0"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => handleRemoveSavedAccount(e, account.email)}
+                          title="Remove account"
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors shrink-0" />
+                      </div>
                     </div>
                   );
                 })}
               </div>
             )}
 
-            {/* Or Enter Any Other Google Email */}
-            <form onSubmit={handleCustomSubmit} className="space-y-3 pt-2 border-t border-slate-800">
+            {/* Enter Your Google Email */}
+            <form onSubmit={handleCustomSubmit} className="space-y-3 pt-1">
               <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-1">
-                Or Add New Google Account
+                Enter Your Google Account Details
               </div>
 
               <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Google Email Address
+                </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input
                     type="email"
-                    id="input-custom-email"
+                    id="input-user-google-email"
                     required
-                    placeholder="Enter your Google email (e.g. name@gmail.com)"
+                    placeholder="Enter your Gmail address (e.g. name@gmail.com)"
                     value={customEmail}
                     onChange={(e) => setCustomEmail(e.target.value)}
                     className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950 border border-slate-700/80 focus:border-indigo-500 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -450,12 +382,15 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
               </div>
 
               <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Full Name (Optional)
+                </label>
                 <div className="relative">
                   <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input
                     type="text"
-                    id="input-custom-name"
-                    placeholder="Your Full Name (Optional)"
+                    id="input-user-google-name"
+                    placeholder="Your Full Name"
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
                     className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950 border border-slate-700/80 focus:border-indigo-500 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -463,7 +398,7 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-1">
+              <div className="flex gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setViewMode('candidates')}
@@ -480,7 +415,7 @@ export const GoogleAccountChooserModal: React.FC<GoogleAccountChooserModalProps>
                     <span>Signing in...</span>
                   ) : (
                     <>
-                      <span>Sign In & Save</span>
+                      <span>Sign In with Google</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </>
                   )}

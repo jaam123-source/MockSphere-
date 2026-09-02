@@ -114,7 +114,7 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
                 <span>Google Authentication</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">
-                Candidate & Admin Portal
+                Candidate Portal Sign In
               </h2>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Sign in with your Google account to access practice tests, resume your learning progress, and launch AI interview rounds.
@@ -164,7 +164,7 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
                   <Users className="w-4 h-4" />
                 </div>
                 <div className="text-[11px] text-slate-400 leading-snug">
-                  Click to select from your registered candidate or administrator Google accounts.
+                  Click to select your Google account or sign in with your personal Gmail address.
                 </div>
               </div>
 
