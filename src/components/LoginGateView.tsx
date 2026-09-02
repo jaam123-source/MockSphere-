@@ -10,39 +10,37 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { User as UserType } from '../types';
-import { GoogleAccountChooserModal } from './GoogleAccountChooserModal';
+import { promptGoogleSignIn } from '../services/googleAuth';
 
 interface LoginGateViewProps {
   onAuthSuccess: (user: UserType) => void;
 }
 
 export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) => {
-  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<string | null>(null);
 
-  const handleOpenGoogleAuth = () => {
+  const handleGoogleSignIn = async () => {
     setError(null);
-    setIsGoogleModalOpen(true);
-  };
-
-  const handleGoogleSuccess = (user: UserType, message?: string) => {
     setLoading(true);
-    setSuccessInfo(message || `Authenticated as ${user.name}`);
-    setError(null);
-    setTimeout(() => {
-      onAuthSuccess(user);
-    }, 400);
-  };
 
-  const handleGoogleError = (errorMsg: string) => {
-    setError(errorMsg);
+    try {
+      const result = await promptGoogleSignIn();
+      setSuccessInfo(`Signed in successfully as ${result.user.name} (${result.user.email})`);
+      setTimeout(() => {
+        onAuthSuccess(result.user);
+      }, 500);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to authenticate with Google. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 relative overflow-hidden">
-      {/* Subtle Background Glows */}
+      {/* Background Ambience */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -119,13 +117,13 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
             <div className="space-y-1.5 pb-2 border-b border-slate-800/80">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-1">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Google OAuth 2.0 Authentication</span>
+                <span>Official Google Sign-In</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">
                 Candidate Sign In
               </h2>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Sign in with your Google account to access your personalized diagnostic assessment, live interview simulations, and placement preparation reports.
+                Continue with your Google account to access your diagnostic tests, resume saved preparation progress, and participate in multimodal AI interviews.
               </p>
             </div>
 
@@ -150,14 +148,14 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
               <button
                 type="button"
                 id="btn-continue-with-google"
-                onClick={handleOpenGoogleAuth}
+                onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="w-full py-3.5 px-4 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-800 font-bold text-sm rounded-2xl shadow-xl shadow-indigo-950/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3 cursor-pointer border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/30"
+                className="w-full py-3.5 px-4 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-800 font-bold text-sm rounded-2xl shadow-xl shadow-indigo-950/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3 cursor-pointer border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <span className="flex items-center gap-2 text-slate-700">
                     <span className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                    <span>Signing in with Google...</span>
+                    <span>Connecting to Google...</span>
                   </span>
                 ) : (
                   <>
@@ -185,40 +183,19 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
               </button>
 
               <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-1 text-center">
-                <div className="text-[11px] font-semibold text-slate-400">
-                  Single Sign-On (SSO) with Google
+                <div className="text-[11px] font-semibold text-slate-300">
+                  Real Google Account Chooser
                 </div>
                 <div className="text-[11px] text-slate-500">
-                  New and existing accounts are linked seamlessly with no duplicate entries.
+                  Selects from the real Google accounts available on your browser/device.
                 </div>
               </div>
-            </div>
-
-            {/* Quick Profile Selection */}
-            <div className="pt-3 border-t border-slate-800 flex flex-col gap-2">
-              <button
-                type="button"
-                id="btn-choose-account"
-                onClick={handleOpenGoogleAuth}
-                className="w-full py-2.5 bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-xs rounded-xl border border-slate-700/80 transition-colors flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Switch / Select Google Account</span>
-              </button>
             </div>
 
           </div>
         </div>
 
       </div>
-
-      {/* Google Account Chooser & Sign-In Dialog */}
-      <GoogleAccountChooserModal
-        isOpen={isGoogleModalOpen}
-        onClose={() => setIsGoogleModalOpen(false)}
-        onSuccess={handleGoogleSuccess}
-        onError={handleGoogleError}
-      />
     </div>
   );
 };

@@ -105,32 +105,41 @@ class Database {
         // Refresh question bank with the full, deduplicated dataset
         parsed.questions = generateDefaultQuestionBank();
 
-        if (!parsed.users || !Array.isArray(parsed.users) || parsed.users.length === 0) {
-          parsed.users = [
-            {
-              user_id: 'user_demo',
-              name: 'Alex Johnson',
-              email: 'candidate@example.com',
-              password_hash: this.hashPassword('Password@123'),
-              created_at: new Date().toISOString(),
-            },
-          ];
+        // Purge any legacy hardcoded / fake demo users
+        if (parsed.users && Array.isArray(parsed.users)) {
+          parsed.users = parsed.users.filter(
+            (u: any) =>
+              u.email !== 'candidate@example.com' &&
+              u.email !== 'demo@interview.com' &&
+              u.email !== 'alex.johnson@gmail.com' &&
+              u.email !== 'sarah.connor@gmail.com' &&
+              u.user_id !== 'user_demo'
+          );
+        } else {
+          parsed.users = [];
         }
+
         if (!parsed.user_progress) {
           parsed.user_progress = {};
         }
+
+        // Clean up orphaned demo user progress
+        delete parsed.user_progress['user_demo'];
+
         Object.keys(parsed.user_progress).forEach((uid) => {
           const up = parsed.user_progress[uid];
           if (!up.active_level_attempts) up.active_level_attempts = {};
           if (!up.question_attempts) up.question_attempts = [];
           if (!up.concept_performance) up.concept_performance = {};
         });
-        if (!parsed.user_progress['user_demo']) {
-          parsed.user_progress['user_demo'] = this.createDefaultUserProgress('user_demo');
-        }
+
         if (!parsed.settings) {
           parsed.settings = { ...DEFAULT_SETTINGS };
+        } else {
+          parsed.settings.globalDemoMode = false;
         }
+
+        this.saveDatabase(parsed);
         return parsed;
       }
     } catch (e) {
@@ -138,22 +147,12 @@ class Database {
     }
 
     const initialData: DatabaseSchema = {
-      users: [
-        {
-          user_id: 'user_demo',
-          name: 'Alex Johnson',
-          email: 'candidate@example.com',
-          password_hash: this.hashPassword('Password@123'),
-          created_at: new Date().toISOString(),
-        },
-      ],
+      users: [],
       settings: { ...DEFAULT_SETTINGS },
       questions: generateDefaultQuestionBank(),
       user_progress: {},
     };
 
-    // Seed demo user with a clean starter state
-    initialData.user_progress['user_demo'] = this.createDefaultUserProgress('user_demo');
     this.saveDatabase(initialData);
     return initialData;
   }
