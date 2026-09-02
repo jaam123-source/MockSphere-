@@ -31,7 +31,7 @@ declare global {
 }
 
 const DEFAULT_CLIENT_ID =
-  (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
+  (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '866683821439-rwus45cfiomfvtyer4atma.apps.googleusercontent.com';
 
 /**
  * Wait for Google Identity Services script to be ready
