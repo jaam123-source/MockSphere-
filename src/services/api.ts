@@ -90,6 +90,20 @@ export const ApiService = {
   },
 
   // Auth
+  async googleAuth(payload: {
+    credential?: string;
+    email?: string;
+    name?: string;
+    avatar_url?: string;
+  }): Promise<{ user: User; token: string; message?: string; isNewUser?: boolean }> {
+    const res = await request<{ user: User; token: string; message?: string; isNewUser?: boolean }>('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    setStoredAuth(res.token, res.user);
+    return res;
+  },
+
   async register(name: string, email: string, password: string): Promise<{ user: User; token: string; email_dispatched?: boolean; message?: string }> {
     const res = await request<{ user: User; token: string; email_dispatched?: boolean; message?: string }>('/api/register', {
       method: 'POST',

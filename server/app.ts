@@ -34,6 +34,67 @@ app.get('/api/health', (req, res) => {
 });
 
 // Authentication Routes
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { credential, email, name, avatar_url } = req.body;
+    let resolvedEmail = email;
+    let resolvedName = name;
+    let resolvedAvatar = avatar_url;
+
+    // If Google ID token JWT was provided, decode its payload
+    if (credential && typeof credential === 'string') {
+      try {
+        const parts = credential.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+          if (payload.email) resolvedEmail = payload.email;
+          if (payload.name) resolvedName = payload.name;
+          if (payload.picture) resolvedAvatar = payload.picture;
+        }
+      } catch (e) {
+        console.warn('[Server] Could not parse Google ID token JWT:', e);
+      }
+    }
+
+    if (!resolvedEmail || typeof resolvedEmail !== 'string' || !resolvedEmail.includes('@')) {
+      return res.status(400).json({ error: 'A valid Google email address is required to sign in.' });
+    }
+
+    const result = db.loginOrRegisterGoogleUser(
+      resolvedEmail,
+      resolvedName,
+      resolvedAvatar
+    );
+
+    // If new user registered, attempt to send welcome email
+    let emailResult: any = null;
+    if (result.isNewUser) {
+      try {
+        emailResult = await sendRegistrationWelcomeEmail({
+          to: result.user.email,
+          userName: result.user.name,
+          appUrl: process.env.APP_URL,
+        });
+      } catch (emailErr: any) {
+        console.warn('[Server] Google sign-in welcome email dispatch warning:', emailErr.message);
+      }
+    }
+
+    res.json({
+      user: result.user,
+      token: result.token,
+      isNewUser: result.isNewUser,
+      emailResult,
+      message: result.isNewUser
+        ? `Account registered with Google! Welcome email sent to ${result.user.email}.`
+        : `Signed in as ${result.user.name}`,
+    });
+  } catch (err: any) {
+    console.error('[Server] Google auth error:', err);
+    res.status(400).json({ error: err.message || 'Google authentication failed' });
+  }
+});
+
 app.post('/api/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;

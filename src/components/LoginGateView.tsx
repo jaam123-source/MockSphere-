@@ -1,90 +1,43 @@
 import React, { useState } from 'react';
 import {
-  Sparkles,
-  Lock,
-  Mail,
-  User,
-  ArrowRight,
-  CheckCircle2,
-  AlertCircle,
   BrainCircuit,
   GraduationCap,
-  ShieldCheck,
   Code2,
   Layers,
   Award,
-  Eye,
+  AlertCircle,
+  ShieldCheck,
+  CheckCircle2,
 } from 'lucide-react';
-import { ApiService } from '../services/api';
 import { User as UserType } from '../types';
-import { EmailOutboxModal } from './EmailOutboxModal';
+import { GoogleAccountChooserModal } from './GoogleAccountChooserModal';
 
 interface LoginGateViewProps {
   onAuthSuccess: (user: UserType) => void;
 }
 
 export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) => {
-  const [isRegister, setIsRegister] = useState<boolean>(false);
-  const [name, setName] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [registrationSuccessData, setRegistrationSuccessData] = useState<{
-    user: UserType;
-    message: string;
-  } | null>(null);
-  const [isOutboxOpen, setIsOutboxOpen] = useState<boolean>(false);
+  const [successInfo, setSuccessInfo] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleOpenGoogleAuth = () => {
     setError(null);
-    setRegistrationSuccessData(null);
-
-    try {
-      if (isRegister) {
-        const res = await ApiService.register(name.trim(), email.trim(), password);
-        setRegistrationSuccessData({
-          user: res.user,
-          message:
-            res.message ||
-            `Account created! Welcome registration email dispatched to ${email.trim()}.`,
-        });
-      } else {
-        const res = await ApiService.login(email.trim(), password);
-        onAuthSuccess(res.user);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please verify your credentials.');
-    } finally {
-      setLoading(false);
-    }
+    setIsGoogleModalOpen(true);
   };
 
-  const handleDemoSignIn = async () => {
+  const handleGoogleSuccess = (user: UserType, message?: string) => {
     setLoading(true);
+    setSuccessInfo(message || `Authenticated as ${user.name}`);
     setError(null);
-    try {
-      const res = await ApiService.enableDemoMode();
-      onAuthSuccess(res.user);
-    } catch (err: any) {
-      // Fallback direct demo login
-      try {
-        const loginRes = await ApiService.login('demo@interview.com', 'Demo@123');
-        onAuthSuccess(loginRes.user);
-      } catch (loginErr: any) {
-        setError('Failed to log in with presentation demo credentials: ' + (loginErr.message || err.message));
-      }
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(() => {
+      onAuthSuccess(user);
+    }, 400);
   };
 
-  const fillRegisterDemo = () => {
-    setName('Sarah Connor');
-    setEmail('sarah.connor@example.com');
-    setPassword('Pass@word123');
+  const handleGoogleError = (errorMsg: string) => {
+    setError(errorMsg);
   };
 
   return (
@@ -158,207 +111,113 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
           </div>
         </div>
 
-        {/* Right Side: Authentication Box */}
+        {/* Right Side: Google Authentication Box */}
         <div className="lg:col-span-6 w-full max-w-md mx-auto">
-          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-md space-y-6">
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-md space-y-6 text-left">
             
-            {/* Header Tabs */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <div>
-                <h2 className="text-xl font-bold text-white tracking-tight">
-                  {registrationSuccessData
-                    ? 'Registration Completed!'
-                    : isRegister
-                    ? 'Candidate Registration'
-                    : 'Candidate Sign In'}
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {registrationSuccessData
-                    ? 'Your confirmation email has been dispatched.'
-                    : isRegister
-                    ? 'Create your account to start diagnostics & receive confirmation mail.'
-                    : 'Sign in to access your assessment dashboard & progression.'}
-                </p>
+            {/* Header */}
+            <div className="space-y-1.5 pb-2 border-b border-slate-800/80">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-1">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Google OAuth 2.0 Authentication</span>
               </div>
+              <h2 className="text-2xl font-bold text-white tracking-tight">
+                Candidate Sign In
+              </h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Sign in with your Google account to access your personalized diagnostic assessment, live interview simulations, and placement preparation reports.
+              </p>
             </div>
 
-            {/* Error & Registration Alerts */}
+            {/* Error Message Display */}
             {error && (
-              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
+              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2.5 animate-fadeIn">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
-            {/* Registration Success Confirmation Card */}
-            {registrationSuccessData ? (
-              <div className="space-y-4 animate-fadeIn">
-                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs space-y-3">
-                  <div className="flex items-center gap-2.5 font-bold text-emerald-400 text-sm">
-                    <CheckCircle2 className="w-5 h-5 shrink-0" />
-                    <span>Welcome Email Dispatched!</span>
-                  </div>
-                  <p className="text-slate-300 leading-relaxed">
-                    You are registered for <strong>Placement Preparation AI</strong>. A confirmation email with your candidate credentials, roadmaps, and next steps has been sent to your Gmail inbox:
-                  </p>
-                  <div className="p-2.5 bg-slate-950/80 border border-emerald-500/30 rounded-xl text-center font-mono font-bold text-cyan-400">
-                    {registrationSuccessData.user.email}
-                  </div>
-                  <div className="text-[11px] text-slate-400 bg-slate-900/60 rounded-lg p-2 border border-slate-800 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                    <span>
-                      The email is delivered via Gmail SMTP (smtp.gmail.com:587) and is accessible in your mobile Gmail app & inbox.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <button
-                    onClick={() => onAuthSuccess(registrationSuccessData.user)}
-                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span>Proceed to Assessment Dashboard</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsOutboxOpen(true)}
-                    className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Eye className="w-4 h-4 text-cyan-400" />
-                    <span>Inspect Email Delivery & Outbox</span>
-                  </button>
-                </div>
+            {/* Success Feedback Display */}
+            {successInfo && (
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2.5 animate-fadeIn">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{successInfo}</span>
               </div>
-            ) : (
-              /* Form */
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {isRegister && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-300">Candidate Full Name</label>
-                    <div className="relative">
-                      <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
-                      <input
-                        type="text"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Alex Johnson"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+            )}
+
+            {/* Single "Continue with Google" Action */}
+            <div className="space-y-4 pt-1">
+              <button
+                type="button"
+                id="btn-continue-with-google"
+                onClick={handleOpenGoogleAuth}
+                disabled={loading}
+                className="w-full py-3.5 px-4 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-800 font-bold text-sm rounded-2xl shadow-xl shadow-indigo-950/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3 cursor-pointer border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/30"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2 text-slate-700">
+                    <span className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                    <span>Signing in with Google...</span>
+                  </span>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
                       />
-                    </div>
-                  </div>
+                      <path
+                        fill="#34A853"
+                        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                      />
+                    </svg>
+                    <span>Continue with Google</span>
+                  </>
                 )}
+              </button>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-300">Email Address (Gmail / Corporate)</label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="candidate@gmail.com"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
-                    />
-                  </div>
+              <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-1 text-center">
+                <div className="text-[11px] font-semibold text-slate-400">
+                  Single Sign-On (SSO) with Google
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-300">Password</label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {loading ? (
-                    'Processing...'
-                  ) : isRegister ? (
-                    <>
-                      Complete Registration & Send Mail <ArrowRight className="w-4 h-4" />
-                    </>
-                  ) : (
-                    <>
-                      Sign In to Dashboard <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
-
-            {/* Quick Demo Login Option */}
-            {!registrationSuccessData && (
-              <div className="pt-3 border-t border-slate-800/80 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={handleDemoSignIn}
-                  disabled={loading}
-                  className="w-full py-2.5 bg-slate-800/80 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-xs rounded-xl border border-slate-700/80 transition-colors flex items-center justify-center gap-2"
-                >
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>One-Click Demo Candidate Login</span>
-                </button>
-
-                <div className="flex items-center justify-between text-xs pt-2">
-                  {isRegister ? (
-                    <button
-                      type="button"
-                      onClick={fillRegisterDemo}
-                      className="text-cyan-400 hover:underline font-semibold"
-                    >
-                      Fill sample data
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsOutboxOpen(true)}
-                      className="text-slate-400 hover:text-cyan-400 flex items-center gap-1 text-[11px]"
-                    >
-                      <Mail className="w-3.5 h-3.5" />
-                      <span>Email Delivery Outbox</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsRegister(!isRegister);
-                      setError(null);
-                      setRegistrationSuccessData(null);
-                    }}
-                    className="text-indigo-400 hover:text-indigo-300 font-semibold"
-                  >
-                    {isRegister ? 'Already registered? Sign In' : 'New candidate? Register'}
-                  </button>
+                <div className="text-[11px] text-slate-500">
+                  New and existing accounts are linked seamlessly with no duplicate entries.
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Quick Demo Access Option */}
+            <div className="pt-3 border-t border-slate-800 flex flex-col gap-2">
+              <button
+                type="button"
+                id="btn-quick-demo-login"
+                onClick={handleOpenGoogleAuth}
+                className="w-full py-2.5 bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-xs rounded-xl border border-slate-700/80 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>Select Candidate Profile</span>
+              </button>
+            </div>
 
           </div>
         </div>
 
       </div>
 
-      {/* Email Outbox & Preview Modal */}
-      <EmailOutboxModal
-        isOpen={isOutboxOpen}
-        onClose={() => setIsOutboxOpen(false)}
-        currentUser={registrationSuccessData?.user || null}
+      {/* Google Account Chooser & Sign-In Dialog */}
+      <GoogleAccountChooserModal
+        isOpen={isGoogleModalOpen}
+        onClose={() => setIsGoogleModalOpen(false)}
+        onSuccess={handleGoogleSuccess}
+        onError={handleGoogleError}
       />
     </div>
   );

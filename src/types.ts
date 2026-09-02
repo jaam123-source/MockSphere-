@@ -2,7 +2,9 @@ export interface User {
   user_id: string;
   name: string;
   email: string;
-  password_hash: string;
+  password_hash?: string;
+  avatar_url?: string;
+  auth_provider?: 'google' | 'password';
   created_at: string;
 }
 

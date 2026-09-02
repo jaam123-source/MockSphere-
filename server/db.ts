@@ -201,6 +201,46 @@ class Database {
   }
 
   // User Authentication
+  public loginOrRegisterGoogleUser(
+    email: string,
+    name?: string,
+    avatarUrl?: string
+  ): { user: User; token: string; isNewUser: boolean } {
+    const cleanEmail = email.trim().toLowerCase();
+    let user = this.data.users.find((u) => u.email.toLowerCase() === cleanEmail);
+    let isNewUser = false;
+
+    if (!user) {
+      const derivedName = name && name.trim() ? name.trim() : cleanEmail.split('@')[0];
+      user = {
+        user_id: `usr_g_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        name: derivedName,
+        email: cleanEmail,
+        avatar_url: avatarUrl,
+        auth_provider: 'google',
+        created_at: new Date().toISOString(),
+      };
+      this.data.users.push(user);
+      this.data.user_progress[user.user_id] = this.createDefaultUserProgress(user.user_id);
+      isNewUser = true;
+    } else {
+      // User already exists - reuse account and don't create duplicate
+      if (name && name.trim() && (!user.name || user.name === 'Alex Johnson' || user.name === cleanEmail.split('@')[0])) {
+        user.name = name.trim();
+      }
+      if (avatarUrl) {
+        user.avatar_url = avatarUrl;
+      }
+      user.auth_provider = 'google';
+      if (!this.data.user_progress[user.user_id]) {
+        this.data.user_progress[user.user_id] = this.createDefaultUserProgress(user.user_id);
+      }
+    }
+
+    this.saveDatabase();
+    return { user, token: `token_${user.user_id}`, isNewUser };
+  }
+
   public registerUser(name: string, email: string, password: string): { user: User; token: string } {
     const existing = this.data.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (existing) {
