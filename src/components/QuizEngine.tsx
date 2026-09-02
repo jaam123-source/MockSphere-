@@ -74,7 +74,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [result, setResult] = useState<LevelAttemptResult | TopicTestResult | null>(null);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
-  const [showReviewList, setShowReviewList] = useState<boolean>(false);
+  const [showReviewList, setShowReviewList] = useState<boolean>(true);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'wrong' | 'correct'>('all');
 
   const topicName = TOPIC_TITLES[topicId] || 'Aptitude Assessment';
@@ -303,13 +303,78 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     );
   }
 
+  // Helper to format option text
+  const getOptionText = (item: ReviewQuestionItem, choice: string) => {
+    const c = (choice || '').trim().toUpperCase();
+    if (c === 'A') return item.option_a || 'Option A';
+    if (c === 'B') return item.option_b || 'Option B';
+    if (c === 'C') return item.option_c || 'Option C';
+    if (c === 'D') return item.option_d || 'Option D';
+    if (!c || c === 'NONE') return 'None selected';
+    return choice;
+  };
+
+  // Helper to render level progress indicator
+  const renderLevelProgressIndicator = () => {
+    const topic = dashboard?.topics?.[topicId];
+    const completedCount = topic?.completedLevels ?? 0;
+    const test1Passed = topic?.test1Passed ?? false;
+
+    const levels = [1, 2, 3, 4, 5];
+
+    return (
+      <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between gap-1.5 overflow-x-auto text-xs shadow-lg">
+        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> Progression Map:
+        </div>
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          {levels.map((lvl, i) => {
+            const isDone = lvl <= completedCount || (result?.status === 'PASSED' && lvl <= levelId && mode === 'level');
+            let isUnlocked = lvl === 1 || lvl - 1 <= completedCount || (result?.status === 'PASSED' && lvl - 1 <= levelId && mode === 'level');
+            if (lvl > 5 && !test1Passed) isUnlocked = false;
+
+            let iconText = '🔒 Locked';
+            let style = 'bg-slate-950/60 text-slate-500 border-slate-800/80';
+
+            if (isDone) {
+              iconText = '✓ Completed';
+              style = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 font-bold';
+            } else if (isUnlocked) {
+              iconText = '🔓 Unlocked';
+              style = lvl === levelId && !result
+                ? 'bg-indigo-600 text-white border-indigo-400 font-extrabold shadow-md shadow-indigo-600/30'
+                : 'bg-indigo-500/15 text-indigo-300 border-indigo-500/40 font-bold';
+            }
+
+            return (
+              <React.Fragment key={lvl}>
+                <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 shrink-0 text-xs ${style}`}>
+                  <span>Level {lvl}</span>
+                  <span className="text-[11px] font-semibold">{iconText}</span>
+                </div>
+                {i < levels.length - 1 && (
+                  <span className="text-slate-600 font-bold shrink-0">→</span>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   // ---------------- RESULT VIEW ----------------
   if (result) {
     const isPassed = result.status === 'PASSED';
-    const isLevelAttempt = 'next_level_unlocked' in result;
+    const totalQ = result.total_questions || 10;
+    const correctCount = result.score;
+    const wrongCount = totalQ - correctCount;
 
     return (
       <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-28 sm:pb-8 space-y-6 animate-fadeIn">
+        {/* Progress Tracker Indicator */}
+        {renderLevelProgressIndicator()}
+
         {/* Result Header Card */}
         <div
           id="quiz-result-summary-card"
@@ -319,7 +384,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
               : 'bg-gradient-to-b from-rose-950/40 via-slate-900 to-slate-900 border-rose-500/40'
           }`}
         >
-          <div className="relative z-10 space-y-4">
+          <div className="relative z-10 space-y-5">
             <div
               className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-2xl flex items-center justify-center border shadow-lg ${
                 isPassed
@@ -331,102 +396,84 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
             </div>
 
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2 border">
-                {isPassed ? (
-                  <span className="text-emerald-400 border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                    Assessment Passed (≥{result.cutoff}% Cutoff Cleared)
-                  </span>
-                ) : (
-                  <span className="text-rose-400 border-rose-500/20 bg-rose-500/10 px-2 py-0.5 rounded-full">
-                    Cutoff Not Met (&lt;{result.cutoff}%)
-                  </span>
-                )}
+              <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
+                {mode === 'level' ? `Level ${levelId} Result` : `Topic Test ${testNumber} Result`}
               </div>
 
-              <h2 className="text-3xl font-extrabold text-white">
-                {isPassed ? `Level ${levelId} Cleared!` : 'Cutoff Not Reached'}
-              </h2>
-              <p className="text-sm text-slate-300 max-w-lg mx-auto mt-1">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
                 {isPassed
-                  ? mode === 'level' && levelId === 5
-                    ? `Level 5 Complete! You scored ${result.percentage}%. Checkpoint Test 1 is now unlocked. Clear Test 1 (≥70%) to unlock Level 6.`
-                    : mode === 'level' && levelId < 10
-                    ? `Great job! You scored ${result.percentage}% (Cutoff: ${result.cutoff}%). Level ${levelId + 1} is now unlocked.`
-                    : 'You met the required proficiency standard and unlocked the next progression tier.'
-                  : `You scored ${result.percentage}%. A minimum cutoff of ${result.cutoff}% is required to unlock Level ${levelId + 1}. Please review explanations below.`}
+                  ? `Congratulations! You passed Level ${levelId}.`
+                  : 'You did not reach the 70% cutoff.'}
+              </h2>
+              <p className="text-sm text-slate-300 max-w-lg mx-auto mt-2">
+                {isPassed
+                  ? `You achieved ${result.percentage}% accuracy (70% Cutoff Cleared). Level ${levelId + 1} is now unlocked.`
+                  : `You scored ${result.percentage}%. A score of 70% or higher is required to unlock Level ${levelId + 1}. Please review explanations below.`}
               </p>
             </div>
 
-            {/* Prominent High-Visibility Progression Banner when passed */}
-            {isPassed && mode === 'level' && levelId < 10 && levelId !== 5 && onProceedNextLevel && (
-              <div className="p-4 bg-emerald-500/10 border border-emerald-500/40 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-left max-w-2xl mx-auto shadow-lg shadow-emerald-500/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-white">
-                      Level {levelId + 1} Unlocked!
-                    </div>
-                    <p className="text-xs text-slate-300">
-                      You passed Level {levelId} with {result.percentage}% accuracy (Cutoff: {result.cutoff}%). Advance to Level {levelId + 1} now.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  id="btn-banner-proceed-next-level"
-                  onClick={() => onProceedNextLevel(levelId + 1)}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5 shrink-0 transition-transform hover:scale-105 cursor-pointer"
-                >
-                  <span>Proceed to Level {levelId + 1}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
             {/* Score Metrics Box */}
-            <div className="grid grid-cols-3 gap-4 max-w-md mx-auto pt-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto pt-2">
               <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
                 <div className="text-xs text-slate-400 font-medium">Score</div>
-                <div className="text-xl font-bold text-white">
-                  {result.score} <span className="text-xs text-slate-400">/ {result.total_questions}</span>
+                <div className="text-lg font-bold text-white">
+                  {result.score} / {totalQ}
                 </div>
               </div>
+
               <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
                 <div className="text-xs text-slate-400 font-medium">Percentage</div>
-                <div
-                  className={`text-xl font-bold ${
-                    isPassed ? 'text-emerald-400' : 'text-rose-400'
-                  }`}
-                >
+                <div className={`text-lg font-bold ${isPassed ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {result.percentage}%
                 </div>
               </div>
+
               <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
-                <div className="text-xs text-slate-400 font-medium">Passing Cutoff</div>
-                <div className="text-xl font-bold text-cyan-400">{result.cutoff}%</div>
+                <div className="text-xs text-slate-400 font-medium">Correct Answers</div>
+                <div className="text-lg font-bold text-emerald-400">
+                  ✓ {correctCount}
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
+                <div className="text-xs text-slate-400 font-medium">Wrong Answers</div>
+                <div className="text-lg font-bold text-rose-400">
+                  ✗ {wrongCount}
+                </div>
               </div>
             </div>
 
-            {/* Actions Bar */}
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-6">
+            {/* Prominent Actions Bar */}
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
               {isPassed && mode === 'level' && levelId < 10 && levelId !== 5 && onProceedNextLevel ? (
                 <button
-                  id="btn-proceed-next-level"
+                  id="btn-continue-next-level"
                   onClick={() => onProceedNextLevel(levelId + 1)}
-                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition-transform hover:scale-105"
+                  className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-transform hover:scale-105 cursor-pointer"
                 >
-                  Proceed to Level {levelId + 1} <ArrowRight className="w-4 h-4" />
+                  <span>Continue to Level {levelId + 1}</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               ) : null}
+
+              {!isPassed && (
+                <button
+                  id="btn-retry-level"
+                  onClick={() => loadQuestions(true)}
+                  className="px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-rose-600/30 flex items-center gap-2 transition-transform hover:scale-105 cursor-pointer"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Retry Level {levelId}</span>
+                </button>
+              )}
 
               {isPassed && mode === 'level' && levelId === 5 && onProceedTest ? (
                 <button
                   id="btn-proceed-test-1"
                   onClick={() => onProceedTest(1)}
-                  className="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-sm rounded-xl shadow-lg shadow-amber-500/25 flex items-center gap-2 transition-transform hover:scale-105"
+                  className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm rounded-xl shadow-lg shadow-amber-500/25 flex items-center gap-2 transition-transform hover:scale-105 cursor-pointer"
                 >
-                  <Award className="w-4 h-4 text-slate-950" /> Start Checkpoint Test 1 (Unlocks Level 6) <ArrowRight className="w-4 h-4" />
+                  <Award className="w-4 h-4" /> Start Checkpoint Test 1 <ArrowRight className="w-4 h-4" />
                 </button>
               ) : null}
 
@@ -434,76 +481,18 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
                 <button
                   id="btn-proceed-test-2"
                   onClick={() => onProceedTest(2)}
-                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-transform hover:scale-105"
+                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-transform hover:scale-105 cursor-pointer"
                 >
-                  Start Checkpoint Test 2 <ArrowRight className="w-4 h-4" />
-                </button>
-              ) : null}
-
-              {/* Next Stage Unlocked: Technical Round or Final Test */}
-              {isPassed && mode === 'test' && testNumber === 2 && dashboard.progression.technical_unlocked && onStartTechnicalInterview ? (
-                <button
-                  id="btn-quiz-proceed-technical"
-                  onClick={onStartTechnicalInterview}
-                  className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-sm rounded-xl shadow-lg shadow-cyan-500/30 flex items-center gap-2 transition-transform hover:scale-105"
-                >
-                  <Award className="w-4 h-4" /> Enter AI Technical Round (5 Domains) <ArrowRight className="w-4 h-4" />
-                </button>
-              ) : isPassed && mode === 'test' && testNumber === 2 && dashboard.progression.final_aptitude_unlocked && onStartFinalTest ? (
-                <button
-                  id="btn-quiz-proceed-final-test"
-                  onClick={onStartFinalTest}
-                  className="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm rounded-xl shadow-lg shadow-amber-500/25 flex items-center gap-2 transition-transform hover:scale-105"
-                >
-                  <Award className="w-4 h-4" /> Take 25-Q Final Aptitude Test <ArrowRight className="w-4 h-4" />
-                </button>
-              ) : null}
-
-              {/* Retry button with non-repetitive fresh pool */}
-              <button
-                id="btn-retry-assessment"
-                onClick={() => loadQuestions(true)}
-                className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-cyan-600/30 flex items-center gap-2 transition-transform hover:scale-105"
-              >
-                <RotateCcw className="w-4 h-4" /> {isPassed ? 'Practice Again (New Questions)' : 'Retry Level (Fresh Questions)'}
-              </button>
-
-              {!isPassed && onOpenRevision ? (
-                <button
-                  id="btn-enter-revision-mode"
-                  onClick={onOpenRevision}
-                  className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-amber-600/30 flex items-center gap-2 transition-transform hover:scale-105"
-                >
-                  <BookOpen className="w-4 h-4" /> Enter Revision Mode
+                  <Award className="w-4 h-4" /> Start Checkpoint Test 2 <ArrowRight className="w-4 h-4" />
                 </button>
               ) : null}
 
               <button
                 id="btn-return-map"
                 onClick={onBack}
-                className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm rounded-xl border border-slate-700 transition-colors"
+                className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm rounded-xl border border-slate-700 transition-colors cursor-pointer"
               >
                 Return to Level Map
-              </button>
-
-              <button
-                id="btn-toggle-review-answers"
-                onClick={() => {
-                  const nextState = !showReviewList;
-                  setShowReviewList(nextState);
-                  if (nextState) {
-                    setTimeout(() => {
-                      document.getElementById('quiz-review-section')?.scrollIntoView({ behavior: 'smooth' });
-                    }, 100);
-                  }
-                }}
-                className={`px-5 py-3 font-semibold text-sm rounded-xl border transition-all flex items-center gap-2 ${
-                  showReviewList
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-600/30'
-                    : 'bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border-indigo-500/30'
-                }`}
-              >
-                <BookOpen className="w-4 h-4" /> {showReviewList ? 'Hide Explanations' : 'Review Explanations'}
               </button>
             </div>
           </div>
@@ -752,7 +741,19 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
 
                       {/* Question Statement */}
                       <div className="text-sm font-semibold text-white leading-relaxed">
-                        {item.question}
+                        Question {originalIndex || idx + 1}: {item.question}
+                      </div>
+
+                      {/* Explicit Answer Review Summary */}
+                      <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div className={`p-2 rounded-lg border ${item.is_correct ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300' : 'bg-rose-950/20 border-rose-500/30 text-rose-300'}`}>
+                          <span className="font-bold text-slate-300">Your Answer: </span>
+                          <span className="font-semibold">{getOptionText(item, item.your_answer)}</span>
+                        </div>
+                        <div className="p-2 rounded-lg border bg-emerald-950/20 border-emerald-500/30 text-emerald-300">
+                          <span className="font-bold text-slate-300">Correct Answer: </span>
+                          <span className="font-semibold">{getOptionText(item, item.correct_answer)}</span>
+                        </div>
                       </div>
 
                       {/* Options Grid */}

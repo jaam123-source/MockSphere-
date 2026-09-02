@@ -138,6 +138,42 @@ export const TopicLevelMapView: React.FC<TopicLevelMapViewProps> = ({
         </div>
       </div>
 
+      {/* Level Progress Indicator */}
+      <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between gap-1.5 overflow-x-auto text-xs shadow-lg">
+        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> Progression Stepper:
+        </div>
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          {[1, 2, 3, 4, 5].map((lvl, i) => {
+            const passed = isLevelPassed(lvl);
+            const unlocked = isLevelUnlocked(lvl);
+
+            let iconText = '🔒';
+            let style = 'bg-slate-950/60 text-slate-500 border-slate-800/80';
+
+            if (passed) {
+              iconText = '✓';
+              style = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 font-bold';
+            } else if (unlocked) {
+              iconText = '🔓';
+              style = 'bg-indigo-500/15 text-indigo-300 border-indigo-500/40 font-bold';
+            }
+
+            return (
+              <React.Fragment key={lvl}>
+                <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 shrink-0 text-xs ${style}`}>
+                  <span>Level {lvl}</span>
+                  <span className="text-[11px] font-semibold">{iconText}</span>
+                </div>
+                {i < 4 && (
+                  <span className="text-slate-600 font-bold shrink-0">→</span>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
       {/* PHASE 1: Levels 1 through 5 */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
