@@ -396,49 +396,69 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
             </div>
 
             <div>
-              <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-                {mode === 'level' ? `Level ${levelId} Result` : `Topic Test ${testNumber} Result`}
+              <div className="text-sm font-extrabold uppercase tracking-widest text-indigo-400 mb-1">
+                {mode === 'level' ? `LEVEL ${levelId} RESULT` : `TOPIC TEST ${testNumber} RESULT`}
               </div>
 
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
                 {isPassed
                   ? `Congratulations! You passed Level ${levelId}.`
-                  : 'You did not reach the 70% cutoff.'}
+                  : `You did not reach the ${result.cutoff}% cutoff.`}
               </h2>
-              <p className="text-sm text-slate-300 max-w-lg mx-auto mt-2">
-                {isPassed
-                  ? `You achieved ${result.percentage}% accuracy (70% Cutoff Cleared). Level ${levelId + 1} is now unlocked.`
-                  : `You scored ${result.percentage}%. A score of 70% or higher is required to unlock Level ${levelId + 1}. Please review explanations below.`}
-              </p>
+
+              <div className={`mt-3 py-2 px-4 rounded-xl border max-w-md mx-auto text-sm font-bold ${
+                isPassed
+                  ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300'
+                  : 'bg-rose-950/60 border-rose-500/50 text-rose-300'
+              }`}>
+                {isPassed ? (
+                  <div>
+                    <span className="text-base font-black">✓ LEVEL {levelId} PASSED</span>
+                    <p className="text-xs font-medium text-emerald-200 mt-0.5">
+                      You scored {result.percentage}%. Required cutoff: {result.cutoff}%.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="text-base font-black">✗ LEVEL {levelId} NOT PASSED</span>
+                    <p className="text-xs font-medium text-rose-200 mt-0.5">
+                      Your Score: {result.score} / {totalQ} ({result.percentage}%). Required Cutoff: {result.cutoff}%.
+                    </p>
+                    <p className="text-[11px] text-rose-300/80 mt-0.5">
+                      You need at least {result.cutoff}% to unlock Level {levelId + 1}.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Score Metrics Box */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto pt-2">
               <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
-                <div className="text-xs text-slate-400 font-medium">Score</div>
+                <div className="text-xs text-slate-400 font-medium">Your Score</div>
                 <div className="text-lg font-bold text-white">
                   {result.score} / {totalQ}
                 </div>
               </div>
 
               <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
-                <div className="text-xs text-slate-400 font-medium">Percentage</div>
+                <div className="text-xs text-slate-400 font-medium">Your Percentage</div>
                 <div className={`text-lg font-bold ${isPassed ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {result.percentage}%
                 </div>
               </div>
 
               <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
-                <div className="text-xs text-slate-400 font-medium">Correct Answers</div>
-                <div className="text-lg font-bold text-emerald-400">
-                  ✓ {correctCount}
+                <div className="text-xs text-slate-400 font-medium">Cutoff</div>
+                <div className="text-lg font-bold text-cyan-400">
+                  {result.cutoff}%
                 </div>
               </div>
 
               <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
-                <div className="text-xs text-slate-400 font-medium">Wrong Answers</div>
-                <div className="text-lg font-bold text-rose-400">
-                  ✗ {wrongCount}
+                <div className="text-xs text-slate-400 font-medium">Status</div>
+                <div className={`text-lg font-bold ${isPassed ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {isPassed ? 'PASSED ✓' : 'FAILED ✗'}
                 </div>
               </div>
             </div>

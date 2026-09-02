@@ -56,12 +56,15 @@ export default function App() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadDashboard = async () => {
-    const token = ApiService.getCurrentUser();
-    if (!token) {
+    const user = ApiService.getCurrentUser();
+    if (!user) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    // Only set loading spinner if dashboard has not been fetched yet
+    if (!dashboard) {
+      setLoading(true);
+    }
     setLoadError(null);
     try {
       const state = await ApiService.getDashboardState();
@@ -71,18 +74,17 @@ export default function App() {
       }
     } catch (err: any) {
       console.error('Failed to load dashboard state:', err);
-      // If unauthorized, clear stored auth and prompt login
+      // Only clear session if initial load failed with explicit auth error
       if (
+        !dashboard &&
         err.message &&
         (err.message.includes('401') ||
-          err.message.includes('404') ||
-          err.message.includes('not found') ||
           err.message.includes('Authentication required') ||
           err.message.includes('User not found'))
       ) {
         ApiService.logout();
         setCurrentUser(null);
-      } else {
+      } else if (!dashboard) {
         setLoadError(err.message || 'Failed to connect to backend server');
       }
     } finally {
