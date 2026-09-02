@@ -62,17 +62,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-blue-500 to-cyan-400 flex items-center justify-center shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-200 shrink-0">
                 <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div className="min-w-0 truncate">
+              <div className="min-w-0">
                 <div className="flex items-center gap-1.5 sm:gap-2">
-                  <span className="font-bold tracking-tight text-sm sm:text-base md:text-lg text-slate-100 group-hover:text-blue-400 transition-colors truncate">
-                    AI Interview System
+                  <span className="font-extrabold tracking-tight text-base sm:text-lg md:text-xl text-white group-hover:text-blue-400 transition-colors">
+                    Mock-Sphere
                   </span>
-                  <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
-                    <Sparkles className="w-3 h-3 text-cyan-400" /> Multimodal
+                  <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                    <Sparkles className="w-2.5 h-2.5 text-cyan-400" /> Pro
                   </span>
                 </div>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 hidden sm:block truncate">
-                  Learning • Aptitude • Technical • Behavioral HR
+                <p className="text-[11px] sm:text-xs text-slate-400 font-medium truncate">
+                  AI Virtual Interview Trainer
                 </p>
               </div>
             </div>

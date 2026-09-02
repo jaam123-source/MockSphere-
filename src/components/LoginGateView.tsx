@@ -45,12 +45,12 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
-              AI Multimodal <br />
-              <span className="bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-                Interview & Assessment Suite
-              </span>
+            <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+              Mock-Sphere
             </h1>
+            <p className="text-base sm:text-xl font-bold bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+              AI Virtual Interview Trainer
+            </p>
             <p className="text-sm text-slate-400 leading-relaxed max-w-xl">
               Prepare for Tier-1 technology companies and campus placements with diagnostic aptitude tests, multimodal code & speech evaluations, and intelligent STAR behavioral interviews.
             </p>
