@@ -206,11 +206,21 @@ class Database {
   public loginOrRegisterGoogleUser(
     email: string,
     name?: string,
-    avatarUrl?: string
+    avatarUrl?: string,
+    googleId?: string
   ): { user: User; token: string; isNewUser: boolean } {
     const cleanEmail = email.trim().toLowerCase();
     const isAdmin = cleanEmail === ADMIN_EMAIL.toLowerCase();
-    let user = this.data.users.find((u) => u.email.toLowerCase() === cleanEmail);
+
+    // Prefer matching by Google unique sub (googleId) first, then email
+    let user: User | undefined = undefined;
+    if (googleId) {
+      user = this.data.users.find((u) => u.google_id === googleId);
+    }
+    if (!user) {
+      user = this.data.users.find((u) => u.email.toLowerCase() === cleanEmail);
+    }
+
     let isNewUser = false;
 
     if (!user) {
@@ -219,6 +229,7 @@ class Database {
         user_id: `usr_g_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         name: derivedName,
         email: cleanEmail,
+        google_id: googleId,
         role: isAdmin ? 'admin' : 'user',
         avatar_url: avatarUrl,
         auth_provider: 'google',
@@ -229,6 +240,9 @@ class Database {
       isNewUser = true;
     } else {
       // User already exists - reuse account and don't create duplicate
+      if (googleId && !user.google_id) {
+        user.google_id = googleId;
+      }
       if (name && name.trim() && (!user.name || user.name === 'Alex Johnson' || user.name === cleanEmail.split('@')[0])) {
         user.name = name.trim();
       }

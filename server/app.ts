@@ -60,10 +60,11 @@ app.get('/api/health', (req, res) => {
 // Authentication Routes
 app.post('/api/auth/google', async (req, res) => {
   try {
-    const { credential, email, name, avatar_url } = req.body;
+    const { credential, email, name, avatar_url, google_id } = req.body;
     let resolvedEmail = email;
     let resolvedName = name;
     let resolvedAvatar = avatar_url;
+    let resolvedGoogleId = google_id;
 
     // If Google ID token JWT was provided, decode its payload
     if (credential && typeof credential === 'string') {
@@ -74,6 +75,7 @@ app.post('/api/auth/google', async (req, res) => {
           if (payload.email) resolvedEmail = payload.email;
           if (payload.name) resolvedName = payload.name;
           if (payload.picture) resolvedAvatar = payload.picture;
+          if (payload.sub) resolvedGoogleId = payload.sub;
         }
       } catch (e) {
         console.warn('[Server] Could not parse Google ID token JWT:', e);
@@ -87,7 +89,8 @@ app.post('/api/auth/google', async (req, res) => {
     const result = db.loginOrRegisterGoogleUser(
       resolvedEmail,
       resolvedName,
-      resolvedAvatar
+      resolvedAvatar,
+      resolvedGoogleId
     );
 
     // If new user registered, attempt to send welcome email

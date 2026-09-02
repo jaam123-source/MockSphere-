@@ -2,6 +2,7 @@ export interface User {
   user_id: string;
   name: string;
   email: string;
+  google_id?: string;
   role?: 'admin' | 'user';
   password_hash?: string;
   avatar_url?: string;

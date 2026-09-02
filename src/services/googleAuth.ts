@@ -130,6 +130,7 @@ export async function promptGoogleSignIn(): Promise<{ user: User; token: string;
               email: googleUserInfo.email,
               name: googleUserInfo.name || googleUserInfo.email.split('@')[0],
               avatar_url: googleUserInfo.picture,
+              google_id: googleUserInfo.sub,
             });
 
             setStoredAuth(authResult.token, authResult.user);

@@ -95,6 +95,7 @@ export const ApiService = {
     email?: string;
     name?: string;
     avatar_url?: string;
+    google_id?: string;
   }): Promise<{ user: User; token: string; message?: string; isNewUser?: boolean }> {
     const res = await request<{ user: User; token: string; message?: string; isNewUser?: boolean }>('/api/auth/google', {
       method: 'POST',
