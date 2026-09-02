@@ -7,19 +7,23 @@ import {
   AptitudeQuestion,
   AptitudeTopicId,
   AptitudeTopicInfo,
+  ComprehensiveAptitudeReport,
   ConceptMastery,
   FinalAptitudeResult,
   FinalReportData,
   HRInterviewSession,
   HRQuestion,
   LevelAttemptResult,
+  LevelPerformanceItem,
   QuestionAttemptLog,
   ReviewQuestionItem,
   TechnicalDomainId,
   TechnicalInterviewSession,
+  TopicPerformanceItem,
   TopicTestResult,
   User,
   UserDashboardState,
+  WrongAnswerItem,
 } from '../src/types';
 import { generateDefaultQuestionBank, TOPICS_META, CONCEPT_TIPS, normalizeQuestionText } from './questionBank';
 import { generateAITechnicalQuestions, evaluateTechnicalAnswer, evaluateHREvaluation, generateFinalAIFeedback, DOMAIN_DEFAULTS } from './ai';
@@ -1464,33 +1468,264 @@ class Database {
   public async getFinalReport(userId: string): Promise<FinalReportData> {
     const user = this.getUserById(userId) || this.data.users[0];
     const prog = this.getUserProgress(user.user_id);
-    const dashboard = this.getDashboardState(user.user_id);
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const levelAttempts = prog.level_attempts || [];
+    const testAttempts = prog.test_attempts || [];
+    const questionAttempts = prog.question_attempts || [];
+
+    const hasData = levelAttempts.length > 0 || testAttempts.length > 0 || questionAttempts.length > 0;
+
+    let compReport: ComprehensiveAptitudeReport;
+
+    if (!hasData) {
+      compReport = {
+        has_data: false,
+        missing_data_reason:
+          'Unable to generate the report because complete test results are not available. No level attempts or aptitude tests have been completed yet. Please complete at least one aptitude level or test to generate your performance report.',
+        student_name: user.name,
+        student_email: user.email,
+        test_date: dateStr,
+        overall_score: 0,
+        total_questions: 0,
+        attempted: 0,
+        correct: 0,
+        wrong: 0,
+        unanswered: 0,
+        overall_percentage: 0,
+        overall_accuracy: 0,
+        cutoff: 70,
+        overall_status: 'NOT PASSED',
+        level_performance: [],
+        topic_performance: [],
+        strengths: [],
+        areas_to_improve: [],
+        wrong_answers: [],
+        final_analysis:
+          'No assessment data recorded yet. Please complete Level 1 to view your real aptitude analysis.',
+        recommendations: [
+          'Complete Level 1 in Quantitative, Logical, Verbal, or Specialized Aptitude to begin tracking your performance.',
+        ],
+      };
+    } else {
+      // Build level performance
+      const levelPerfItems: LevelPerformanceItem[] = levelAttempts.map((att) => {
+        const total = att.total_questions || 10;
+        const score = att.score || 0;
+        const wrong = total - score;
+        const pct = att.percentage ?? Math.round((score / total) * 100);
+        const cutoff = att.cutoff || 70;
+        const statusStr: 'PASSED' | 'NOT PASSED' = pct >= cutoff ? 'PASSED' : 'NOT PASSED';
+        const topicName = TOPICS_META[att.topic_id]?.name || att.topic_id;
+
+        return {
+          level_id: att.level_id,
+          topic_id: att.topic_id,
+          topic_name: topicName,
+          attempt_number: att.attempt_number || 1,
+          score,
+          total_questions: total,
+          attempted: total,
+          correct: score,
+          wrong,
+          unanswered: 0,
+          percentage: pct,
+          cutoff,
+          status: statusStr,
+        };
+      });
+
+      // Calculate totals
+      let totalQ = 0;
+      let totalCorrect = 0;
+      let totalWrong = 0;
+      let totalAttempted = 0;
+
+      levelPerfItems.forEach((item) => {
+        totalQ += item.total_questions;
+        totalCorrect += item.correct;
+        totalWrong += item.wrong;
+        totalAttempted += item.attempted;
+      });
+
+      const overallPct = totalQ > 0 ? Math.round((totalCorrect / totalQ) * 100) : 0;
+      const overallAcc = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
+      const overallStatusStr: 'PASSED' | 'NOT PASSED' = overallPct >= 70 ? 'PASSED' : 'NOT PASSED';
+
+      // Topic / Category performance aggregation
+      const catStats: Record<string, { attempted: number; correct: number; wrong: number }> = {};
+      const wrongAnswerItems: WrongAnswerItem[] = [];
+
+      levelAttempts.forEach((att) => {
+        const reviews = att.answers_review || [];
+        reviews.forEach((r) => {
+          const cat = r.category || 'General';
+          if (!catStats[cat]) catStats[cat] = { attempted: 0, correct: 0, wrong: 0 };
+          catStats[cat].attempted += 1;
+          if (r.is_correct) {
+            catStats[cat].correct += 1;
+          } else {
+            catStats[cat].wrong += 1;
+
+            let yourAnsText = r.your_answer || 'None';
+            let correctAnsText = r.correct_answer || 'None';
+            if (r.your_answer === 'A' && r.option_a) yourAnsText = `${r.option_a} (Option A)`;
+            else if (r.your_answer === 'B' && r.option_b) yourAnsText = `${r.option_b} (Option B)`;
+            else if (r.your_answer === 'C' && r.option_c) yourAnsText = `${r.option_c} (Option C)`;
+            else if (r.your_answer === 'D' && r.option_d) yourAnsText = `${r.option_d} (Option D)`;
+
+            if (r.correct_answer === 'A' && r.option_a) correctAnsText = `${r.option_a} (Option A)`;
+            else if (r.correct_answer === 'B' && r.option_b) correctAnsText = `${r.option_b} (Option B)`;
+            else if (r.correct_answer === 'C' && r.option_c) correctAnsText = `${r.option_c} (Option C)`;
+            else if (r.correct_answer === 'D' && r.option_d) correctAnsText = `${r.option_d} (Option D)`;
+
+            wrongAnswerItems.push({
+              question_id: r.question_id,
+              question: r.question,
+              your_answer: yourAnsText,
+              correct_answer: correctAnsText,
+              explanation: r.explanation || 'Refer to fundamental formulas and step-by-step logic.',
+              category: cat,
+              level_id: att.level_id,
+            });
+          }
+        });
+
+        if (reviews.length === 0 && att.wrong_answers) {
+          att.wrong_answers.forEach((w) => {
+            const cat = w.category || 'General';
+            if (!catStats[cat]) catStats[cat] = { attempted: 0, correct: 0, wrong: 0 };
+            catStats[cat].attempted += 1;
+            catStats[cat].wrong += 1;
+            wrongAnswerItems.push({
+              question: w.question,
+              your_answer: w.your_answer,
+              correct_answer: w.correct_answer,
+              explanation: w.explanation,
+              category: cat,
+              level_id: att.level_id,
+            });
+          });
+        }
+      });
+
+      const topicPerfItems: TopicPerformanceItem[] = Object.keys(catStats).map((catName) => {
+        const s = catStats[catName];
+        const acc = s.attempted > 0 ? Math.round((s.correct / s.attempted) * 100) : 0;
+        return {
+          topic_name: catName,
+          attempted: s.attempted,
+          correct: s.correct,
+          wrong: s.wrong,
+          accuracy: acc,
+        };
+      });
+
+      // Strengths & Areas to Improve
+      const strengthTopics = topicPerfItems.filter((t) => t.accuracy >= 70);
+      const weakTopics = topicPerfItems.filter((t) => t.accuracy < 70);
+
+      const strengths =
+        strengthTopics.length > 0
+          ? strengthTopics.map(
+              (t) => `${t.topic_name} — High Accuracy: ${t.accuracy}% (${t.correct}/${t.attempted} correct)`
+            )
+          : ['No topics currently meet the 70% threshold. Focus on foundational practice across all modules.'];
+
+      const areas_to_improve =
+        weakTopics.length > 0
+          ? weakTopics.map(
+              (t) => `${t.topic_name} — Priority Area: ${t.accuracy}% Accuracy (${t.correct}/${t.attempted} correct)`
+            )
+          : ['None identified. High accuracy maintained above 70% across all attempted topics.'];
+
+      // Final analysis summary
+      let analysisSummary = `Your overall performance across all attempted levels is ${totalCorrect} / ${totalQ} (${overallPct}%), with an overall accuracy rate of ${overallAcc}%. `;
+      if (overallPct >= 70) {
+        analysisSummary += `You have cleared the required 70% cutoff requirement. `;
+      } else {
+        analysisSummary += `You are currently below the required 70% cutoff threshold. `;
+      }
+
+      if (strengthTopics.length > 0) {
+        analysisSummary += `You demonstrated strong performance in ${strengthTopics.map((t) => t.topic_name).join(', ')}. `;
+      }
+      if (weakTopics.length > 0) {
+        analysisSummary += `You may need more practice in ${weakTopics.map((t) => `${t.topic_name} (${t.accuracy}%)`).join(', ')}.`;
+      }
+
+      // Data-based recommendations
+      const recommendations: string[] = [];
+      weakTopics.forEach((wt) => {
+        recommendations.push(
+          `Practice more ${wt.topic_name} problems to improve accuracy (currently at ${wt.accuracy}%).`
+        );
+      });
+
+      if (overallAcc >= 80) {
+        recommendations.push(
+          'Continue practicing mixed problems across advanced levels to maintain your performance.'
+        );
+      } else if (overallAcc < 70) {
+        recommendations.push(
+          'Review step-by-step explanations for questions answered incorrectly before re-attempting failed levels.'
+        );
+      }
+
+      if (recommendations.length === 0) {
+        recommendations.push('Maintain consistent problem-solving practice to retain speed and accuracy.');
+      }
+
+      compReport = {
+        has_data: true,
+        student_name: user.name,
+        student_email: user.email,
+        test_date: dateStr,
+        overall_score: totalCorrect,
+        total_questions: totalQ,
+        attempted: totalAttempted,
+        correct: totalCorrect,
+        wrong: totalWrong,
+        unanswered: 0,
+        overall_percentage: overallPct,
+        overall_accuracy: overallAcc,
+        cutoff: 70,
+        overall_status: overallStatusStr,
+        level_performance: levelPerfItems,
+        topic_performance: topicPerfItems,
+        strengths,
+        areas_to_improve,
+        wrong_answers: wrongAnswerItems,
+        final_analysis: analysisSummary,
+        recommendations,
+      };
+    }
 
     const latestFinalApt = prog.final_aptitude_attempts[prog.final_aptitude_attempts.length - 1] || {
-      score: 22,
-      total_questions: 25,
-      percentage: 88,
-      status: 'QUALIFIED',
+      score: compReport.overall_score,
+      total_questions: compReport.total_questions || 10,
+      percentage: compReport.overall_percentage,
+      status: compReport.overall_status === 'PASSED' ? 'QUALIFIED' : 'NOT_QUALIFIED',
       topic_scores: {
-        quantitative: { score: 6, total: 7, percentage: 85 },
-        logical: { score: 5, total: 6, percentage: 83 },
-        verbal: { score: 5, total: 6, percentage: 83 },
-        specialized: { score: 6, total: 6, percentage: 100 },
+        quantitative: { score: 0, total: 0, percentage: compReport.overall_percentage },
+        logical: { score: 0, total: 0, percentage: compReport.overall_percentage },
+        verbal: { score: 0, total: 0, percentage: compReport.overall_percentage },
+        specialized: { score: 0, total: 0, percentage: compReport.overall_percentage },
       },
     };
 
     const completedTech = prog.technical_sessions.filter((s) => s.status === 'COMPLETED');
     const latestTech = completedTech[completedTech.length - 1] || {
       domain: 'fullstack' as TechnicalDomainId,
-      overall_score: 84,
-      passed: true,
+      overall_score: compReport.overall_percentage,
+      passed: compReport.overall_percentage >= 70,
       questions: [{ question_id: 'q1' }, { question_id: 'q2' }, { question_id: 'q3' }],
     };
 
     const completedHR = prog.hr_sessions.filter((s) => s.status === 'COMPLETED');
     const latestHR = completedHR[completedHR.length - 1] || {
-      overall_score: 86,
-      passed: true,
+      overall_score: compReport.overall_percentage,
+      passed: compReport.overall_percentage >= 70,
       questions: [{ question_id: 'q1' }, { question_id: 'q2' }, { question_id: 'q3' }],
     };
 
@@ -1498,7 +1733,7 @@ class Database {
       (latestFinalApt.percentage * 0.4) + (latestTech.overall_score * 0.35) + (latestHR.overall_score * 0.25)
     );
 
-    const isQualified = compositeScore >= 65 && latestTech.passed && latestHR.passed;
+    const isQualified = compositeScore >= 70 && compReport.overall_status === 'PASSED';
 
     const aiFeedback = await generateFinalAIFeedback({
       candidate_name: user.name,
@@ -1518,8 +1753,9 @@ class Database {
       report_id: `rep_${Date.now()}`,
       user_name: user.name,
       user_email: user.email,
-      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      date: dateStr,
       selected_domain: latestTech.domain.toUpperCase(),
+      comprehensive_aptitude: compReport,
       aptitude: {
         quantitative: latestFinalApt.topic_scores.quantitative.percentage,
         logical: latestFinalApt.topic_scores.logical.percentage,
@@ -1546,14 +1782,19 @@ class Database {
       },
       ai_feedback: {
         summary: aiFeedback.executive_summary,
-        strengths: aiFeedback.key_strengths,
-        weaknesses: aiFeedback.critical_weaknesses,
-        action_plan: aiFeedback.personalized_action_plan.map((p) => `${p.title}: ${p.focus} (${p.timeframe})`),
-        executive_summary: aiFeedback.executive_summary,
-        key_strengths: aiFeedback.key_strengths,
-        critical_weaknesses: aiFeedback.critical_weaknesses,
-        recommended_topics: aiFeedback.recommended_topics,
-        personalized_action_plan: aiFeedback.personalized_action_plan,
+        strengths: compReport.strengths,
+        weaknesses: compReport.areas_to_improve,
+        action_plan: compReport.recommendations,
+        executive_summary: compReport.final_analysis,
+        key_strengths: compReport.strengths,
+        critical_weaknesses: compReport.areas_to_improve,
+        recommended_topics: compReport.areas_to_improve,
+        personalized_action_plan: compReport.recommendations.map((rec, i) => ({
+          step: i + 1,
+          title: `Action Step ${i + 1}`,
+          focus: rec,
+          timeframe: 'Immediate',
+        })),
       },
     };
 

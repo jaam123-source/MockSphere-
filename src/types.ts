@@ -304,12 +304,72 @@ export interface HRInterviewSession {
   completed_at?: string;
 }
 
+export interface LevelPerformanceItem {
+  level_id: number;
+  topic_id: string;
+  topic_name: string;
+  attempt_number: number;
+  score: number;
+  total_questions: number;
+  attempted: number;
+  correct: number;
+  wrong: number;
+  unanswered: number;
+  percentage: number;
+  cutoff: number;
+  status: 'PASSED' | 'NOT PASSED';
+}
+
+export interface TopicPerformanceItem {
+  topic_name: string;
+  attempted: number;
+  correct: number;
+  wrong: number;
+  accuracy: number;
+}
+
+export interface WrongAnswerItem {
+  question_id?: string;
+  question: string;
+  your_answer: string;
+  correct_answer: string;
+  explanation: string;
+  category?: string;
+  level_id?: number;
+}
+
+export interface ComprehensiveAptitudeReport {
+  has_data: boolean;
+  missing_data_reason?: string;
+  student_name: string;
+  student_email: string;
+  test_date: string;
+  overall_score: number;
+  total_questions: number;
+  attempted: number;
+  correct: number;
+  wrong: number;
+  unanswered: number;
+  overall_percentage: number;
+  overall_accuracy: number;
+  cutoff: number;
+  overall_status: 'PASSED' | 'NOT PASSED';
+  level_performance: LevelPerformanceItem[];
+  topic_performance: TopicPerformanceItem[];
+  strengths: string[];
+  areas_to_improve: string[];
+  wrong_answers: WrongAnswerItem[];
+  final_analysis: string;
+  recommendations: string[];
+}
+
 export interface FinalReportData {
   report_id: string;
   user_name: string;
   user_email: string;
   date: string;
   selected_domain: string;
+  comprehensive_aptitude?: ComprehensiveAptitudeReport;
   aptitude: {
     quantitative: number;
     logical: number;
