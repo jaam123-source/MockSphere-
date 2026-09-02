@@ -130,6 +130,12 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
     };
   }, [loadQuestions]);
 
+  useEffect(() => {
+    if (result) {
+      setShowReviewList(true);
+    }
+  }, [result]);
+
   const currentQ = questions?.[currentIndex] || questions?.[0];
 
   // Auto-countdown timer
@@ -199,6 +205,7 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
       }
 
       setResult(res);
+      setShowReviewList(true);
       onRefreshDashboard();
 
       if (res.status === 'PASSED') {
@@ -208,6 +215,11 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
           origin: { y: 0.6 },
         });
       }
+
+      // Scroll to result card / review section smoothly
+      setTimeout(() => {
+        document.getElementById('quiz-result-summary-card')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } catch (err: any) {
       alert(`Submission error: ${err.message}`);
     } finally {
@@ -322,26 +334,55 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2 border">
                 {isPassed ? (
                   <span className="text-emerald-400 border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                    Assessment Passed
+                    Assessment Passed (≥{result.cutoff}% Cutoff Cleared)
                   </span>
                 ) : (
                   <span className="text-rose-400 border-rose-500/20 bg-rose-500/10 px-2 py-0.5 rounded-full">
-                    Revision Recommended
+                    Cutoff Not Met (&lt;{result.cutoff}%)
                   </span>
                 )}
               </div>
 
               <h2 className="text-3xl font-extrabold text-white">
-                {isPassed ? 'Outstanding Achievement!' : 'Cutoff Not Reached'}
+                {isPassed ? `Level ${levelId} Cleared!` : 'Cutoff Not Reached'}
               </h2>
               <p className="text-sm text-slate-300 max-w-lg mx-auto mt-1">
                 {isPassed
-                  ? mode === 'level' && levelId === 5 && topicId === 'quantitative'
-                    ? `Phase 1 Complete! You scored ${result.percentage}%. Checkpoint Test 1 is now unlocked. You must clear Test 1 (≥70%) to unlock Level 6.`
-                    : 'You met the required 70% proficiency standard and unlocked the next progression tier.'
-                  : `You scored ${result.percentage}%. A score of ${result.cutoff}% is required to unlock subsequent stages.`}
+                  ? mode === 'level' && levelId === 5
+                    ? `Level 5 Complete! You scored ${result.percentage}%. Checkpoint Test 1 is now unlocked. Clear Test 1 (≥70%) to unlock Level 6.`
+                    : mode === 'level' && levelId < 10
+                    ? `Great job! You scored ${result.percentage}% (Cutoff: ${result.cutoff}%). Level ${levelId + 1} is now unlocked.`
+                    : 'You met the required proficiency standard and unlocked the next progression tier.'
+                  : `You scored ${result.percentage}%. A minimum cutoff of ${result.cutoff}% is required to unlock Level ${levelId + 1}. Please review explanations below.`}
               </p>
             </div>
+
+            {/* Prominent High-Visibility Progression Banner when passed */}
+            {isPassed && mode === 'level' && levelId < 10 && levelId !== 5 && onProceedNextLevel && (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/40 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-left max-w-2xl mx-auto shadow-lg shadow-emerald-500/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-white">
+                      Level {levelId + 1} Unlocked!
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      You passed Level {levelId} with {result.percentage}% accuracy (Cutoff: {result.cutoff}%). Advance to Level {levelId + 1} now.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  id="btn-banner-proceed-next-level"
+                  onClick={() => onProceedNextLevel(levelId + 1)}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5 shrink-0 transition-transform hover:scale-105 cursor-pointer"
+                >
+                  <span>Proceed to Level {levelId + 1}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
             {/* Score Metrics Box */}
             <div className="grid grid-cols-3 gap-4 max-w-md mx-auto pt-4">
