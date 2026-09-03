@@ -7,7 +7,7 @@ export interface User {
   password_hash?: string;
   avatar_url?: string;
   auth_provider?: 'google' | 'password';
-  created_at: string;
+  created_at?: string;
 }
 
 export type AptitudeTopicId = 'quantitative' | 'logical' | 'verbal' | 'specialized';

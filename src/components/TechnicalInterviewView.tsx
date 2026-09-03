@@ -924,7 +924,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
               {isPassed ? 'Outstanding Engineering Performance!' : 'Good Effort — Target Weak Areas on Retake'}
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mt-1">
-              Domain: <span className="font-semibold text-slate-900 dark:text-white">{selectedDomainMeta.name}</span> | Completed 30 Multi-Level Live Questions.
+              Domain: <span className="font-semibold text-slate-900 dark:text-white">{selectedDomainMeta?.name || 'Technical Domain'}</span> | Completed 30 Multi-Level Live Questions.
             </p>
           </div>
 
