@@ -193,6 +193,7 @@ export interface TechnicalQuestion {
   hints?: string[];
   expected_key_points?: string[];
   improved_answer?: string;
+  keywords?: string[];
 }
 
 export type TechnicalInterviewQuestion = TechnicalQuestion;
@@ -207,6 +208,7 @@ export interface TechnicalAnswerPayload {
   code_snippet?: string;
   diagram_data?: string;
   time_taken_seconds?: number;
+  attempt_number?: number;
 }
 
 export interface AIQuestionEvaluation {
@@ -227,6 +229,11 @@ export interface AIQuestionEvaluation {
   weaknesses: string[];
   suggested_improvements: string[];
   follow_up_prompt?: string;
+  detected_keywords?: string[];
+  required_keywords?: string[];
+  keyword_count?: number;
+  has_required_keywords?: boolean;
+  attempt_number?: number;
 }
 
 export interface TechnicalInterviewSession {

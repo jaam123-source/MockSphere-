@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { AIQuestionEvaluation, TechnicalDomainId, TechnicalQuestion } from '../src/types';
 import { TECHNICAL_DOMAINS_LIST, TECHNICAL_QUESTION_BANK } from './technicalQuestionBank';
 import { getCuratedDomainQuestions } from './domainCuratedQuestions';
+import { detectKeywordsInAnswer } from '../src/utils/technicalKeywords';
 
 // Server-side Google GenAI client
 let genAIClient: GoogleGenAI | null = null;
@@ -168,12 +169,23 @@ export async function evaluateTechnicalAnswer(payload: {
   code_snippet?: string;
   diagram_data?: string;
   time_taken_seconds?: number;
+  topic?: string;
+  expected_key_points?: string[];
+  keywords?: string[];
+  attempt_number?: number;
 }): Promise<AIQuestionEvaluation> {
   const combinedAnswer = [
     payload.response_text ? `Text/Voice response: ${payload.response_text}` : '',
     payload.code_snippet ? `Code implementation:\n${payload.code_snippet}` : '',
     payload.diagram_data ? `Diagram / Architecture notes: ${payload.diagram_data}` : '',
   ].filter(Boolean).join('\n\n');
+
+  const kwCheck = detectKeywordsInAnswer(combinedAnswer, {
+    question: payload.question,
+    topic: payload.topic,
+    expected_key_points: payload.expected_key_points,
+    keywords: payload.keywords,
+  });
 
   if (!combinedAnswer.trim()) {
     return {
@@ -192,6 +204,11 @@ export async function evaluateTechnicalAnswer(payload: {
       strengths: [],
       weaknesses: ['Empty answer submitted'],
       suggested_improvements: ['Ensure you articulate your thought process aloud and provide code when required.'],
+      detected_keywords: [],
+      required_keywords: kwCheck.requiredKeywords,
+      keyword_count: 0,
+      has_required_keywords: false,
+      attempt_number: payload.attempt_number || 1,
     };
   }
 
@@ -264,6 +281,11 @@ Return strict JSON:
         weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : ['Elaborate deeper on production failure modes'],
         suggested_improvements: Array.isArray(parsed.suggested_improvements) ? parsed.suggested_improvements : ['Incorporate time/space complexity into explanations.'],
         follow_up_prompt: parsed.follow_up_prompt,
+        detected_keywords: kwCheck.detectedKeywords,
+        required_keywords: kwCheck.requiredKeywords,
+        keyword_count: kwCheck.detectedCount,
+        has_required_keywords: kwCheck.hasAtLeastTwoKeywords,
+        attempt_number: payload.attempt_number || 1,
       };
     }
   } catch (err) {
@@ -299,6 +321,11 @@ Return strict JSON:
     suggested_improvements: [
       'Discuss computational complexity (time/space) and real-world system boundaries.',
     ],
+    detected_keywords: kwCheck.detectedKeywords,
+    required_keywords: kwCheck.requiredKeywords,
+    keyword_count: kwCheck.detectedCount,
+    has_required_keywords: kwCheck.hasAtLeastTwoKeywords,
+    attempt_number: payload.attempt_number || 1,
   };
 }
 

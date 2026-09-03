@@ -43,6 +43,9 @@ import {
   Award,
   TrendingUp,
   Loader2,
+  Tag,
+  RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   AIQuestionEvaluation,
@@ -55,6 +58,7 @@ import {
 } from '../types';
 import { ApiService } from '../services/api';
 import { SpeechService } from '../utils/speech';
+import { detectKeywordsInAnswer } from '../utils/technicalKeywords';
 
 interface TechnicalInterviewViewProps {
   dashboard: UserDashboardState;
@@ -152,6 +156,17 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   const [pendingNextSession, setPendingNextSession] = useState<TechnicalInterviewSession | null>(null);
   const [showStepFeedbackModal, setShowStepFeedbackModal] = useState<boolean>(false);
   const [showHint, setShowHint] = useState<boolean>(false);
+
+  // Technical Keyword Detection & Retry States
+  const [currentAttemptCount, setCurrentAttemptCount] = useState<number>(1);
+  const [showRetryModal, setShowRetryModal] = useState<boolean>(false);
+  const [retryInfo, setRetryInfo] = useState<{
+    detectedKeywords: string[];
+    requiredKeywords: string[];
+    detectedCount: number;
+    topic: string;
+    missingCount: number;
+  } | null>(null);
 
   // Stop camera tracks cleanly
   const stopCamera = useCallback(() => {
@@ -298,6 +313,9 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         setDiagramDescription('');
         setShowHint(false);
         setQuestionStartTime(Date.now());
+        setCurrentAttemptCount(1);
+        setShowRetryModal(false);
+        setRetryInfo(null);
 
         // Default mode based on question type:
         // Coding questions default to 'code' (Code Editor workspace)
@@ -423,6 +441,17 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     }
   };
 
+  // Retry handler for Attempt Once Again
+  const handleAttemptOnceAgain = () => {
+    SpeechService.stopSpeaking();
+    setIsSpeakingInterviewer(false);
+    setShowRetryModal(false);
+    setCurrentAttemptCount(2);
+    if (!isCodingQuestion && responseMode === 'voice' && textResponse) {
+      setResponseMode('text');
+    }
+  };
+
   // Submit response handler
   const handleSubmitAnswer = async () => {
     if (!session) return;
@@ -451,6 +480,33 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       }
     }
 
+    // Keyword detection check on candidate's answer
+    const combinedAnswer = [payloadText, isCodingQ ? payloadCode : '', payloadDiag].filter(Boolean).join(' ');
+    const kwDetection = detectKeywordsInAnswer(combinedAnswer, currentQ);
+
+    // If candidate does not answer with at least 2 keywords on attempt 1, prompt to attempt once again!
+    if (kwDetection.detectedCount < 2 && currentAttemptCount === 1) {
+      setRetryInfo({
+        detectedKeywords: kwDetection.detectedKeywords,
+        requiredKeywords: kwDetection.requiredKeywords,
+        detectedCount: kwDetection.detectedCount,
+        topic: currentQ.topic || 'Core Concept',
+        missingCount: kwDetection.missingCount,
+      });
+      setShowRetryModal(true);
+
+      if (isAudioFeedbackEnabled) {
+        SpeechService.stopSpeaking();
+        setIsSpeakingInterviewer(true);
+        SpeechService.speak(
+          "Your answer is missing the core technical keywords for this topic. Please attempt once again by incorporating key technical concepts.",
+          () => setIsSpeakingInterviewer(false),
+          () => setIsSpeakingInterviewer(true)
+        );
+      }
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const result = await ApiService.evaluateTechnicalAnswer({
@@ -462,6 +518,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         code_snippet: isCodingQ ? payloadCode || undefined : undefined,
         diagram_data: payloadDiag || undefined,
         time_taken_seconds: timeSpentSeconds,
+        attempt_number: currentAttemptCount,
       });
 
       // Show evaluation to student and stage next session without prematurely jumping to next question
@@ -491,6 +548,9 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     setIsSpeakingInterviewer(false);
     setShowStepFeedbackModal(false);
     setLatestEval(null);
+    setCurrentAttemptCount(1);
+    setShowRetryModal(false);
+    setRetryInfo(null);
 
     // Advance session to the next question now that candidate is ready
     if (pendingNextSession) {
@@ -987,6 +1047,12 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     currentLevel === 1 ? 'Level 1 — Basic' : currentLevel === 2 ? 'Level 2 — Intermediate' : 'Level 3 — Practical';
   const levelProgressIndex = (currentIdx % 10) + 1;
 
+  // Live keyword detection calculation for candidate feedback
+  const liveCombinedAnswer = [textResponse, isCodingQuestion ? codeSnippet : '', diagramDescription].filter(Boolean).join(' ');
+  const liveKwResult = React.useMemo(() => {
+    return detectKeywordsInAnswer(liveCombinedAnswer, currentQ);
+  }, [liveCombinedAnswer, currentQ]);
+
   return (
     <div id="live-technical-interview-room" className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 pb-20 sm:pb-6 space-y-4 sm:space-y-6">
       {/* Top Navigation & Status Bar */}
@@ -1324,6 +1390,21 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
                 </div>
               </div>
 
+              {/* Re-attempt Notice Banner when candidate is on Attempt 2 */}
+              {currentAttemptCount === 2 && (
+                <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-between gap-3 text-xs animate-in fade-in">
+                  <div className="flex items-center space-x-2 text-amber-800 dark:text-amber-200 font-medium">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>
+                      <strong className="font-semibold">Attempt 2 of 2:</strong> Incorporate core technical terms and submit. The interviewer will provide the complete technical explanation and model answer.
+                    </span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 shrink-0">
+                    Re-attempt
+                  </span>
+                </div>
+              )}
+
               {/* Workspace Content based on active tab */}
               {(responseMode === 'voice' || (!isCodingQuestion && responseMode === 'code')) && (
                 <div className="space-y-3">
@@ -1423,29 +1504,82 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
             </div>
 
             {/* Submit Bar */}
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-4 flex items-center justify-between gap-2">
-              <span className="text-[11px] text-slate-400 truncate">
-                {currentIdx < 29 ? `Next: Q${currentIdx + 2}` : 'Final Submission'}
-              </span>
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {/* Technical Keywords Detection Indicator */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
+                    liveKwResult.hasAtLeastTwoKeywords
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                      : liveKwResult.detectedCount === 1
+                      ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                  }`}
+                  title={
+                    liveKwResult.hasAtLeastTwoKeywords
+                      ? `Matched keywords: ${liveKwResult.detectedKeywords.join(', ')}`
+                      : `Requires at least 2 keywords. Suggestions: ${liveKwResult.requiredKeywords.slice(0, 4).join(', ')}`
+                  }
+                >
+                  <Tag className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    {liveKwResult.hasAtLeastTwoKeywords ? (
+                      <>
+                        <span className="font-bold">{liveKwResult.detectedCount}/2 Keywords</span>
+                        <span className="hidden md:inline"> ({liveKwResult.detectedKeywords.slice(0, 2).join(', ')})</span>
+                      </>
+                    ) : liveKwResult.detectedCount === 1 ? (
+                      <>
+                        <span className="font-bold">1/2 Keywords</span>
+                        <span className="hidden md:inline"> ("{liveKwResult.detectedKeywords[0]}") — 1 more needed</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-bold">0/2 Keywords</span>
+                        <span className="hidden md:inline"> — Need at least 2 technical terms</span>
+                      </>
+                    )}
+                  </span>
+                </div>
 
-              <button
-                id="btn-submit-answer"
-                onClick={handleSubmitAnswer}
-                disabled={isSubmitting}
-                className="px-5 sm:px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md transition flex items-center space-x-2 disabled:opacity-50 shrink-0"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Evaluating...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Submit Answer</span>
-                    <Send className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+                <span className="text-[11px] text-slate-400">
+                  {currentAttemptCount === 2 ? 'Attempt 2 of 2' : 'Attempt 1 of 2'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3">
+                <span className="text-[11px] text-slate-400 hidden sm:inline">
+                  {currentIdx < 29 ? `Next: Q${currentIdx + 2}` : 'Final Submission'}
+                </span>
+
+                <button
+                  id="btn-submit-answer"
+                  onClick={handleSubmitAnswer}
+                  disabled={isSubmitting}
+                  className={`w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white shadow-md transition flex items-center justify-center space-x-2 disabled:opacity-50 shrink-0 ${
+                    currentAttemptCount === 2
+                      ? 'bg-amber-600 hover:bg-amber-500 active:bg-amber-700'
+                      : 'bg-blue-600 hover:bg-blue-500 active:bg-blue-700'
+                  }`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Evaluating...</span>
+                    </>
+                  ) : currentAttemptCount === 2 ? (
+                    <>
+                      <span>Submit & View Explanation</span>
+                      <Send className="w-4 h-4" />
+                    </>
+                  ) : (
+                    <>
+                      <span>Submit Answer</span>
+                      <Send className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1495,6 +1629,47 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
                   {latestEval.confidence_score || 80}%
                 </div>
               </div>
+            </div>
+
+            {/* Technical Keywords Detection & Attempt Status Banner */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center space-x-2.5">
+                <div
+                  className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                    (latestEval.detected_keywords?.length || 0) >= 2
+                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400'
+                      : 'bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400'
+                  }`}
+                >
+                  <Tag className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Technical Keywords Verification (At Least 2 Required)
+                  </div>
+                  <div className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
+                    {latestEval.detected_keywords && latestEval.detected_keywords.length > 0 ? (
+                      <span className="text-emerald-600 dark:text-emerald-400">
+                        {latestEval.detected_keywords.length}/2 Detected: {latestEval.detected_keywords.join(', ')}
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400">0/2 Keywords Detected</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <span
+                className={`self-start sm:self-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                  currentAttemptCount === 2 || latestEval.attempt_number === 2
+                    ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                    : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                }`}
+              >
+                {currentAttemptCount === 2 || latestEval.attempt_number === 2
+                  ? 'Explanation Provided After Re-attempt'
+                  : 'Validated on Attempt 1'}
+              </span>
             </div>
 
             {/* Natural Interviewer Spoken Reaction */}
@@ -1594,6 +1769,94 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
                     : `Proceed to Question ${currentIdx + 2}`}
                 </span>
                 <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* ATTEMPT ONCE AGAIN MODAL (KEYWORD VALIDATION GATE)  */}
+      {/* ---------------------------------------------------- */}
+      {showRetryModal && retryInfo && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-5 sm:p-7 space-y-4 sm:space-y-5 animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-start space-x-3.5">
+              <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                  Keyword Validation Notice
+                </span>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">
+                  Technical Keywords Missing — Attempt Once Again
+                </h3>
+              </div>
+            </div>
+
+            {/* Explanatory Content */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-300 space-y-3">
+              <p className="leading-relaxed">
+                In this technical round, the interviewer requires your answer to contain <span className="font-bold text-slate-900 dark:text-white">at least 2 core technical keywords</span> framed for this question ({retryInfo.topic}).
+              </p>
+
+              <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 flex items-center justify-between gap-2 text-xs">
+                <span className="text-slate-600 dark:text-slate-400">Keywords Detected in Your Answer:</span>
+                <span className="font-bold text-amber-700 dark:text-amber-300">
+                  {retryInfo.detectedCount} of 2 required
+                </span>
+              </div>
+
+              {retryInfo.detectedKeywords.length > 0 && (
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Detected:</span>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {retryInfo.detectedKeywords.map((kw, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs font-semibold"
+                      >
+                        ✓ {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {retryInfo.requiredKeywords.length > 0 && (
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    Key concepts to consider incorporating for {retryInfo.topic}:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {retryInfo.requiredKeywords.slice(0, 6).map((kw, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-medium border border-blue-100 dark:border-blue-900/40"
+                      >
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <p className="text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                Please attempt once again and express your technical knowledge. After this re-attempt, the complete technical explanation and model answer will be provided.
+              </p>
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2">
+              <button
+                id="btn-attempt-once-again"
+                onClick={handleAttemptOnceAgain}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md transition flex items-center justify-center space-x-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Attempt Once Again</span>
               </button>
             </div>
           </div>

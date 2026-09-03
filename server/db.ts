@@ -1300,7 +1300,8 @@ class Database {
     responseText: string,
     codeSnippet?: string,
     diagramData?: string,
-    timeTakenSeconds?: number
+    timeTakenSeconds?: number,
+    attemptNumber: number = 1
   ): Promise<{ session: TechnicalInterviewSession; currentEvaluation: any }> {
     const prog = this.getUserProgress(userId);
     const session = prog.technical_sessions.find((s) => s.session_id === sessionId);
@@ -1319,6 +1320,10 @@ class Database {
       code_snippet: codeSnippet,
       diagram_data: diagramData,
       time_taken_seconds: timeTakenSeconds,
+      topic: question.topic,
+      expected_key_points: question.expected_key_points,
+      keywords: question.keywords,
+      attempt_number: attemptNumber,
     });
 
     session.responses.push({

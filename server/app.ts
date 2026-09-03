@@ -560,7 +560,7 @@ app.post('/api/technical/start', async (req, res) => {
 app.post('/api/technical/evaluate', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    const { session_id, question_id, response_type, response_text, code_snippet, diagram_data, time_taken_seconds } = req.body;
+    const { session_id, question_id, response_type, response_text, code_snippet, diagram_data, time_taken_seconds, attempt_number } = req.body;
     if (!session_id || !question_id) {
       return res.status(400).json({ error: 'session_id and question_id are required' });
     }
@@ -572,7 +572,8 @@ app.post('/api/technical/evaluate', async (req, res) => {
       response_text || '',
       code_snippet,
       diagram_data,
-      time_taken_seconds
+      time_taken_seconds,
+      typeof attempt_number === 'number' ? attempt_number : 1
     );
     res.json(result);
   } catch (err: any) {

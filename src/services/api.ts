@@ -247,6 +247,7 @@ export const ApiService = {
     code_snippet?: string;
     diagram_data?: string;
     time_taken_seconds?: number;
+    attempt_number?: number;
   }): Promise<{ session: TechnicalInterviewSession; currentEvaluation: any }> {
     return request('/api/technical/evaluate', {
       method: 'POST',
