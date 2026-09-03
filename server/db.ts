@@ -1221,6 +1221,22 @@ class Database {
   public getActiveTechnicalInterview(userId: string): TechnicalInterviewSession | null {
     const prog = this.getUserProgress(userId);
     const active = (prog.technical_sessions || []).find((s) => s.status === 'IN_PROGRESS');
+    if (active) {
+      if (!active.questions || !Array.isArray(active.questions) || active.questions.length === 0) {
+        active.questions = getCuratedDomainQuestions(active.domain || 'fullstack');
+        active.total_questions = active.questions.length;
+        active.responses = active.responses || [];
+        this.saveDatabase();
+      }
+      if (typeof active.current_question_index !== 'number') {
+        active.current_question_index = 0;
+      }
+      if (active.current_question_index >= active.questions.length) {
+        active.status = 'COMPLETED';
+        this.saveDatabase();
+        return null;
+      }
+    }
     return active || null;
   }
 

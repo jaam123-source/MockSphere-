@@ -25,9 +25,10 @@ function normalizeTerm(term: string): string {
 /**
  * Extracts and canonicalizes the primary technical keywords for a question.
  */
-export function extractQuestionKeywords(question: Partial<TechnicalQuestion>): string[] {
-  if (question.keywords && question.keywords.length > 0) {
-    return Array.from(new Set(question.keywords.map(k => k.trim()).filter(Boolean)));
+export function extractQuestionKeywords(question?: Partial<TechnicalQuestion> | null): string[] {
+  if (!question) return [];
+  if (question.keywords && Array.isArray(question.keywords) && question.keywords.length > 0) {
+    return Array.from(new Set(question.keywords.map(k => (k || '').trim()).filter(Boolean)));
   }
 
   const keywordSet = new Set<string>();
@@ -111,7 +112,7 @@ export interface KeywordDetectionResult {
  */
 export function detectKeywordsInAnswer(
   answer: string,
-  question: Partial<TechnicalQuestion>
+  question?: Partial<TechnicalQuestion> | null
 ): KeywordDetectionResult {
   const targetKeywords = extractQuestionKeywords(question);
   if (!answer || !answer.trim() || targetKeywords.length === 0) {

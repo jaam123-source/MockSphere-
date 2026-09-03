@@ -109,14 +109,58 @@ const getDomainIcon = (iconName?: string) => {
   }
 };
 
+// Default technical domains to guarantee immediate zero-delay rendering
+const DEFAULT_TECHNICAL_DOMAINS: TechnicalDomainInfo[] = [
+  {
+    id: 'fullstack',
+    name: 'Full Stack Development',
+    category: 'Software Engineering',
+    description: 'End-to-end web architectures, React/Next.js, Node.js, REST & GraphQL APIs, microservices, and state management.',
+    topics: ['React Reconciliation', 'Node.js Event Loop', 'REST & GraphQL', 'State Management', 'Fullstack Security', 'Caching & Redis'],
+    icon: 'Layers',
+  },
+  {
+    id: 'genai',
+    name: 'Generative AI & LLM Engineering',
+    category: 'AI & Machine Learning',
+    description: 'Transformer architectures, self-attention, RAG pipelines, vector databases, LoRA fine-tuning, prompt engineering, and agentic workflows.',
+    topics: ['Self-Attention & Transformer Math', 'Retrieval-Augmented Generation (RAG)', 'Vector Databases & Similarity Search', 'LoRA & Parameter-Efficient Fine-Tuning', 'Hallucination Mitigation', 'Agent Tool Calling & ReAct Loops'],
+    icon: 'Sparkles',
+  },
+  {
+    id: 'cloud',
+    name: 'Cloud & DevOps Engineering',
+    category: 'Cloud & Infrastructure',
+    description: 'AWS/GCP/Azure architectures, Kubernetes orchestration, Docker, CI/CD automation pipelines, Infrastructure as Code (Terraform), and SRE.',
+    topics: ['Docker & Containerization', 'Kubernetes Pods & Ingress', 'CI/CD Pipelines & GitHub Actions', 'Infrastructure as Code (Terraform)', 'Cloud VPC & Networking', 'Prometheus & SRE Observability'],
+    icon: 'Cloud',
+  },
+  {
+    id: 'datascience',
+    name: 'Data Science & Machine Learning',
+    category: 'Data & Analytics',
+    description: 'Exploratory data analysis, statistical modeling, hypothesis testing, feature engineering, tree ensembles, and predictive MLOps pipelines.',
+    topics: ['Pandas & NumPy Pipelines', 'Hypothesis Testing (p-values)', 'Feature Engineering & Imputation', 'Tree Ensembles (XGBoost/LightGBM)', 'Deep Neural Networks', 'Model Drift & Monitoring'],
+    icon: 'BarChart2',
+  },
+  {
+    id: 'cybersecurity',
+    name: 'Cyber Security & Zero Trust',
+    category: 'Security & Infrastructure',
+    description: 'Threat modeling, OWASP Top 10 mitigation, Zero Trust architectures, cryptographic protocols (RSA/ECC), mTLS, and IAM policies.',
+    topics: ['OWASP Top 10 (SQLi/XSS/CSRF)', 'Zero Trust Architecture', 'Public Key Cryptography (RSA/ECC)', 'mTLS & Network Security', 'Identity & Access (IAM)', 'Incident Response'],
+    icon: 'Shield',
+  },
+];
+
 export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   dashboard,
   onBack,
   onProceedHR,
   onRefreshDashboard,
 }) => {
-  // Domain listing state
-  const [domainsList, setDomainsList] = useState<TechnicalDomainInfo[]>([]);
+  // Domain listing state with instant fallback defaults
+  const [domainsList, setDomainsList] = useState<TechnicalDomainInfo[]>(DEFAULT_TECHNICAL_DOMAINS);
   const [selectedDomain, setSelectedDomain] = useState<TechnicalDomainId>('fullstack');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -447,7 +491,9 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     setIsSpeakingInterviewer(false);
     setShowRetryModal(false);
     setCurrentAttemptCount(2);
-    if (!isCodingQuestion && responseMode === 'voice' && textResponse) {
+    const currQ = session?.questions?.[session?.current_question_index ?? 0];
+    const isCoding = currQ?.type === 'coding';
+    if (!isCoding && responseMode === 'voice' && textResponse) {
       setResponseMode('text');
     }
   };
@@ -569,7 +615,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   };
 
   // Unique categories for filtering
-  const categories: string[] = ['All', ...Array.from(new Set<string>(domainsList.map((d) => d.category)))];
+  const categories: string[] = ['All', ...Array.from(new Set<string>(domainsList.map((d) => d.category).filter(Boolean) as string[]))];
 
   const filteredDomains = domainsList.filter((d) => {
     const matchCat = selectedCategory === 'All' || d.category === selectedCategory;
@@ -872,7 +918,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
             <div className="w-px h-10 bg-slate-200 dark:bg-slate-700" />
             <div>
               <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
-                {session.responses.length}/30
+                {(session.responses || []).length}/30
               </div>
               <div className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Questions Answered</div>
             </div>
@@ -952,8 +998,9 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         <div className="space-y-3">
           <h3 className="font-bold text-slate-900 dark:text-white text-base">Complete Interview Step-by-Step Transcript</h3>
           <div className="space-y-3">
-            {session.responses.map((resp, idx) => {
-              const qObj = session.questions[idx];
+            {(session.responses || []).map((resp, idx) => {
+              const questionsList = session.questions || [];
+              const qObj = questionsList.find((q) => q?.question_id === resp?.question_id) || questionsList[idx] || ({} as Partial<TechnicalQuestion>);
               const evalObj = resp.evaluation;
               return (
                 <div
@@ -1039,8 +1086,47 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   // ----------------------------------------------------
   // VIEW 3: LIVE AI INTERVIEW ROOM (ACTIVE SESSION)
   // ----------------------------------------------------
-  const currentIdx = session.current_question_index;
-  const currentQ: TechnicalQuestion = session.questions[currentIdx] || session.questions[0];
+  const currentIdx = session.current_question_index ?? 0;
+  const questionsList = session.questions || [];
+  const currentQ: TechnicalQuestion | undefined = questionsList[currentIdx] || questionsList[0];
+
+  // Gracefully handle incomplete or empty questions list with a recovery card
+  if (!currentQ || questionsList.length === 0) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-6">
+        <div className="p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl space-y-5">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 flex items-center justify-center text-amber-600 dark:text-amber-400">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Active Session Refresh Needed</h3>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              Your active technical interview session is ready to begin. Choose an option below to start your questions.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+            <button
+              id="btn-recover-start-technical"
+              onClick={() => handleStartInterview(true)}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <Zap className="w-4 h-4" />
+              <span>Start Technical Round</span>
+            </button>
+            <button
+              id="btn-recover-back-domains"
+              onClick={() => setSession(null)}
+              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Select Domain</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const isCodingQuestion = currentQ.type === 'coding';
   const currentLevel = session.current_level || (currentIdx < 10 ? 1 : currentIdx < 20 ? 2 : 3);
   const currentLevelName =
