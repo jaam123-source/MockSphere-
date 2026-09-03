@@ -168,6 +168,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   // Interview state
   const [session, setSession] = useState<TechnicalInterviewSession | null>(null);
   const [isStarting, setIsStarting] = useState<boolean>(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isResetting, setIsResetting] = useState<boolean>(false);
 
@@ -449,17 +450,22 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   // Start interview handler
   const handleStartInterview = async (isRetake = false) => {
     setIsStarting(true);
+    setStartError(null);
     SpeechService.stopSpeaking();
     setIsSpeakingInterviewer(false);
     try {
       const newSession = await ApiService.startTechnicalInterview(selectedDomain, isRetake);
+      if (!newSession || !newSession.session_id) {
+        throw new Error('Failed to initialize interview session. Please try again.');
+      }
       setPendingNextSession(null);
       setSession(newSession);
       setLatestEval(null);
       setShowStepFeedbackModal(false);
       startCamera();
     } catch (err: any) {
-      alert(err.message || 'Failed to start interview.');
+      console.error('Failed to start interview:', err);
+      setStartError(err.message || 'Failed to start interview. Please try again.');
     } finally {
       setIsStarting(false);
     }
@@ -626,15 +632,12 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     return matchCat && matchSearch;
   });
 
+  const activeDomainId = session?.domain || selectedDomain || 'fullstack';
   const selectedDomainMeta =
-    domainsList.find((d) => d.id === selectedDomain) || domainsList[0] || {
-      id: 'fullstack',
-      name: 'Full Stack Development',
-      category: 'Software Engineering',
-      description: 'End-to-end web architectures, APIs, and microservices.',
-      topics: ['React', 'Node.js', 'REST & GraphQL'],
-      icon: 'Layers',
-    };
+    domainsList.find((d) => d.id === activeDomainId) ||
+    DEFAULT_TECHNICAL_DOMAINS.find((d) => d.id === activeDomainId) ||
+    domainsList[0] ||
+    DEFAULT_TECHNICAL_DOMAINS[0];
 
   // ----------------------------------------------------
   // VIEW 1: DOMAIN SELECTION & INTERVIEW BRIEFING
@@ -820,36 +823,53 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         </div>
 
         {/* Selection Confirmation Bar */}
-        <div className="sticky bottom-6 z-20 p-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-              <Sparkles className="w-5 h-5" />
+        <div className="sticky bottom-6 z-20 space-y-3">
+          {startError && (
+            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs sm:text-sm flex items-center justify-between shadow-lg animate-in fade-in">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{startError}</span>
+              </div>
+              <button
+                onClick={() => setStartError(null)}
+                className="text-xs font-semibold underline hover:text-rose-900 dark:hover:text-rose-100 ml-3"
+              >
+                Dismiss
+              </button>
             </div>
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Ready for Live AI Technical Round</p>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">{selectedDomainMeta.name}</h3>
-            </div>
-          </div>
+          )}
 
-          <div className="flex items-center space-x-3">
-            <button
-              id="btn-start-technical-interview"
-              onClick={() => handleStartInterview(false)}
-              disabled={isStarting}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-semibold text-sm bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md transition flex items-center justify-center space-x-2 disabled:opacity-50"
-            >
-              {isStarting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Connecting to Live AI Interviewer...</span>
-                </>
-              ) : (
-                <>
-                  <span>Begin Live Technical Interview</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
+          <div className="p-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Ready for Live AI Technical Round</p>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">{selectedDomainMeta?.name || 'Selected Domain'}</h3>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <button
+                id="btn-start-technical-interview"
+                onClick={() => handleStartInterview(false)}
+                disabled={isStarting}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-semibold text-sm bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md transition flex items-center justify-center space-x-2 disabled:opacity-50"
+              >
+                {isStarting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Connecting to Live AI Interviewer...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Begin Live Technical Interview</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1127,8 +1147,8 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     );
   }
 
-  const isCodingQuestion = currentQ.type === 'coding';
-  const currentLevel = session.current_level || (currentIdx < 10 ? 1 : currentIdx < 20 ? 2 : 3);
+  const isCodingQuestion = currentQ?.type === 'coding';
+  const currentLevel = session?.current_level || (currentIdx < 10 ? 1 : currentIdx < 20 ? 2 : 3);
   const currentLevelName =
     currentLevel === 1 ? 'Level 1 — Basic' : currentLevel === 2 ? 'Level 2 — Intermediate' : 'Level 3 — Practical';
   const levelProgressIndex = (currentIdx % 10) + 1;
@@ -1145,11 +1165,11 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
-            {selectedDomainMeta.name.charAt(0)}
+            {selectedDomainMeta?.name?.charAt(0) || 'T'}
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{selectedDomainMeta.name}</h2>
+              <h2 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{selectedDomainMeta?.name || 'Technical Domain'}</h2>
               <span className="px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                 {currentLevelName}
               </span>

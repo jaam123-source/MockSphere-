@@ -19,6 +19,7 @@ import {
   ReviewQuestionItem,
   TechnicalDomainId,
   TechnicalInterviewSession,
+  TechnicalQuestion,
   TopicPerformanceItem,
   TopicTestResult,
   User,
@@ -1281,8 +1282,21 @@ class Database {
       });
     });
 
-    const generated = await generateAITechnicalQuestions(domain, isRetake, weakTopics);
-    const questions = generated && generated.length >= 30 ? generated : getCuratedDomainQuestions(domain);
+    // Rapid curated question loading with fallback
+    let questions = getCuratedDomainQuestions(domain);
+    if (isRetake && weakTopics.length > 0) {
+      try {
+        const timeoutPromise = new Promise<TechnicalQuestion[]>((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500));
+        const aiPromise = generateAITechnicalQuestions(domain, isRetake, weakTopics);
+        const generated = await Promise.race([aiPromise, timeoutPromise]);
+        if (generated && generated.length >= 30) {
+          questions = generated;
+        }
+      } catch {
+        // Fall back to curated domain questions seamlessly
+        questions = getCuratedDomainQuestions(domain);
+      }
+    }
 
     const session: TechnicalInterviewSession = {
       session_id: `tech_sess_${domain}_${Date.now()}`,
