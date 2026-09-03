@@ -149,6 +149,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
   // Step feedback & modal state
   const [latestEval, setLatestEval] = useState<AIQuestionEvaluation | null>(null);
+  const [pendingNextSession, setPendingNextSession] = useState<TechnicalInterviewSession | null>(null);
   const [showStepFeedbackModal, setShowStepFeedbackModal] = useState<boolean>(false);
   const [showHint, setShowHint] = useState<boolean>(false);
 
@@ -289,7 +290,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
   // Sync starter code and speak new question when session or index updates
   useEffect(() => {
-    if (session && session.status === 'IN_PROGRESS') {
+    if (session && session.status === 'IN_PROGRESS' && !showStepFeedbackModal) {
       const q = session.questions[session.current_question_index];
       if (q) {
         setTextResponse('');
@@ -313,7 +314,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         }
       }
     }
-  }, [session?.current_question_index, session?.session_id]);
+  }, [session?.current_question_index, session?.session_id, showStepFeedbackModal]);
 
   // Question timer interval
   useEffect(() => {
@@ -332,7 +333,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     SpeechService.speak(
       text,
       () => setIsSpeakingInterviewer(false),
-      () => setIsSpeakingInterviewer(false)
+      () => setIsSpeakingInterviewer(true)
     );
   };
 
@@ -347,6 +348,10 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       setIsRecording(false);
       setVoiceVolumeLevel(0);
     } else {
+      // Stop interviewer voice if active so it doesn't talk over candidate
+      SpeechService.stopSpeaking();
+      setIsSpeakingInterviewer(false);
+
       if (!SpeechService.isSpeechRecognitionSupported()) {
         alert('Speech recognition is not natively supported in this browser. Please type your response.');
         return;
@@ -383,8 +388,10 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   const handleStartInterview = async (isRetake = false) => {
     setIsStarting(true);
     SpeechService.stopSpeaking();
+    setIsSpeakingInterviewer(false);
     try {
       const newSession = await ApiService.startTechnicalInterview(selectedDomain, isRetake);
+      setPendingNextSession(null);
       setSession(newSession);
       setLatestEval(null);
       setShowStepFeedbackModal(false);
@@ -403,9 +410,12 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     try {
       await ApiService.resetTechnicalInterview();
       setSession(null);
+      setPendingNextSession(null);
       setLatestEval(null);
+      setShowStepFeedbackModal(false);
       stopCamera();
       SpeechService.stopSpeaking();
+      setIsSpeakingInterviewer(false);
     } catch (err: any) {
       alert(err.message || 'Failed to reset interview.');
     } finally {
@@ -454,25 +464,19 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         time_taken_seconds: timeSpentSeconds,
       });
 
+      // Show evaluation to student and stage next session without prematurely jumping to next question
       setLatestEval(result.currentEvaluation);
+      setPendingNextSession(result.session);
       setShowStepFeedbackModal(true);
 
-      // Spoken AI Interviewer reaction
+      // Speak evaluation feedback/reaction for this answer (not the next question!)
       if (isAudioFeedbackEnabled && result.currentEvaluation?.spoken_response) {
+        setIsSpeakingInterviewer(true);
         SpeechService.speak(
           result.currentEvaluation.spoken_response,
-          () => {},
-          () => {}
+          () => setIsSpeakingInterviewer(false),
+          () => setIsSpeakingInterviewer(true)
         );
-      }
-
-      // Update session in state
-      setSession(result.session);
-
-      // If completed and passed, celebrate with confetti
-      if (result.session.status === 'COMPLETED' && result.session.passed) {
-        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
-        onRefreshDashboard();
       }
     } catch (err: any) {
       alert(err.message || 'Failed to submit response.');
@@ -484,8 +488,24 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   // Proceed to next question after reviewing feedback
   const handleProceedNext = () => {
     SpeechService.stopSpeaking();
+    setIsSpeakingInterviewer(false);
     setShowStepFeedbackModal(false);
     setLatestEval(null);
+
+    // Advance session to the next question now that candidate is ready
+    if (pendingNextSession) {
+      const next = pendingNextSession;
+      setPendingNextSession(null);
+      setSession(next);
+
+      // If completed and passed, celebrate with confetti
+      if (next.status === 'COMPLETED') {
+        if (next.passed) {
+          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        }
+        onRefreshDashboard();
+      }
+    }
   };
 
   // Unique categories for filtering
@@ -992,7 +1012,14 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
           {/* Audio Feedback Toggle */}
           <button
             id="btn-toggle-interviewer-audio"
-            onClick={() => setIsAudioFeedbackEnabled(!isAudioFeedbackEnabled)}
+            onClick={() => {
+              const nextVal = !isAudioFeedbackEnabled;
+              setIsAudioFeedbackEnabled(nextVal);
+              if (!nextVal) {
+                SpeechService.stopSpeaking();
+                setIsSpeakingInterviewer(false);
+              }
+            }}
             className={`p-2 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${
               isAudioFeedbackEnabled
                 ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400'
@@ -1472,16 +1499,37 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
             {/* Natural Interviewer Spoken Reaction */}
             {latestEval.spoken_response && (
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 flex items-start space-x-3">
-                <Brain className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-[10px] sm:text-[11px] font-bold uppercase text-blue-700 dark:text-blue-300">
-                    Interviewer Remarks:
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <div className="flex items-start space-x-3">
+                  <Brain className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-[10px] sm:text-[11px] font-bold uppercase text-blue-700 dark:text-blue-300">
+                      Interviewer Remarks & Evaluation:
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 mt-0.5 leading-relaxed">
+                      "{latestEval.spoken_response}"
+                    </p>
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 mt-0.5 leading-relaxed">
-                    "{latestEval.spoken_response}"
-                  </p>
                 </div>
+
+                {isAudioFeedbackEnabled && (
+                  <button
+                    onClick={() => {
+                      SpeechService.stopSpeaking();
+                      setIsSpeakingInterviewer(true);
+                      SpeechService.speak(
+                        latestEval.spoken_response,
+                        () => setIsSpeakingInterviewer(false),
+                        () => setIsSpeakingInterviewer(true)
+                      );
+                    }}
+                    className="self-start sm:self-center px-3 py-1.5 rounded-xl bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 text-xs font-semibold flex items-center gap-1.5 shrink-0 transition"
+                    title="Replay Spoken Feedback"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                    <span>Replay Audio</span>
+                  </button>
+                )}
               </div>
             )}
 
@@ -1529,13 +1577,22 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
             )}
 
             {/* Action Bar */}
-            <div className="flex items-center justify-end pt-2">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                {pendingNextSession?.status === 'COMPLETED'
+                  ? 'All questions evaluated. Proceed to view your final scorecard.'
+                  : `Review your evaluation. When ready, proceed to Question ${currentIdx + 2}.`}
+              </span>
               <button
                 id="btn-proceed-feedback-next"
                 onClick={handleProceedNext}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-md transition flex items-center justify-center space-x-2"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-md transition flex items-center justify-center space-x-2 shrink-0"
               >
-                <span>{currentIdx < 29 ? 'Proceed to Next Question' : 'View Final Interview Evaluation'}</span>
+                <span>
+                  {pendingNextSession?.status === 'COMPLETED' || currentIdx >= 29
+                    ? 'View Final Interview Evaluation'
+                    : `Proceed to Question ${currentIdx + 2}`}
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
