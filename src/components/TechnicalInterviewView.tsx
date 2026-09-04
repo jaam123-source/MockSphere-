@@ -491,6 +491,50 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     }
   };
 
+  // Back to Technical Dashboard handler (returns candidate to domain selection without exiting to main dashboard)
+  const handleBackToTechnicalDashboard = async () => {
+    if (session && session.status === 'IN_PROGRESS') {
+      const confirmLeave = window.confirm(
+        'Return to Technical Dashboard to select another domain? Your active progress in this domain will be reset.'
+      );
+      if (!confirmLeave) return;
+    }
+
+    // Stop speaking and voice recognition
+    SpeechService.stopSpeaking();
+    setIsSpeakingInterviewer(false);
+    if (isRecording && speechRecognizer) {
+      try {
+        speechRecognizer.stop();
+      } catch {}
+      setIsRecording(false);
+      setVoiceVolumeLevel(0);
+    }
+
+    // Stop camera stream cleanly
+    stopCamera();
+
+    // Reset modals and state
+    setShowStepFeedbackModal(false);
+    setShowRetryModal(false);
+    setRetryInfo(null);
+    setLatestEval(null);
+    setPendingNextSession(null);
+    setTextResponse('');
+    setCodeSnippet('');
+    setDiagramDescription('');
+
+    // Clear backend active session so candidate can pick any domain freshly
+    try {
+      await ApiService.resetTechnicalInterview();
+    } catch (err) {
+      console.warn('Could not reset technical interview session on backend:', err);
+    }
+
+    // Return to domain selector (Technical Dashboard)
+    setSession(null);
+  };
+
   // Retry handler for Attempt Once Again
   const handleAttemptOnceAgain = () => {
     SpeechService.stopSpeaking();
@@ -1071,6 +1115,15 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         {/* Action Controls */}
         <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-800">
           <button
+            id="btn-completed-back-technical-dashboard"
+            onClick={handleBackToTechnicalDashboard}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-sm transition flex items-center justify-center space-x-2 cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Technical Dashboard</span>
+          </button>
+
+          <button
             id="btn-retake-technical"
             onClick={() => handleStartInterview(true)}
             className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-sm transition flex items-center justify-center space-x-2"
@@ -1091,7 +1144,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
           ) : (
             <button
               id="btn-back-domain-selector"
-              onClick={() => setSession(null)}
+              onClick={handleBackToTechnicalDashboard}
               className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md transition flex items-center justify-center space-x-2"
             >
               <span>Switch Domain / Try Again</span>
@@ -1135,11 +1188,11 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
             </button>
             <button
               id="btn-recover-back-domains"
-              onClick={() => setSession(null)}
+              onClick={handleBackToTechnicalDashboard}
               className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Select Domain</span>
+              <span>Technical Dashboard</span>
             </button>
           </div>
         </div>
@@ -1161,7 +1214,18 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     <div id="live-technical-interview-room" className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 pb-20 sm:pb-6 space-y-4 sm:space-y-6">
       {/* Top Navigation & Status Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2.5 sm:space-x-3">
+          {/* Back Button to Technical Dashboard */}
+          <button
+            id="btn-back-to-technical-dashboard"
+            onClick={handleBackToTechnicalDashboard}
+            className="p-2 sm:px-3 sm:py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition flex items-center gap-1.5 text-xs font-semibold shrink-0 cursor-pointer shadow-xs"
+            title="Back to Technical Dashboard (Choose another domain)"
+          >
+            <ArrowLeft className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Technical Dashboard</span>
+          </button>
+
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
             {selectedDomainMeta?.name?.charAt(0) || 'T'}
           </div>
