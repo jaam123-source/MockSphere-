@@ -1155,9 +1155,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
   // Live keyword detection calculation for candidate feedback
   const liveCombinedAnswer = [textResponse, isCodingQuestion ? codeSnippet : '', diagramDescription].filter(Boolean).join(' ');
-  const liveKwResult = React.useMemo(() => {
-    return detectKeywordsInAnswer(liveCombinedAnswer, currentQ);
-  }, [liveCombinedAnswer, currentQ]);
+  const liveKwResult = detectKeywordsInAnswer(liveCombinedAnswer, currentQ);
 
   return (
     <div id="live-technical-interview-room" className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 pb-20 sm:pb-6 space-y-4 sm:space-y-6">
