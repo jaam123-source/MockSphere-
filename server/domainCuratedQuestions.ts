@@ -37,14 +37,13 @@ export function getCuratedDomainQuestions(domain: TechnicalDomainId): TechnicalQ
       topic: t.name,
       difficulty: 'Easy',
       type: 'conceptual',
-      question: `In ${domainName}, what are the fundamental concepts and working principles behind ${t.name}? Explain how ${t.concept} operates in standard environments.`,
+      question: `What is ${t.name} in ${domainName}, and why is it important?`,
       expected_key_points: [
-        `Clear definition of ${t.name}`,
+        `Clear, simple definition of ${t.name}`,
         `Core mechanism governing ${t.concept}`,
-        `Standard implementation patterns and common use cases`,
-        `Key benefits and potential pitfalls`,
+        `Practical use cases and benefits`,
       ],
-      improved_answer: `In ${domainName}, ${t.name} represents a foundational pillar. It operates by establishing predictable abstractions over ${t.concept}. Developers leverage this to enforce maintainability, reduce runtime anomalies, and ensure system consistency across environments.`,
+      improved_answer: `In ${domainName}, ${t.name} refers to ${t.concept}. It provides clean abstractions that make applications reliable, maintainable, and easy to scale.`,
     });
   });
 
@@ -75,36 +74,36 @@ export function getCuratedDomainQuestions(domain: TechnicalDomainId): TechnicalQ
       difficulty: 'Medium',
       type: t.type as any,
       question: isCodeOutput
-        ? `Analyze the following ${domainName} code snippet. Explain the execution flow, memory allocations, and exact output behavior.`
+        ? `What is the output and execution order of this code snippet in ${domainName}?`
         : isDebugging
-        ? `Identify the runtime bottleneck or logical bug in the following ${domainName} module. Explain why it fails under high load and how to fix it.`
-        : `Compare the primary approaches for ${t.name} in ${domainName}. Under what specific engineering conditions would you choose one approach over the other?`,
+        ? `What is the bug in this code snippet and how would you fix it?`
+        : `What is the difference between the main approaches for ${t.name} in ${domainName}?`,
       code_snippet_display: isCodeOutput
-        ? `// Code Analysis Example in ${domainName}\nfunction processTransaction(payload) {\n  console.log('Validating payload...');\n  const result = executeStep(payload);\n  console.log('Completed step with status:', result.status);\n  return result;\n}`
+        ? `// Code Analysis in ${domainName}\nfunction calculate(data) {\n  console.log('Processing:', data);\n  return data ? true : false;\n}`
         : isDebugging
-        ? `// Defective Routine in ${domainName}\nasync function handleBatchRequests(items) {\n  // Bug: unbounded parallel promises without throttling\n  return Promise.all(items.map(item => fetchItem(item.id)));\n}`
+        ? `// Debugging task in ${domainName}\nasync function fetchAll(ids) {\n  // What bug happens here if ids has 10,000 items?\n  return Promise.all(ids.map(id => fetchItem(id)));\n}`
         : undefined,
       expected_key_points: [
-        `Detailed architectural evaluation of ${t.name}`,
-        `Analysis of trade-offs (time vs space, throughput vs latency)`,
-        `Concrete technical justification with edge case considerations`,
+        `Clear explanation of ${t.name}`,
+        `Understanding of tradeoffs and edge cases`,
+        `Direct, actionable answer`,
       ],
-      improved_answer: `When evaluating ${t.name} in ${domainName}, engineering trade-offs govern the optimal decision. Key considerations include asymptotic overhead, network/disk latency, memory pressure, and fault recovery boundaries. Prioritizing decoupled abstractions ensures resilient scaling.`,
+      improved_answer: `In ${domainName}, ${t.name} requires balancing simplicity, performance, and reliability based on specific project needs.`,
     });
   });
 
   // LEVEL 3: PRACTICAL / CODING / PROBLEM SOLVING (10 Questions)
   const l3Topics = [
-    { name: 'Core Algorithm & Data Pipeline Implementation', type: 'coding', lang: 'typescript' },
-    { name: 'High-Throughput Distributed System Design', type: 'scenario', lang: undefined },
-    { name: 'Fault-Tolerant Asynchronous Workflow', type: 'coding', lang: 'typescript' },
-    { name: 'Real-Time Telemetry & Monitoring Architecture', type: 'scenario', lang: undefined },
-    { name: 'Defect Analysis & Root-Cause Mitigation', type: 'debugging', lang: 'typescript' },
-    { name: 'Secure Authentication & Access Control Pipeline', type: 'coding', lang: 'typescript' },
-    { name: 'Data Consistency & Distributed Conflict Resolution', type: 'scenario', lang: undefined },
-    { name: 'Custom LRU / LFU Cache Engine Implementation', type: 'coding', lang: 'typescript' },
-    { name: 'Zero-Downtime Infrastructure Migration Strategy', type: 'scenario', lang: undefined },
-    { name: 'Production Disaster Recovery & Chaos Engineering', type: 'scenario', lang: undefined },
+    { name: 'Data Processing Function', type: 'coding', lang: 'typescript' },
+    { name: 'System Scaling Strategy', type: 'scenario', lang: undefined },
+    { name: 'Asynchronous Task Handler', type: 'coding', lang: 'typescript' },
+    { name: 'Monitoring & Alerting Setup', type: 'scenario', lang: undefined },
+    { name: 'Fixing Unhandled Errors', type: 'debugging', lang: 'typescript' },
+    { name: 'Secure API Authentication', type: 'scenario', lang: undefined },
+    { name: 'Database Query Optimization', type: 'scenario', lang: undefined },
+    { name: 'Simple LRU Cache', type: 'coding', lang: 'typescript' },
+    { name: 'Zero-Downtime Deployment', type: 'scenario', lang: undefined },
+    { name: 'Disaster Recovery Plan', type: 'scenario', lang: undefined },
   ];
 
   l3Topics.forEach((t, i) => {
@@ -121,19 +120,19 @@ export function getCuratedDomainQuestions(domain: TechnicalDomainId): TechnicalQ
       type: t.type as any,
       language: t.lang || 'typescript',
       question: isCoding
-        ? `Implement a production-ready solution in ${domainName} for "${t.name}". Ensure robust input validation, boundary condition handling, and optimal asymptotic time/space efficiency.`
+        ? `Write a clean function in ${domainName} to implement "${t.name}".`
         : isDebugging
-        ? `Analyze a severe production outage caused by "${t.name}" in ${domainName}. How would you isolate the root cause, mitigate immediate business impact, and architect a permanent safeguard?`
-        : `Design a comprehensive production system in ${domainName} addressing "${t.name}". Detail the component topology, data flow, failure recovery, caching layer, and scaling bottlenecks.`,
+        ? `How would you diagnose and fix a critical issue with "${t.name}" in ${domainName}?`
+        : `How would you design a simple, reliable solution for "${t.name}" in ${domainName}?`,
       code_template: isCoding
-        ? `// ${domainName} Implementation: ${t.name}\nexport function executeTask<T>(input: T): { success: boolean; data: any } {\n  // Implement your algorithm or business logic\n  return { success: true, data: null };\n}`
+        ? `// Implement ${t.name}\nexport function solve(input: any) {\n  // Write your code here\n}`
         : undefined,
       expected_key_points: [
-        `Production-grade architecture / implementation for ${t.name}`,
-        `Edge-case and error recovery handling`,
-        `Computational complexity and scalability analysis`,
+        `Practical approach for ${t.name}`,
+        `Handling edge cases and errors`,
+        `Clean, readable code or explanation`,
       ],
-      improved_answer: `For ${t.name} in ${domainName}, the optimal architecture balances modularity, fault isolation, and low operational latency. By introducing idempotent pipelines, rate limiting, and structured telemetry, the system achieves enterprise-grade reliability and seamless horizontal scaling.`,
+      improved_answer: `For ${t.name} in ${domainName}, focus on clean architecture, proper error handling, and robust edge-case validation.`,
     });
   });
 

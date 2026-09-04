@@ -89,14 +89,20 @@ export async function generateAITechnicalQuestions(
       ? `This is a RETAKE interview. The candidate previously struggled with these topics: [${previousWeakTopics.join(', ')}]. Generate new questions that prioritize testing these weak areas alongside fresh questions.`
       : 'Generate an initial comprehensive interview set.';
 
-    const prompt = `You are a Principal Engineering Lead & Live Technical Interviewer for a prestigious technology firm.
+    const prompt = `You are a Principal Engineering Lead & Live Technical Interviewer for a technology company.
 Domain: "${domainMeta.name}" (${domain}).
 ${retakePromptAddition}
 
+CRITICAL REQUIREMENT:
+- Keep every question SIMPLE, SHORT, and DIRECT (1-2 sentences maximum). Real technical interviewers ask concise, realistic questions.
+- DO NOT write long, academic, or multi-paragraph essay questions.
+- Keep expected_key_points to 2-3 concise points.
+- Keep improved_answer concise, crisp, and direct (2-3 sentences).
+
 Generate a total of 30 technical interview questions split into EXACTLY three progressive levels:
-- Level 1 (Basic / Fundamentals): 10 questions (core definitions, primitives, basic syntax, fundamental lifecycles)
-- Level 2 (Intermediate / Understanding): 10 questions (concept comparisons, how/why, debugging, code analysis, intermediate tradeoffs)
-- Level 3 (Practical / Coding / Problem Solving): 10 questions (practical scenario design, coding problem implementation, edge case handling, performance tuning)
+- Level 1 (Basic / Fundamentals): 10 simple questions (core definitions, primitives, basic syntax, differences)
+- Level 2 (Intermediate / Understanding): 10 clear questions (how/why, concept comparisons, debugging, standard tradeoffs)
+- Level 3 (Practical / Coding / Problem Solving): 10 concise practical questions (short coding problems, straightforward scenarios, clean solutions)
 
 Format the output strictly as a JSON array of 30 objects matching this schema:
 [
