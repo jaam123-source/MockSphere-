@@ -53,6 +53,9 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
   const [speechRecognizer, setSpeechRecognizer] = useState<any>(null);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [latestEval, setLatestEval] = useState<any>(null);
+  const [pendingNextSession, setPendingNextSession] = useState<HRInterviewSession | null>(null);
+  const [showHRFeedbackModal, setShowHRFeedbackModal] = useState<boolean>(false);
+  const [isAudioFeedbackEnabled, setIsAudioFeedbackEnabled] = useState<boolean>(true);
 
   // Webcam stream
   const [isCameraActive, setIsCameraActive] = useState<boolean>(true);
@@ -247,27 +250,49 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
         response_text: textResponse,
       });
 
-      setSession(res.session);
       setLatestEval(res.currentEvaluation);
+      setPendingNextSession(res.session);
+      setShowHRFeedbackModal(true);
       setTextResponse('');
       onRefreshDashboard();
 
-      if (res.session.status === 'COMPLETED' && res.session.passed) {
-        confetti({
-          particleCount: 110,
-          spread: 80,
-          origin: { y: 0.6 },
-        });
-      } else if (res.session.status === 'IN_PROGRESS') {
-        const nextQ = res.session.questions?.[res.session.current_question_index];
-        if (nextQ) {
-          speakQuestion(nextQ.question);
-        }
+      if (res.currentEvaluation?.spoken_response && isAudioFeedbackEnabled) {
+        setIsSpeaking(true);
+        SpeechService.speak(
+          res.currentEvaluation.spoken_response,
+          () => setIsSpeaking(false),
+          () => setIsSpeaking(true)
+        );
       }
     } catch (err: any) {
       alert(`HR Evaluation error: ${err.message}`);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleProceedNext = () => {
+    SpeechService.stopSpeaking();
+    setIsSpeaking(false);
+    setShowHRFeedbackModal(false);
+    setLatestEval(null);
+
+    if (pendingNextSession) {
+      const next = pendingNextSession;
+      setPendingNextSession(null);
+      setSession(next);
+
+      if (next.status === 'COMPLETED') {
+        if (next.passed) {
+          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        }
+        onRefreshDashboard();
+      } else {
+        const nextQ = next.questions?.[next.current_question_index];
+        if (nextQ) {
+          speakQuestion(nextQ.question);
+        }
+      }
     }
   };
 
@@ -799,49 +824,71 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
         </div>
       </div>
 
-      {/* Latest Evaluation Feedback Card */}
-      {latestEval && (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-900/90 to-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 animate-fadeIn">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> HR Evaluation & Feedback
-            </span>
-            <div className="text-right">
-              <span className="text-xs text-slate-400">Score: </span>
-              <strong className="text-base sm:text-lg text-emerald-400">{latestEval.score}/100</strong>
+      {/* Step-by-Step HR Question Evaluation Modal */}
+      {showHRFeedbackModal && latestEval && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-900 border border-emerald-500/40 rounded-3xl shadow-2xl p-6 sm:p-8 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">
+                  {latestEval.score}%
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-extrabold text-white">HR Question Evaluation Result</h3>
+                  <p className="text-xs text-slate-400">Review your performance on this question before proceeding.</p>
+                </div>
+              </div>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                latestEval.score >= 70 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-emerald-500/30'
+              }`}>
+                {latestEval.verbal_status || 'EVALUATED'}
+              </span>
             </div>
-          </div>
 
-          <p className="text-xs text-slate-200 leading-relaxed font-medium bg-slate-950/80 p-3.5 sm:p-4 rounded-xl border border-slate-800">
-            {latestEval.feedback}
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs">
-            {latestEval.strengths?.length > 0 && (
-              <div className="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-xl space-y-1">
-                <div className="font-bold text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Communication Strengths:
-                </div>
-                <ul className="list-disc list-inside text-slate-300 space-y-0.5">
-                  {latestEval.strengths.map((s: string, i: number) => (
-                    <li key={i}>{s}</li>
-                  ))}
-                </ul>
+            <div className="space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs sm:text-sm text-slate-200 leading-relaxed font-medium">
+                <p>{latestEval.feedback}</p>
               </div>
-            )}
 
-            {latestEval.weaknesses?.length > 0 && (
-              <div className="p-3 bg-amber-950/20 border border-amber-500/20 rounded-xl space-y-1">
-                <div className="font-bold text-amber-400 flex items-center gap-1">
-                  <AlertCircle className="w-3.5 h-3.5" /> Improvement Opportunities:
-                </div>
-                <ul className="list-disc list-inside text-slate-300 space-y-0.5">
-                  {latestEval.weaknesses.map((w: string, i: number) => (
-                    <li key={i}>{w}</li>
-                  ))}
-                </ul>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {latestEval.strengths?.length > 0 && (
+                  <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30 space-y-1">
+                    <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4" /> Strengths:
+                    </div>
+                    <ul className="list-disc list-inside text-slate-300 space-y-0.5">
+                      {latestEval.strengths.map((s: string, idx: number) => (
+                        <li key={idx}>{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {latestEval.weaknesses?.length > 0 && (
+                  <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/30 space-y-1">
+                    <div className="font-bold text-amber-400 flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4" /> Areas for Growth:
+                    </div>
+                    <ul className="list-disc list-inside text-slate-300 space-y-0.5">
+                      {latestEval.weaknesses.map((w: string, idx: number) => (
+                        <li key={idx}>{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+
+            <div className="flex items-center justify-end pt-3 border-t border-slate-800">
+              <button
+                id="btn-proceed-next-hr-question"
+                onClick={handleProceedNext}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <span>{pendingNextSession?.status === 'COMPLETED' ? 'View Final HR Report' : 'Proceed to Next Question'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}
