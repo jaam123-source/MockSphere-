@@ -599,8 +599,8 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
           </div>
 
           <AIAvatarInterviewer
-            interviewerName="Marcus Sterling"
-            interviewerTitle="Senior Director of Talent & HR Behavioral Assessment"
+            interviewerName="AI HR Interviewer"
+            interviewerTitle="Behavioral & Talent Assessment Agent"
             isSpeaking={isSpeaking}
             questionText={currentQ.question}
             onRepeatQuestion={() => speakQuestion(currentQ.question)}

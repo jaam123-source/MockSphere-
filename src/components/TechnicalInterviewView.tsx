@@ -1292,8 +1292,8 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         <div className="lg:col-span-7 space-y-4">
           {/* AI Interviewer Avatar & Speech Stream */}
           <AIAvatarInterviewer
-            interviewerName="Dr. Elena Vance"
-            interviewerTitle="Senior Principal Engineering Interview Lead"
+            interviewerName="AI Technical Interviewer"
+            interviewerTitle="Advanced Engineering Assessment Agent"
             isSpeaking={isSpeakingInterviewer}
             questionText={currentQ.question}
             onRepeatQuestion={() => speakInterviewerQuestion(currentQ.question)}

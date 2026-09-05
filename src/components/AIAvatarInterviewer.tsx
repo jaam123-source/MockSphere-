@@ -13,8 +13,8 @@ interface AIAvatarInterviewerProps {
 }
 
 export const AIAvatarInterviewer: React.FC<AIAvatarInterviewerProps> = ({
-  interviewerName = 'Dr. Elena Vance',
-  interviewerTitle = 'Senior Principal Interview Lead (AI Virtual Agent)',
+  interviewerName = 'AI Virtual Interviewer',
+  interviewerTitle = 'Automated Technical & Behavioral Assessment Agent',
   isSpeaking,
   isListening = false,
   isThinking = false,
