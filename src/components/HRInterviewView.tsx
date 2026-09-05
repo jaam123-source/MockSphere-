@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
+import { AIAvatarInterviewer } from './AIAvatarInterviewer';
 import {
   Users2,
   Mic,
@@ -587,21 +588,25 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
         </button>
       </div>
 
-      {/* AI HR Question Prompt */}
+      {/* AI HR Question Prompt & Avatar Interviewer */}
       {currentQ && (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-900/95 to-emerald-950/20 border border-emerald-500/30 rounded-2xl p-5 sm:p-8 shadow-xl space-y-3 sm:space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
             <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/25">
               Category: {currentQ.category?.replace(/_/g, ' ').toUpperCase()}
             </span>
             <span className="text-[11px] sm:text-xs text-slate-400">Response Mode: <strong>{responseMode.toUpperCase()}</strong></span>
           </div>
 
-          <h2 className="text-base sm:text-xl font-bold text-white leading-relaxed">
-            {currentQ.question}
-          </h2>
+          <AIAvatarInterviewer
+            interviewerName="Marcus Sterling"
+            interviewerTitle="Senior Director of Talent & HR Behavioral Assessment"
+            isSpeaking={isSpeaking}
+            questionText={currentQ.question}
+            onRepeatQuestion={() => speakQuestion(currentQ.question)}
+          />
 
-          <div className="text-xs text-slate-400 flex items-center gap-1.5 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+          <div className="text-xs text-slate-400 flex items-center gap-1.5 bg-slate-900/90 p-3 rounded-xl border border-slate-800">
             <HelpCircle className="w-4 h-4 text-emerald-400 shrink-0" />
             <span><strong>Interviewer Intent: </strong>{currentQ.intent}</span>
           </div>

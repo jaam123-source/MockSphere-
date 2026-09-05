@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
+import { AIAvatarInterviewer } from './AIAvatarInterviewer';
 import {
   Code2,
   Mic,
@@ -1290,74 +1291,15 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         {/* Left Column: AI Interviewer Video & Live Question Card (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
           {/* AI Interviewer Avatar & Speech Stream */}
-          <div className="relative p-4 sm:p-6 rounded-3xl bg-slate-900 border border-slate-800 text-white overflow-hidden shadow-lg">
-            {/* Animated Glow Halo when speaking */}
-            <div
-              className={`absolute -top-24 -left-24 w-64 h-64 rounded-full blur-3xl transition-opacity duration-700 ${
-                isSpeakingInterviewer ? 'bg-blue-500/20 opacity-100' : 'bg-slate-500/10 opacity-30'
-              }`}
-            />
+          <AIAvatarInterviewer
+            interviewerName="Dr. Elena Vance"
+            interviewerTitle="Senior Principal Engineering Interview Lead"
+            isSpeaking={isSpeakingInterviewer}
+            questionText={currentQ.question}
+            onRepeatQuestion={() => speakInterviewerQuestion(currentQ.question)}
+          />
 
-            <div className="relative z-10 flex items-start space-x-3 sm:space-x-4">
-              {/* Interviewer Visual Pulse Avatar */}
-              <div className="relative shrink-0">
-                <div
-                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 ${
-                    isSpeakingInterviewer
-                      ? 'bg-linear-to-tr from-blue-600 to-cyan-500 ring-4 ring-blue-500/30 scale-105'
-                      : 'bg-slate-800 border border-slate-700'
-                  }`}
-                >
-                  <Brain className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                </div>
-                {isSpeakingInterviewer && (
-                  <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500" />
-                  </span>
-                )}
-              </div>
-
-              {/* Interviewer Status & Question Content */}
-              <div className="space-y-2 flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-cyan-400">
-                      Senior AI Interviewer
-                    </span>
-                    {isSpeakingInterviewer && (
-                      <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 animate-pulse">
-                        Speaking...
-                      </span>
-                    )}
-                    {isCodingQuestion ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
-                        <Code2 className="w-3 h-3" /> Coding Question
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 flex items-center gap-1">
-                        <BookOpen className="w-3 h-3" /> Theory Question
-                      </span>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => speakInterviewerQuestion(currentQ.question)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition text-xs flex items-center gap-1 shrink-0"
-                    title="Replay Audio Question"
-                  >
-                    <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="text-[10px] sm:text-[11px]">Replay</span>
-                  </button>
-                </div>
-
-                <div className="text-sm sm:text-base md:text-lg font-medium text-slate-100 leading-relaxed">
-                  {currentQ.question}
-                </div>
-              </div>
-            </div>
-
-            {/* Code Snippet Display (if intermediate code output / debugging) */}
+          {/* Code Snippet Display (if intermediate code output / debugging) */}
             {currentQ.code_snippet_display && (
               <div className="mt-4 p-3 sm:p-4 rounded-xl bg-slate-950/80 border border-slate-800 font-mono text-[11px] sm:text-xs text-cyan-300 overflow-x-auto">
                 <pre>{currentQ.code_snippet_display}</pre>
@@ -1391,7 +1333,6 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
                 </ul>
               </div>
             )}
-          </div>
 
           {/* Candidate Webcam & Audio Preview */}
           <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
