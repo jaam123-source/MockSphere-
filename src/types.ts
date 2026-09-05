@@ -277,16 +277,32 @@ export interface TechnicalInterviewSession {
   created_at?: string;
 }
 
+export type HRInterviewMode = 'quick' | 'standard' | 'full';
+
 export interface HRQuestion {
   question_id: string;
-  category: 'behavioral' | 'situational' | 'culture' | 'career';
+  category: 'introduction' | 'education' | 'strengths_weaknesses' | 'projects' | 'behavioral' | 'situational' | 'company' | 'career' | 'closing';
   question: string;
   intent: string;
+}
+
+export interface HRMetricsBreakdown {
+  communication: number; // 0 - 10
+  confidence: number; // 0 - 10
+  clarity: number; // 0 - 10
+  relevance: number; // 0 - 10
+  professionalism: number; // 0 - 10
+  answer_structure: number; // 0 - 10
+  problem_solving: number; // 0 - 10
+  resume_knowledge: number; // 0 - 10
+  positive_attitude: number; // 0 - 10
+  interview_readiness: number; // 0 - 10
 }
 
 export interface HRInterviewSession {
   session_id: string;
   user_id: string;
+  mode: HRInterviewMode;
   status: 'IN_PROGRESS' | 'COMPLETED';
   current_question_index: number;
   total_questions: number;
@@ -294,6 +310,7 @@ export interface HRInterviewSession {
   responses: Array<{
     question_id: string;
     question: string;
+    category: string;
     response_type: 'text' | 'voice';
     response: string;
     evaluation: {
@@ -307,8 +324,14 @@ export interface HRInterviewSession {
     };
   }>;
   overall_score?: number;
+  metrics_breakdown?: HRMetricsBreakdown;
+  strengths?: string[];
+  areas_to_improve?: string[];
+  ai_feedback?: string;
+  suggested_practice?: string;
   passed?: boolean;
   completed_at?: string;
+  created_at?: string;
 }
 
 export interface LevelPerformanceItem {

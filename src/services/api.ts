@@ -5,6 +5,7 @@ import {
   FinalAptitudeResult,
   FinalReportData,
   HRInterviewSession,
+  HRInterviewMode,
   LevelAttemptResult,
   ResponseMode,
   TechnicalDomainId,
@@ -256,9 +257,10 @@ export const ApiService = {
   },
 
   // HR Round
-  async startHRInterview(): Promise<HRInterviewSession> {
+  async startHRInterview(mode: HRInterviewMode = 'standard'): Promise<HRInterviewSession> {
     return request<HRInterviewSession>('/api/hr/start', {
       method: 'POST',
+      body: JSON.stringify({ mode }),
     });
   },
 

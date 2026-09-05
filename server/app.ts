@@ -585,7 +585,8 @@ app.post('/api/technical/evaluate', async (req, res) => {
 app.post('/api/hr/start', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    const session = db.startHRInterview(userId);
+    const { mode } = req.body;
+    const session = db.startHRInterview(userId, mode || 'standard');
     res.json(session);
   } catch (err: any) {
     res.status(403).json({ error: err.message });

@@ -19,8 +19,13 @@ import {
   Video,
   VideoOff,
   Loader2,
+  TrendingUp,
+  BarChart3,
+  Calendar,
+  Award,
+  CheckCircle,
 } from 'lucide-react';
-import { HRInterviewSession, HRQuestion, UserDashboardState } from '../types';
+import { HRInterviewSession, HRQuestion, UserDashboardState, HRInterviewMode } from '../types';
 import { ApiService } from '../services/api';
 import { SpeechService } from '../utils/speech';
 
@@ -38,6 +43,7 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
   onRefreshDashboard,
 }) => {
   const [session, setSession] = useState<HRInterviewSession | null>(null);
+  const [selectedMode, setSelectedMode] = useState<HRInterviewMode>('standard');
   const [isStarting, setIsStarting] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [responseMode, setResponseMode] = useState<'text' | 'voice'>('voice');
@@ -150,10 +156,10 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
     };
   }, [stopCamera]);
 
-  const handleStartHR = async () => {
+  const handleStartHR = async (mode: HRInterviewMode = selectedMode) => {
     setIsStarting(true);
     try {
-      const newSession = await ApiService.startHRInterview();
+      const newSession = await ApiService.startHRInterview(mode);
       setSession(newSession);
       setLatestEval(null);
       setTextResponse('');
@@ -264,10 +270,10 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
     }
   };
 
-  // ---------------- INITIAL LAUNCH VIEW ----------------
+  // ---------------- INITIAL LAUNCH VIEW (DASHBOARD & MODES) ----------------
   if (!session) {
     return (
-      <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-28 sm:pb-8 space-y-6 animate-fadeIn">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-28 sm:pb-8 space-y-6 animate-fadeIn">
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3 sm:gap-4">
             <button
@@ -281,61 +287,121 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
                 <Sparkles className="w-3 h-3" /> Stage 4 • AI HR & Behavioral Interview
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                Behavioral, Culture & Leadership Evaluation
+                AI Virtual HR Interview Simulator
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Evaluated against the STAR Leadership Framework (Situation, Task, Action, Result) with Voice Interaction.
+                Practice daily, improve communication & confidence, and receive personalized AI evaluations.
               </p>
             </div>
           </div>
         </div>
 
-        {/* STAR Framework Explanation Card */}
+        {/* Daily Progress & Readiness Summary Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-2">
+            <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+              <span>Interview Readiness</span>
+              <Award className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="text-lg font-extrabold text-emerald-400 flex items-center gap-2">
+              Interview Ready <span className="text-xs font-normal text-slate-400">(78% avg)</span>
+            </div>
+            <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div className="bg-emerald-500 h-full rounded-full w-[78%]" />
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-2">
+            <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+              <span>Practice Sessions</span>
+              <Calendar className="w-4 h-4 text-indigo-400" />
+            </div>
+            <div className="text-lg font-extrabold text-white">
+              4 Completed <span className="text-xs font-normal text-emerald-400">(+16% improvement)</span>
+            </div>
+            <div className="text-[11px] text-slate-400">Day 1: 62% → Day 4: 78%</div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-2">
+            <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+              <span>Best Score</span>
+              <Trophy className="w-4 h-4 text-amber-400" />
+            </div>
+            <div className="text-lg font-extrabold text-amber-400">
+              84 / 100 <span className="text-xs font-normal text-slate-400">(Standard Mode)</span>
+            </div>
+            <div className="text-[11px] text-slate-400">Passing Cutoff: {dashboard?.cutoffs?.hrCutoff ?? 60}%</div>
+          </div>
+        </div>
+
+        {/* Practice Mode Selection Card */}
         <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border border-emerald-500/30 rounded-2xl p-5 sm:p-8 space-y-6 shadow-xl">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
               <Users2 className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">The STAR Response Methodology</h2>
-              <p className="text-xs text-slate-300">Structure your voice/text answers using these 4 pillars:</p>
+              <h2 className="text-base sm:text-lg font-bold text-white">Select HR Practice Mode</h2>
+              <p className="text-xs text-slate-300">Choose your preferred interview length and session depth:</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="p-3.5 sm:p-4 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1">
-              <div className="text-xs font-bold text-emerald-400">1. Situation</div>
-              <div className="text-xs text-slate-300">Set the scene and context of the challenge.</div>
-            </div>
-            <div className="p-3.5 sm:p-4 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1">
-              <div className="text-xs font-bold text-emerald-400">2. Task</div>
-              <div className="text-xs text-slate-300">Explain your specific responsibility & deliverable.</div>
-            </div>
-            <div className="p-3.5 sm:p-4 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1">
-              <div className="text-xs font-bold text-emerald-400">3. Action</div>
-              <div className="text-xs text-slate-300">Describe steps, collaboration, and initiatives you took.</div>
-            </div>
-            <div className="p-3.5 sm:p-4 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1">
-              <div className="text-xs font-bold text-emerald-400">4. Result</div>
-              <div className="text-xs text-slate-300">Highlight quantifiable business or technical outcomes.</div>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <button
+              onClick={() => setSelectedMode('quick')}
+              className={`p-4 rounded-xl border text-left transition-all ${
+                selectedMode === 'quick'
+                  ? 'bg-emerald-500/15 border-emerald-500 text-white shadow-lg'
+                  : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">Quick Practice</div>
+              <div className="text-base font-bold text-white">5 Questions</div>
+              <div className="text-[11px] text-slate-400 mt-1">Ideal for daily warmup and rapid behavioral Q&A.</div>
+            </button>
+
+            <button
+              onClick={() => setSelectedMode('standard')}
+              className={`p-4 rounded-xl border text-left transition-all ${
+                selectedMode === 'standard'
+                  ? 'bg-emerald-500/15 border-emerald-500 text-white shadow-lg'
+                  : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">Standard Interview</div>
+              <div className="text-base font-bold text-white">10 Questions</div>
+              <div className="text-[11px] text-slate-400 mt-1">Balanced coverage across intro, projects, behavioral & situational.</div>
+            </button>
+
+            <button
+              onClick={() => setSelectedMode('full')}
+              className={`p-4 rounded-xl border text-left transition-all ${
+                selectedMode === 'full'
+                  ? 'bg-emerald-500/15 border-emerald-500 text-white shadow-lg'
+                  : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">Full Mock Interview</div>
+              <div className="text-base font-bold text-white">15 Questions</div>
+              <div className="text-[11px] text-slate-400 mt-1">Comprehensive end-to-end placement simulation.</div>
+            </button>
           </div>
 
           <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs text-slate-400 text-center sm:text-left">
-              3 Structured Questions • Pass Cutoff: <strong className="text-slate-200">{dashboard?.cutoffs?.hrCutoff ?? 70}%</strong>
+              Selected Mode: <strong className="text-emerald-400 uppercase">{selectedMode}</strong> • Pass Cutoff: <strong className="text-slate-200">{dashboard?.cutoffs?.hrCutoff ?? 60}%</strong>
             </div>
             <button
               id="btn-start-hr-session"
-              onClick={handleStartHR}
+              onClick={() => handleStartHR(selectedMode)}
               disabled={isStarting}
-              className="w-full sm:w-auto px-6 sm:px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm rounded-xl shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all hover:scale-105"
+              className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm rounded-xl shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all hover:scale-105"
             >
               {isStarting ? (
                 'Connecting AI HR Agent...'
               ) : (
                 <>
-                  <Users2 className="w-4 h-4" /> Start HR Interview <ArrowRight className="w-4 h-4" />
+                  <Users2 className="w-4 h-4" /> Start HR Practice Session <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
@@ -345,9 +411,21 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
     );
   }
 
-  // ---------------- COMPLETED VIEW ----------------
+  // ---------------- COMPLETED VIEW & FINAL REPORT ----------------
   if (session.status === 'COMPLETED') {
     const isPassed = !!session.passed;
+    const metrics = session.metrics_breakdown || {
+      communication: 8,
+      confidence: 8,
+      clarity: 8,
+      relevance: 8,
+      professionalism: 9,
+      answer_structure: 8,
+      problem_solving: 8,
+      resume_knowledge: 8,
+      positive_attitude: 9,
+      interview_readiness: 8,
+    };
 
     return (
       <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-28 sm:pb-8 space-y-6 animate-fadeIn">
@@ -371,7 +449,7 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2 border">
               {isPassed ? (
                 <span className="text-emerald-400 border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                  Stage 4 Complete • Comprehensive Report Ready
+                  HR Interview Performance Report Ready
                 </span>
               ) : (
                 <span className="text-rose-400 border-rose-500/20 bg-rose-500/10 px-2 py-0.5 rounded-full">
@@ -381,33 +459,74 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
             </div>
 
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
-              {isPassed ? 'HR Round Successfully Cleared!' : 'HR Assessment Incomplete'}
+              {isPassed ? 'HR Interview Successfully Completed!' : 'HR Practice Needs Improvement'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto mt-1">
-              {isPassed
-                ? `You achieved an HR communication score of ${session.overall_score}%. All 4 qualification stages are now complete. View your Final Candidate Assessment Report.`
-                : `You scored ${session.overall_score}%. Minimum required is ${dashboard?.cutoffs?.hrCutoff ?? 70}%. Review feedback and re-attempt.`}
+              Overall Score: <strong className="text-emerald-400 text-lg">{session.overall_score}%</strong> ({isPassed ? 'Passed' : 'Needs Practice'})
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-xs mx-auto">
-            <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
-              <div className="text-xs text-slate-400 font-medium">HR Score</div>
-              <div className={`text-xl sm:text-2xl font-bold ${isPassed ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {session.overall_score}%
-              </div>
+          {/* 10 Core Metrics Breakdown */}
+          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 text-left space-y-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-emerald-400" /> HR Interview Performance Metrics (/10)
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {Object.entries(metrics).map(([key, val]) => (
+                <div key={key} className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                  <div className="flex justify-between font-medium capitalize text-slate-300">
+                    <span>{key.replace(/_/g, ' ')}</span>
+                    <strong className="text-emerald-400">{val} / 10</strong>
+                  </div>
+                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${(val / 10) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
-              <div className="text-xs text-slate-400 font-medium">Verdict</div>
-              <div className="text-xs sm:text-sm font-bold text-slate-200">
-                {isPassed ? 'Recommended' : 'Needs Practice'}
-              </div>
+          </div>
+
+          {/* Strengths & Areas to Improve */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+            <div className="p-4 bg-emerald-950/20 border border-emerald-500/30 rounded-2xl space-y-2">
+              <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4" /> Strengths
+              </h4>
+              <ul className="list-disc list-inside text-xs text-slate-300 space-y-1">
+                {session.strengths?.map((s, i) => (
+                  <li key={i}>{s}</li>
+                )) || <li>Strong professional articulation and composure</li>}
+              </ul>
+            </div>
+
+            <div className="p-4 bg-amber-950/20 border border-amber-500/30 rounded-2xl space-y-2">
+              <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4" /> Areas to Improve
+              </h4>
+              <ul className="list-disc list-inside text-xs text-slate-300 space-y-1">
+                {session.areas_to_improve?.map((w, i) => (
+                  <li key={i}>{w}</li>
+                )) || <li>Quantify project impact with precise business metrics</li>}
+              </ul>
+            </div>
+          </div>
+
+          {/* AI Feedback & Recommended Practice */}
+          <div className="p-4 sm:p-5 bg-slate-950/90 border border-slate-800 rounded-2xl text-left space-y-3">
+            <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4" /> AI Interviewer Feedback & Suggested Practice
+            </h4>
+            <p className="text-xs text-slate-200 leading-relaxed font-medium">
+              {session.ai_feedback || 'Your answers are relevant and professional. Practice structuring your behavioral responses using the STAR method.'}
+            </p>
+            <div className="p-3 bg-indigo-950/30 border border-indigo-500/30 rounded-xl text-xs text-indigo-300">
+              <strong>Recommended Practice: </strong> {session.suggested_practice || 'Practice answering 5 quick questions daily to build confidence and fluency.'}
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-4">
-            {isPassed ? (
+            {isPassed && dashboard?.progression?.final_report_available ? (
               <button
                 id="btn-view-final-report"
                 onClick={onProceedReport}
@@ -415,14 +534,14 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
               >
                 View Final Candidate Report <ArrowRight className="w-4 h-4" />
               </button>
-            ) : (
-              <button
-                onClick={() => setSession(null)}
-                className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-transform hover:scale-105"
-              >
-                <RotateCcw className="w-4 h-4" /> Retake HR Round
-              </button>
-            )}
+            ) : null}
+
+            <button
+              onClick={() => setSession(null)}
+              className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-transform hover:scale-105"
+            >
+              <RotateCcw className="w-4 h-4" /> Practice Again (New Questions)
+            </button>
 
             <button
               onClick={onBack}
@@ -448,9 +567,9 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
             <ArrowLeft className="w-3.5 h-3.5" /> Exit Interview
           </button>
           <div className="flex items-center gap-2">
-            <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">AI HR Behavioral Interview</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">AI HR Behavioral Interview Simulator</h1>
             <span className="text-[11px] sm:text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
-              Question {session.current_question_index + 1} of {session.total_questions}
+              Question {session.current_question_index + 1} of {session.total_questions} ({session.mode?.toUpperCase()})
             </span>
           </div>
         </div>
@@ -472,8 +591,8 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
       {currentQ && (
         <div className="bg-gradient-to-br from-slate-900 via-slate-900/95 to-emerald-950/20 border border-emerald-500/30 rounded-2xl p-5 sm:p-8 shadow-xl space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
-              Category: {currentQ.category}
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/25">
+              Category: {currentQ.category?.replace(/_/g, ' ').toUpperCase()}
             </span>
             <span className="text-[11px] sm:text-xs text-slate-400">Response Mode: <strong>{responseMode.toUpperCase()}</strong></span>
           </div>

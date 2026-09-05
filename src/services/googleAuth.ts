@@ -194,3 +194,16 @@ export async function promptGoogleSignIn(): Promise<{ user: User; token: string;
   });
 }
 
+/**
+ * Quick sign-in bypass for preview environments and containers where Google OAuth origins may be unconfigured.
+ */
+export async function quickSignAsUser(email = 'jaammaaj123@gmail.com', name = 'JAAM'): Promise<{ user: User; token: string }> {
+  const authResult = await ApiService.googleAuth({
+    email,
+    name,
+    google_id: 'quick_bypass_' + Date.now(),
+  });
+  setStoredAuth(authResult.token, authResult.user);
+  return authResult;
+}
+

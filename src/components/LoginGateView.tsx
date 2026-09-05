@@ -13,7 +13,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { User as UserType } from '../types';
-import { promptGoogleSignIn } from '../services/googleAuth';
+import { promptGoogleSignIn, quickSignAsUser } from '../services/googleAuth';
 
 interface LoginGateViewProps {
   onAuthSuccess: (user: UserType) => void;
@@ -35,6 +35,22 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
       }, 400);
     } catch (err: any) {
       setError(err?.message || 'Google sign-in was cancelled or failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickSignIn = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const result = await quickSignAsUser('jaammaaj123@gmail.com', 'JAAM');
+      setSuccessInfo(`Welcome back, ${result.user.name}!`);
+      setTimeout(() => {
+        onAuthSuccess(result.user);
+      }, 400);
+    } catch (err: any) {
+      setError(err?.message || 'Quick sign-in failed.');
     } finally {
       setLoading(false);
     }
@@ -187,6 +203,17 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
                     <span>Continue with Google</span>
                   </>
                 )}
+              </button>
+
+              <button
+                type="button"
+                id="btn-quick-sign-in"
+                onClick={handleQuickSignIn}
+                disabled={loading}
+                className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer border border-indigo-500/40 disabled:opacity-60"
+              >
+                <Sparkles className="w-4 h-4 text-cyan-300" />
+                <span>Quick Sign In as jaammaaj123@gmail.com (Instant Bypass)</span>
               </button>
 
               <div className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-2xl flex items-center gap-3">

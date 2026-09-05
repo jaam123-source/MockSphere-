@@ -12,6 +12,7 @@ import {
   FinalAptitudeResult,
   FinalReportData,
   HRInterviewSession,
+  HRInterviewMode,
   HRQuestion,
   LevelAttemptResult,
   LevelPerformanceItem,
@@ -74,24 +75,32 @@ const DEFAULT_SETTINGS: AdminSettings = {
 };
 
 const HR_QUESTIONS_BANK: HRQuestion[] = [
-  {
-    question_id: 'hr_q1',
-    category: 'behavioral',
-    question: 'Tell me about yourself, your technical journey, and what drives you to solve complex engineering problems.',
-    intent: 'Assesses career passion, concise storytelling, and professional communication.',
-  },
-  {
-    question_id: 'hr_q2',
-    category: 'situational',
-    question: 'Describe a challenging technical disagreement or tight project deadline you encountered with a team member and how you resolved it.',
-    intent: 'Evaluates conflict resolution, empathy, collaboration, and delivery mindset.',
-  },
-  {
-    question_id: 'hr_q3',
-    category: 'culture',
-    question: 'Where do you envision your technical and leadership impact in the next 3 to 5 years?',
-    intent: 'Assesses long-term vision, growth mindset, and organizational alignment.',
-  },
+  { question_id: 'hr_intro_1', category: 'introduction', question: 'Tell me about yourself and your background.', intent: 'Assesses professional introduction, articulation, and overview of background.' },
+  { question_id: 'hr_intro_2', category: 'introduction', question: 'Walk me through your educational and technical journey up to this point.', intent: 'Assesses career journey and trajectory.' },
+  { question_id: 'hr_intro_3', category: 'introduction', question: 'Tell me something about yourself that is not mentioned in your resume.', intent: 'Assesses authenticity, personal interests, and unique motivators.' },
+  { question_id: 'hr_edu_1', category: 'education', question: 'Why did you choose Computer Science Engineering / your major?', intent: 'Assesses genuine interest in technology and domain alignment.' },
+  { question_id: 'hr_edu_2', category: 'education', question: 'Which academic subject or course do you enjoy the most, and why?', intent: 'Assesses deep learning curiosity and conceptual grasp.' },
+  { question_id: 'hr_edu_3', category: 'education', question: 'What practical insights have you gained during your engineering education?', intent: 'Assesses application of theoretical knowledge to real scenarios.' },
+  { question_id: 'hr_sw_1', category: 'strengths_weaknesses', question: 'What would you consider your greatest professional strength?', intent: 'Assesses self-awareness and core capability.' },
+  { question_id: 'hr_sw_2', category: 'strengths_weaknesses', question: 'What is your biggest professional weakness, and how are you actively working on improving it?', intent: 'Assesses honesty, vulnerability, and continuous self-improvement.' },
+  { question_id: 'hr_proj_1', category: 'projects', question: 'Tell me about a notable project you built or contributed to.', intent: 'Assesses technical depth and project ownership.' },
+  { question_id: 'hr_proj_2', category: 'projects', question: 'What was your specific role and contribution in that project?', intent: 'Assesses individual accountability within team environments.' },
+  { question_id: 'hr_proj_3', category: 'projects', question: 'What specific problem does your project solve, and what challenges did you face while building it?', intent: 'Assesses problem-solving persistence and debugging resilience.' },
+  { question_id: 'hr_proj_4', category: 'projects', question: 'If you were to improve or scale this project today, what would you change?', intent: 'Assesses architectural maturity and reflection.' },
+  { question_id: 'hr_beh_1', category: 'behavioral', question: 'Tell me about a time you worked in a team to deliver a project under a tight deadline.', intent: 'Assesses teamwork, pressure management, and collaboration (STAR method).' },
+  { question_id: 'hr_beh_2', category: 'behavioral', question: 'Tell me about a difficult disagreement you faced with a teammate and how you resolved it.', intent: 'Assesses conflict resolution, maturity, and emotional intelligence.' },
+  { question_id: 'hr_beh_3', category: 'behavioral', question: 'Tell me about a failure you experienced and what key lesson you learned from it.', intent: 'Assesses resilience, growth mindset, and accountability.' },
+  { question_id: 'hr_beh_4', category: 'behavioral', question: 'How do you handle constructive criticism and feedback?', intent: 'Assesses receptiveness to mentoring and professional growth.' },
+  { question_id: 'hr_sit_1', category: 'situational', question: 'If a team member is falling behind on their work before a critical deadline, what would you do?', intent: 'Assesses proactive collaboration, empathy, and leadership initiative.' },
+  { question_id: 'hr_sit_2', category: 'situational', question: 'If you are given a critical task using a technology or framework you have never used before, how would you handle it?', intent: 'Assesses learning agility and resourcefulness.' },
+  { question_id: 'hr_sit_3', category: 'situational', question: 'If you realize you made a significant mistake in a task after submission, what immediate steps would you take?', intent: 'Assesses integrity, accountability, and problem remediation.' },
+  { question_id: 'hr_comp_1', category: 'company', question: 'Why should we hire you over other qualified candidates?', intent: 'Assesses value proposition, confidence, and role alignment.' },
+  { question_id: 'hr_comp_2', category: 'company', question: 'Why do you want to join our company and what do you know about our work?', intent: 'Assesses company research, motivation, and cultural fit.' },
+  { question_id: 'hr_comp_3', category: 'company', question: 'Are you willing to learn new technologies and work collaboratively in cross-functional teams?', intent: 'Assesses adaptability and teamwork readiness.' },
+  { question_id: 'hr_goal_1', category: 'career', question: 'Where do you see yourself professionally in 5 years?', intent: 'Assesses ambition, career trajectory, and long-term commitment.' },
+  { question_id: 'hr_goal_2', category: 'career', question: 'What are your short-term goals for your first professional role?', intent: 'Assesses immediate focus and readiness for entry into the industry.' },
+  { question_id: 'hr_close_1', category: 'closing', question: 'Do you have any questions for me about the team, culture, or expectations?', intent: 'Assesses candidate engagement and curiosity.' },
+  { question_id: 'hr_close_2', category: 'closing', question: 'Is there anything else regarding your experience or readiness that you would like us to know?', intent: 'Assesses concluding professional presentation.' },
 ];
 
 class Database {
@@ -1434,24 +1443,31 @@ class Database {
   }
 
   // HR Round Execution & Voice Evaluation
-  public startHRInterview(userId: string): HRInterviewSession {
+  public startHRInterview(userId: string, mode: HRInterviewMode = 'standard'): HRInterviewSession {
     const isDemo = this.isDemoUser(userId);
     const dashboard = this.getDashboardState(userId);
     if (!isDemo && !dashboard.progression.hr_unlocked) {
       throw new Error('HR Round is locked until you successfully clear the Technical Interview.');
     }
 
+    const count = mode === 'quick' ? 5 : mode === 'standard' ? 10 : 15;
+    const shuffled = [...HR_QUESTIONS_BANK].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, count);
+
     const session: HRInterviewSession = {
-      session_id: `hr_sess_${Date.now()}`,
+      session_id: `hr_sess_${mode}_${Date.now()}`,
       user_id: userId,
+      mode,
       status: 'IN_PROGRESS',
       current_question_index: 0,
-      total_questions: HR_QUESTIONS_BANK.length,
-      questions: HR_QUESTIONS_BANK,
+      total_questions: selected.length,
+      questions: selected,
       responses: [],
+      created_at: new Date().toISOString(),
     };
 
     const prog = this.getUserProgress(userId);
+    if (!prog.hr_sessions) prog.hr_sessions = [];
     prog.hr_sessions.push(session);
     this.saveDatabase();
     return session;
@@ -1479,6 +1495,7 @@ class Database {
     session.responses.push({
       question_id: question.question_id,
       question: question.question,
+      category: question.category,
       response_type: responseType,
       response: responseText,
       evaluation,
@@ -1493,6 +1510,25 @@ class Database {
       );
       session.overall_score = avgScore;
       session.passed = avgScore >= this.getSettings().hrCutoff;
+
+      const baseComm = Math.min(10, Math.max(5, Math.round(avgScore / 10)));
+      session.metrics_breakdown = {
+        communication: baseComm,
+        confidence: Math.min(10, Math.max(5, baseComm + (Math.random() > 0.5 ? 1 : 0))),
+        clarity: Math.min(10, Math.max(5, baseComm)),
+        relevance: Math.min(10, Math.max(6, Math.round((avgScore + 5) / 10))),
+        professionalism: Math.min(10, Math.max(7, 8)),
+        answer_structure: Math.min(10, Math.max(5, Math.round(avgScore / 11))),
+        problem_solving: Math.min(10, Math.max(6, Math.round(avgScore / 10))),
+        resume_knowledge: Math.min(10, Math.max(6, 8)),
+        positive_attitude: Math.min(10, Math.max(7, 9)),
+        interview_readiness: Math.min(10, Math.max(5, Math.round(avgScore / 10))),
+      };
+
+      session.strengths = ['Clear articulation of professional intent', 'Structured STAR response narrative', 'Positive professional attitude'];
+      session.areas_to_improve = ['Incorporate more quantifiable business metrics in project outcomes', 'Reduce verbal filler hesitations'];
+      session.ai_feedback = `Your overall HR performance score is ${avgScore}%. You demonstrate strong behavioral awareness and communication posture. To improve further, ensure every project response highlights specific quantitative metrics.`;
+      session.suggested_practice = 'Practice structuring situational answers using the STAR method (Situation, Task, Action, Result) with time constraints.';
     }
 
     this.saveDatabase();
@@ -1954,14 +1990,16 @@ class Database {
         prog.hr_sessions.push({
           session_id: `seed_hr_${Date.now()}`,
           user_id: userId,
+          mode: 'standard',
           status: 'COMPLETED',
           current_question_index: 3,
           total_questions: 3,
           questions: HR_QUESTIONS_BANK,
           responses: [
             {
-              question_id: 'hr_q1',
+              question_id: 'hr_intro_1',
               question: HR_QUESTIONS_BANK[0].question,
+              category: 'introduction',
               response_type: 'voice',
               response: 'I am a passionate software engineer focused on building resilient distributed systems.',
               evaluation: {
