@@ -41,42 +41,46 @@ const TOPIC_ICONS: Record<AptitudeTopicId, React.ReactNode> = {
   specialized: <Cpu className="w-6 h-6 text-pink-400" />,
 };
 
-const TOPIC_COLORS: Record<AptitudeTopicId, { bg: string; border: string; bar: string; text: string; badge: string; glow: string; cornerGlow: string }> = {
+const TOPIC_COLORS: Record<AptitudeTopicId, { bg: string; border: string; bar: string; text: string; badge: string; glow: string; cornerGlow: string; iconBg: string }> = {
   quantitative: {
-    bg: 'from-blue-950/50 via-slate-900 to-slate-950',
-    border: 'border-blue-500/30 hover:border-blue-400/80 shadow-[0_0_20px_rgba(59,130,246,0.12)] hover:shadow-[0_0_28px_rgba(59,130,246,0.28)]',
-    bar: 'bg-gradient-to-r from-blue-500 to-cyan-400',
-    text: 'text-blue-400',
-    badge: 'bg-blue-500/15 text-blue-300 border-blue-500/35',
+    bg: 'from-white/95 via-sky-50/70 to-blue-50/50',
+    border: 'border-blue-300/80 hover:border-blue-500 shadow-[0_8px_30px_rgb(59,130,246,0.12)] hover:shadow-[0_12px_35px_rgb(59,130,246,0.24)]',
+    bar: 'bg-gradient-to-r from-blue-600 to-sky-500',
+    text: 'text-blue-700',
+    badge: 'bg-blue-100 text-blue-800 border-blue-200',
     glow: 'blue',
-    cornerGlow: 'from-blue-600 to-cyan-500',
+    cornerGlow: 'from-blue-400/30 to-sky-300/10',
+    iconBg: 'bg-gradient-to-br from-blue-500 to-sky-500 text-white shadow-md shadow-blue-500/30',
   },
   logical: {
-    bg: 'from-purple-950/50 via-slate-900 to-slate-950',
-    border: 'border-purple-500/30 hover:border-purple-400/80 shadow-[0_0_20px_rgba(168,85,247,0.12)] hover:shadow-[0_0_28px_rgba(168,85,247,0.28)]',
-    bar: 'bg-gradient-to-r from-purple-500 to-indigo-400',
-    text: 'text-purple-400',
-    badge: 'bg-purple-500/15 text-purple-300 border-purple-500/35',
+    bg: 'from-white/95 via-purple-50/70 to-indigo-50/50',
+    border: 'border-purple-300/80 hover:border-purple-500 shadow-[0_8px_30px_rgb(168,85,247,0.12)] hover:shadow-[0_12px_35px_rgb(168,85,247,0.24)]',
+    bar: 'bg-gradient-to-r from-purple-600 to-indigo-500',
+    text: 'text-purple-700',
+    badge: 'bg-purple-100 text-purple-800 border-purple-200',
     glow: 'purple',
-    cornerGlow: 'from-purple-600 to-indigo-500',
+    cornerGlow: 'from-purple-400/30 to-indigo-300/10',
+    iconBg: 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-md shadow-purple-500/30',
   },
   verbal: {
-    bg: 'from-teal-950/50 via-slate-900 to-slate-950',
-    border: 'border-teal-500/30 hover:border-teal-400/80 shadow-[0_0_20px_rgba(20,184,166,0.12)] hover:shadow-[0_0_28px_rgba(20,184,166,0.28)]',
-    bar: 'bg-gradient-to-r from-teal-500 to-cyan-400',
-    text: 'text-teal-400',
-    badge: 'bg-teal-500/15 text-teal-300 border-teal-500/35',
+    bg: 'from-white/95 via-teal-50/70 to-cyan-50/50',
+    border: 'border-teal-300/80 hover:border-teal-500 shadow-[0_8px_30px_rgb(20,184,166,0.12)] hover:shadow-[0_12px_35px_rgb(20,184,166,0.24)]',
+    bar: 'bg-gradient-to-r from-teal-600 to-cyan-500',
+    text: 'text-teal-700',
+    badge: 'bg-teal-100 text-teal-800 border-teal-200',
     glow: 'teal',
-    cornerGlow: 'from-teal-600 to-cyan-500',
+    cornerGlow: 'from-teal-400/30 to-cyan-300/10',
+    iconBg: 'bg-gradient-to-br from-teal-500 to-cyan-500 text-white shadow-md shadow-teal-500/30',
   },
   specialized: {
-    bg: 'from-pink-950/50 via-slate-900 to-slate-950',
-    border: 'border-pink-500/30 hover:border-pink-400/80 shadow-[0_0_20px_rgba(236,72,153,0.12)] hover:shadow-[0_0_28px_rgba(236,72,153,0.28)]',
-    bar: 'bg-gradient-to-r from-pink-500 to-violet-400',
-    text: 'text-pink-400',
-    badge: 'bg-pink-500/15 text-pink-300 border-pink-500/35',
+    bg: 'from-white/95 via-pink-50/70 to-rose-50/50',
+    border: 'border-pink-300/80 hover:border-pink-500 shadow-[0_8px_30px_rgb(236,72,153,0.12)] hover:shadow-[0_12px_35px_rgb(236,72,153,0.24)]',
+    bar: 'bg-gradient-to-r from-pink-600 to-rose-500',
+    text: 'text-pink-700',
+    badge: 'bg-pink-100 text-pink-800 border-pink-200',
     glow: 'pink',
-    cornerGlow: 'from-pink-600 to-violet-500',
+    cornerGlow: 'from-pink-400/30 to-rose-300/10',
+    iconBg: 'bg-gradient-to-br from-pink-500 to-rose-500 text-white shadow-md shadow-pink-500/30',
   },
 };
 
@@ -547,33 +551,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 key={topic.id}
                 id={`topic-card-${topic.id}`}
                 onClick={() => onSelectTopic(topic.id)}
-                className={`relative rounded-2xl bg-gradient-to-br ${style.bg} border ${style.border} p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer group overflow-hidden backdrop-blur-xl`}
+                className={`relative rounded-3xl bg-gradient-to-br ${style.bg} border ${style.border} p-6 sm:p-7 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5 cursor-pointer group overflow-hidden backdrop-blur-2xl`}
               >
                 {/* Decorative subtle corner gradient highlight */}
-                <div className={`absolute -top-12 -right-12 w-32 h-32 rounded-full bg-gradient-to-br ${style.cornerGlow} opacity-30 blur-2xl pointer-events-none transition-opacity group-hover:opacity-60`} />
+                <div className={`absolute -top-16 -right-16 w-36 h-36 rounded-full bg-gradient-to-br ${style.cornerGlow} opacity-60 blur-3xl pointer-events-none transition-opacity group-hover:opacity-100`} />
 
                 <div className="relative z-10 flex items-start justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3.5">
-                    <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 shadow-inner group-hover:scale-105 transition-transform">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3.5 rounded-2xl ${style.iconBg} group-hover:scale-110 transition-transform duration-300`}>
                       {TOPIC_ICONS[topic.id]}
                     </div>
                     <div>
-                      <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-cyan-200 transition-colors">
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
                         {topic.name}
                       </h3>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${style.badge}`}>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${style.badge}`}>
                           {topic.isCompleted
                             ? 'Topic Completed ✓'
                             : `Current: Level ${topic.currentLevel} of 10`}
                         </span>
                         {topic.test1Passed && (
-                          <span className="text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
                             Test 1 Passed
                           </span>
                         )}
                         {topic.test2Passed && (
-                          <span className="text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
                             Test 2 Passed
                           </span>
                         )}
@@ -582,22 +586,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
 
                   {/* Chevron indicator */}
-                  <div className="w-8 h-8 rounded-full bg-slate-800/80 border border-slate-700/80 flex items-center justify-center text-slate-400 group-hover:text-white group-hover:border-cyan-500/50 group-hover:bg-slate-800 transition-all shadow-xs shrink-0">
+                  <div className="w-9 h-9 rounded-2xl bg-white/90 border border-slate-200/80 flex items-center justify-center text-slate-500 group-hover:text-slate-900 group-hover:border-slate-300 group-hover:bg-white transition-all shadow-sm shrink-0">
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </div>
 
-                <p className="relative z-10 text-xs text-slate-300 line-clamp-1 mb-5 font-normal">
+                <p className="relative z-10 text-xs sm:text-sm text-slate-600 line-clamp-1 mb-5 font-normal">
                   {topic.description}
                 </p>
 
                 {/* Progress Bar & Level Markers */}
                 <div className="relative z-10 space-y-2 mb-5">
                   <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-slate-400">Progression Completion</span>
+                    <span className="text-slate-500">Progression Completion</span>
                     <span className={style.text}>{topic.progressPercentage}%</span>
                   </div>
-                  <div className="w-full h-2.5 bg-slate-900/90 rounded-full overflow-hidden border border-slate-800/90">
+                  <div className="w-full h-2.5 bg-slate-200/70 rounded-full overflow-hidden border border-slate-300/50">
                     <div
                       className={`h-full ${style.bar} transition-all duration-700`}
                       style={{ width: `${topic.progressPercentage}%` }}
@@ -606,14 +610,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
 
                 {/* Card Action Footer */}
-                <div className="relative z-10 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-                  <div className="flex items-center gap-3">
+                <div className="relative z-10 pt-4 border-t border-slate-200/70 flex items-center justify-between text-xs text-slate-600">
+                  <div className="flex items-center gap-3 font-medium">
                     <span>
-                      <strong className="text-slate-200">{topic.completedLevels}</strong>/10 Levels
+                      <strong className="text-slate-900 font-bold">{topic.completedLevels}</strong>/10 Levels
                     </span>
                     <span>•</span>
                     <span>
-                      <strong className="text-slate-200">
+                      <strong className="text-slate-900 font-bold">
                         {(topic.test1Passed ? 1 : 0) + (topic.test2Passed ? 1 : 0)}
                       </strong>
                       /2 Tests
