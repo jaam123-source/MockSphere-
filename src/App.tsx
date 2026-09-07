@@ -73,7 +73,6 @@ export default function App() {
         setCurrentUser(state.user);
       }
     } catch (err: any) {
-      console.error('Failed to load dashboard state:', err);
       const errMsg = (err?.message || '').toLowerCase();
       const isAuthError =
         errMsg.includes('401') ||
@@ -84,11 +83,17 @@ export default function App() {
         errMsg.includes('unauthorized') ||
         errMsg.includes('user not found');
 
-      if (!dashboard && isAuthError) {
+      if (isAuthError) {
+        console.warn('User session expired or not found. Redirecting to candidate portal.');
         ApiService.logout();
         setCurrentUser(null);
-      } else if (!dashboard) {
-        setLoadError(err.message || 'Failed to connect to backend server');
+        setDashboard(null);
+        setLoadError(null);
+      } else {
+        console.error('Failed to load dashboard state:', err);
+        if (!dashboard) {
+          setLoadError(err.message || 'Failed to connect to backend server');
+        }
       }
     } finally {
       setLoading(false);

@@ -351,7 +351,8 @@ app.get('/api/aptitude/topics', (req, res) => {
     const state = db.getDashboardState(userId);
     res.json({ topics: state.topics });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    const isAuthErr = err.message?.includes('not found') || err.message?.includes('log in') || err.message?.includes('required');
+    res.status(isAuthErr ? 401 : 500).json({ error: err.message });
   }
 });
 
@@ -372,7 +373,8 @@ app.get('/api/aptitude/topic/:topic_id', (req, res) => {
       test2_passed: prog.topic_test2_passed[topic_id as AptitudeTopicId] || false,
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    const isAuthErr = err.message?.includes('not found') || err.message?.includes('log in') || err.message?.includes('required');
+    res.status(isAuthErr ? 401 : 500).json({ error: err.message });
   }
 });
 
