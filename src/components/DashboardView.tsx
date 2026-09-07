@@ -42,46 +42,51 @@ const TOPIC_ICONS: Record<AptitudeTopicId, React.ReactNode> = {
 };
 
 const TOPIC_COLORS: Record<AptitudeTopicId, { bg: string; border: string; bar: string; text: string; badge: string; glow: string; cornerGlow: string; iconBg: string }> = {
+
   quantitative: {
-    bg: 'from-white/95 via-sky-50/70 to-blue-50/50',
-    border: 'border-blue-300/80 hover:border-blue-500 shadow-[0_8px_30px_rgb(59,130,246,0.12)] hover:shadow-[0_12px_35px_rgb(59,130,246,0.24)]',
-    bar: 'bg-gradient-to-r from-blue-600 to-sky-500',
-    text: 'text-blue-700',
-    badge: 'bg-blue-100 text-blue-800 border-blue-200',
-    glow: 'blue',
-    cornerGlow: 'from-blue-400/30 to-sky-300/10',
-    iconBg: 'bg-gradient-to-br from-blue-500 to-sky-500 text-white shadow-md shadow-blue-500/30',
+    bg: 'from-white/95 via-cyan-50/80 to-blue-100/60',
+    border: 'border-cyan-300/80 hover:border-cyan-500 shadow-[0_8px_30px_rgb(6,182,212,0.14)] hover:shadow-[0_12px_35px_rgb(6,182,212,0.28)]',
+    bar: 'bg-gradient-to-r from-cyan-500 to-blue-500',
+    text: 'text-cyan-700',
+    badge: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+    glow: 'cyan',
+    cornerGlow: 'from-cyan-400/35 to-blue-300/15',
+    iconBg: 'bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/35',
   },
+
   logical: {
-    bg: 'from-white/95 via-purple-50/70 to-indigo-50/50',
-    border: 'border-purple-300/80 hover:border-purple-500 shadow-[0_8px_30px_rgb(168,85,247,0.12)] hover:shadow-[0_12px_35px_rgb(168,85,247,0.24)]',
-    bar: 'bg-gradient-to-r from-purple-600 to-indigo-500',
-    text: 'text-purple-700',
-    badge: 'bg-purple-100 text-purple-800 border-purple-200',
-    glow: 'purple',
-    cornerGlow: 'from-purple-400/30 to-indigo-300/10',
-    iconBg: 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-md shadow-purple-500/30',
+    bg: 'from-white/95 via-violet-50/80 to-fuchsia-50/60',
+    border: 'border-violet-300/80 hover:border-violet-500 shadow-[0_8px_30px_rgb(139,92,246,0.14)] hover:shadow-[0_12px_35px_rgb(139,92,246,0.28)]',
+    bar: 'bg-gradient-to-r from-violet-600 to-fuchsia-500',
+    text: 'text-violet-700',
+    badge: 'bg-violet-100 text-violet-800 border-violet-200',
+    glow: 'violet',
+    cornerGlow: 'from-violet-400/35 to-fuchsia-300/15',
+    iconBg: 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-md shadow-violet-500/35',
   },
+
   verbal: {
-    bg: 'from-white/95 via-teal-50/70 to-cyan-50/50',
-    border: 'border-teal-300/80 hover:border-teal-500 shadow-[0_8px_30px_rgb(20,184,166,0.12)] hover:shadow-[0_12px_35px_rgb(20,184,166,0.24)]',
-    bar: 'bg-gradient-to-r from-teal-600 to-cyan-500',
-    text: 'text-teal-700',
-    badge: 'bg-teal-100 text-teal-800 border-teal-200',
-    glow: 'teal',
-    cornerGlow: 'from-teal-400/30 to-cyan-300/10',
-    iconBg: 'bg-gradient-to-br from-teal-500 to-cyan-500 text-white shadow-md shadow-teal-500/30',
+    bg: 'from-white/95 via-emerald-50/80 to-teal-50/60',
+    border: 'border-emerald-300/80 hover:border-emerald-500 shadow-[0_8px_30px_rgb(16,185,129,0.14)] hover:shadow-[0_12px_35px_rgb(16,185,129,0.28)]',
+    bar: 'bg-gradient-to-r from-emerald-500 to-teal-500',
+    text: 'text-emerald-700',
+    badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    glow: 'emerald',
+    cornerGlow: 'from-emerald-400/35 to-teal-300/15',
+    iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/35',
   },
+
   specialized: {
-    bg: 'from-white/95 via-pink-50/70 to-rose-50/50',
-    border: 'border-pink-300/80 hover:border-pink-500 shadow-[0_8px_30px_rgb(236,72,153,0.12)] hover:shadow-[0_12px_35px_rgb(236,72,153,0.24)]',
-    bar: 'bg-gradient-to-r from-pink-600 to-rose-500',
-    text: 'text-pink-700',
-    badge: 'bg-pink-100 text-pink-800 border-pink-200',
-    glow: 'pink',
-    cornerGlow: 'from-pink-400/30 to-rose-300/10',
-    iconBg: 'bg-gradient-to-br from-pink-500 to-rose-500 text-white shadow-md shadow-pink-500/30',
+    bg: 'from-white/95 via-orange-50/80 to-rose-50/60',
+    border: 'border-orange-300/80 hover:border-orange-500 shadow-[0_8px_30px_rgb(249,115,22,0.14)] hover:shadow-[0_12px_35px_rgb(249,115,22,0.28)]',
+    bar: 'bg-gradient-to-r from-orange-500 to-rose-500',
+    text: 'text-orange-700',
+    badge: 'bg-orange-100 text-orange-800 border-orange-200',
+    glow: 'orange',
+    cornerGlow: 'from-orange-400/35 to-rose-300/15',
+    iconBg: 'bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-md shadow-orange-500/35',
   },
+
 };
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
