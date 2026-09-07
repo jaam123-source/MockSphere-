@@ -411,63 +411,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </section>
 
-      {/* PRIMARY ACTION CARD: CONTINUE PREPARATION */}
-      <section
-        id="dashboard-continue-preparation-card"
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-cyan-950 border-2 border-indigo-500/40 p-6 sm:p-7 shadow-2xl shadow-indigo-950/60 transition-all hover:border-indigo-400/60"
-      >
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${nextAction.badgeBg}`}>
-                <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                <span>{nextAction.stage}</span>
-              </span>
-              <span className="text-xs font-semibold text-slate-400">
-                • Saved Progress Active
-              </span>
-            </div>
-
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-              <span>{nextAction.title}</span>
-            </h2>
-
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              {nextAction.description}
-            </p>
-
-            <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-400 font-medium">
-              <span className="flex items-center gap-1 text-cyan-300">
-                <Check className="w-4 h-4 text-cyan-400" />
-                <strong>{stats.total_levels_completed}</strong>/40 Levels Cleared
-              </span>
-              <span className="flex items-center gap-1 text-indigo-300">
-                <Check className="w-4 h-4 text-indigo-400" />
-                <strong>{stats.total_tests_passed}</strong>/8 Tests Cleared
-              </span>
-              <span className="flex items-center gap-1 text-emerald-300">
-                <strong>{stats.overall_progress}%</strong> Prep Score
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3 w-full lg:w-auto shrink-0">
-            <button
-              id="btn-primary-continue-preparation"
-              onClick={nextAction.action}
-              className="px-6 py-4 rounded-xl bg-gradient-to-r from-indigo-500 via-blue-600 to-cyan-500 hover:from-indigo-400 hover:via-blue-500 hover:to-cyan-400 text-white text-sm sm:text-base font-black shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-3 transition-all hover:scale-[1.03] cursor-pointer"
-            >
-              {nextAction.icon}
-              <span>{nextAction.buttonLabel}</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-            <div className="text-[11px] text-slate-400 text-center lg:text-right">
-              All progress is securely auto-saved to your Google account
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* STAGE PROMPT CALLOUT: Ready for Technical Round / Next Stage */}
       {progression.technical_unlocked && !progression.technical_passed && (
         <section
