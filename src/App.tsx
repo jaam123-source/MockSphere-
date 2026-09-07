@@ -101,7 +101,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    document.documentElement.classList.add('dark');
+    document.documentElement.classList.remove('dark');
     loadDashboard();
   }, []);
 
@@ -216,7 +216,12 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[#F5F9FF] text-slate-800 flex flex-col antialiased selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
+      {/* Background large subtle blurred gradient blobs */}
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-[#E8FBFF] rounded-full blur-[120px] pointer-events-none opacity-80" />
+      <div className="absolute top-1/3 right-10 w-[500px] h-[500px] bg-[#F3EEFF] rounded-full blur-[120px] pointer-events-none opacity-80" />
+      <div className="absolute bottom-1/4 left-10 w-[550px] h-[550px] bg-[#FFF0FA] rounded-full blur-[130px] pointer-events-none opacity-70" />
+      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-[#E8FBFF] rounded-full blur-[140px] pointer-events-none opacity-60" />
       {/* Top Banner when in DEMO MODE (Admin only) */}
       {isDemoMode && currentUser?.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
         <aside
