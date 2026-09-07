@@ -3,6 +3,8 @@
 @layer base {
   body {
     font-family: 'Space Grotesk', sans-serif;
+    background-color: #F7FAFF;
+    color: #0F172A;
   }
 }
 
