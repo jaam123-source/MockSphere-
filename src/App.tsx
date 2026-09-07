@@ -74,14 +74,17 @@ export default function App() {
       }
     } catch (err: any) {
       console.error('Failed to load dashboard state:', err);
-      // Only clear session if initial load failed with explicit auth error
-      if (
-        !dashboard &&
-        err.message &&
-        (err.message.includes('401') ||
-          err.message.includes('Authentication required') ||
-          err.message.includes('User not found'))
-      ) {
+      const errMsg = (err?.message || '').toLowerCase();
+      const isAuthError =
+        errMsg.includes('401') ||
+        errMsg.includes('auth') ||
+        errMsg.includes('session') ||
+        errMsg.includes('not found') ||
+        errMsg.includes('log in') ||
+        errMsg.includes('unauthorized') ||
+        errMsg.includes('user not found');
+
+      if (!dashboard && isAuthError) {
         ApiService.logout();
         setCurrentUser(null);
       } else if (!dashboard) {
@@ -93,6 +96,7 @@ export default function App() {
   };
 
   useEffect(() => {
+    document.documentElement.classList.add('dark');
     loadDashboard();
   }, []);
 

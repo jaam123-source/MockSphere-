@@ -493,15 +493,8 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   };
 
   // Back to Technical Dashboard handler (returns candidate to domain selection without exiting to main dashboard)
-  const handleBackToTechnicalDashboard = async () => {
-    if (session && session.status === 'IN_PROGRESS') {
-      const confirmLeave = window.confirm(
-        'Return to Technical Dashboard to select another domain? Your active progress in this domain will be reset.'
-      );
-      if (!confirmLeave) return;
-    }
-
-    // Stop speaking and voice recognition
+  const handleBackToTechnicalDashboard = () => {
+    // Stop speaking and voice recognition immediately
     SpeechService.stopSpeaking();
     setIsSpeakingInterviewer(false);
     if (isRecording && speechRecognizer) {
@@ -515,7 +508,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     // Stop camera stream cleanly
     stopCamera();
 
-    // Reset modals and state
+    // Reset modals and state synchronously
     setShowStepFeedbackModal(false);
     setShowRetryModal(false);
     setRetryInfo(null);
@@ -525,15 +518,13 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     setCodeSnippet('');
     setDiagramDescription('');
 
-    // Clear backend active session so candidate can pick any domain freshly
-    try {
-      await ApiService.resetTechnicalInterview();
-    } catch (err) {
-      console.warn('Could not reset technical interview session on backend:', err);
-    }
-
-    // Return to domain selector (Technical Dashboard)
+    // Immediately return to domain selector (Technical Dashboard)
     setSession(null);
+
+    // Reset backend session asynchronously in the background
+    ApiService.resetTechnicalInterview().catch((err) => {
+      console.warn('Could not reset technical interview session on backend:', err);
+    });
   };
 
   // Retry handler for Attempt Once Again
@@ -691,65 +682,65 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     return (
       <div id="technical-domain-selector" className="space-y-6 sm:space-y-8 max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-28 sm:pb-8">
         {/* Header Bar */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-6">
           <div>
             <div className="flex items-center space-x-3 mb-2">
               <button
                 id="btn-back-dashboard"
                 onClick={onBack}
-                className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight">
                 Technical Interview Round
               </h1>
             </div>
-            <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm md:text-base max-w-3xl">
+            <p className="text-slate-200 text-xs sm:text-sm md:text-base font-medium max-w-3xl leading-relaxed">
               Experience a realistic, 3-level AI-powered live technical interview. Select your engineering domain, answer conceptual questions, analyze code snippets, and solve practical architectural challenges.
             </p>
           </div>
 
           <div className="flex items-center space-x-3">
-            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
+            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-800/80 flex items-center gap-1.5">
               <Check className="w-3.5 h-3.5" /> Final Aptitude Cleared
             </span>
           </div>
         </div>
 
         {/* 3-Level Progressive Flow Banner */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 bg-slate-50 dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <div className="flex items-start space-x-3 p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-xs">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 bg-slate-900/90 p-4 sm:p-5 rounded-2xl border border-slate-800">
+          <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-blue-950/80 text-blue-400 border border-blue-800/60 flex items-center justify-center font-bold text-sm shrink-0">
               L1
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Level 1 — Basic</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <h4 className="text-sm font-bold text-white">Level 1 — Basic</h4>
+              <p className="text-xs text-slate-300 mt-0.5">
                 10 Questions: Fundamentals, primitives, core syntax, definitions & standard lifecycles.
               </p>
             </div>
           </div>
 
-          <div className="flex items-start space-x-3 p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-xs">
-            <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-sm shrink-0">
+          <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-purple-950/80 text-purple-400 border border-purple-800/60 flex items-center justify-center font-bold text-sm shrink-0">
               L2
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Level 2 — Intermediate</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <h4 className="text-sm font-bold text-white">Level 2 — Intermediate</h4>
+              <p className="text-xs text-slate-300 mt-0.5">
                 10 Questions: Architecture comparisons, code output tracing, debugging & performance tradeoffs.
               </p>
             </div>
           </div>
 
-          <div className="flex items-start space-x-3 p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-xs">
-            <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-sm shrink-0">
+          <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-amber-950/80 text-amber-400 border border-amber-800/60 flex items-center justify-center font-bold text-sm shrink-0">
               L3
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Level 3 — Practical</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <h4 className="text-sm font-bold text-white">Level 3 — Practical</h4>
+              <p className="text-xs text-slate-300 mt-0.5">
                 10 Questions: Real-world coding problems, system design scenarios & production edge cases.
               </p>
             </div>
@@ -760,8 +751,8 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Choose Your Technical Domain</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <h2 className="text-base sm:text-lg font-bold text-white">Choose Your Technical Domain</h2>
+              <p className="text-xs text-slate-300">
                 Select from the top 5 high-demand industry domains widely running in tech companies.
               </p>
             </div>
@@ -800,65 +791,154 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
         {/* 20-Domain Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredDomains.map((dom) => {
+          {filteredDomains.map((dom, domIdx) => {
             const IconComp = getDomainIcon(dom.icon);
             const isSelected = selectedDomain === dom.id;
+
+            // Domain theme palettes for vibrant variety
+            const palettes = [
+              {
+                accent: 'cyan',
+                topBar: 'from-cyan-500 via-blue-500 to-indigo-500',
+                selectedBorder: 'border-cyan-400 ring-2 ring-cyan-500/40 shadow-xl shadow-cyan-500/20',
+                selectedBg: 'from-cyan-950/40 via-slate-900 to-slate-950',
+                iconSelected: 'bg-gradient-to-tr from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/30',
+                iconDefault: 'bg-cyan-950/50 text-cyan-400 border border-cyan-800/60 group-hover:bg-cyan-900/60 group-hover:border-cyan-500/60 group-hover:text-cyan-200',
+                badgeSelected: 'bg-cyan-500/20 text-cyan-300 border-cyan-400/50',
+                badgeDefault: 'bg-slate-800/80 text-cyan-300 border-slate-700/60',
+                textTitleSelected: 'text-cyan-300',
+                arrowSelected: 'text-cyan-400',
+                sparkleColor: 'text-cyan-400',
+              },
+              {
+                accent: 'violet',
+                topBar: 'from-purple-500 via-violet-500 to-fuchsia-500',
+                selectedBorder: 'border-violet-400 ring-2 ring-violet-500/40 shadow-xl shadow-violet-500/20',
+                selectedBg: 'from-violet-950/40 via-slate-900 to-slate-950',
+                iconSelected: 'bg-gradient-to-tr from-purple-500 to-fuchsia-600 text-white shadow-md shadow-purple-500/30',
+                iconDefault: 'bg-violet-950/50 text-violet-400 border border-violet-800/60 group-hover:bg-violet-900/60 group-hover:border-violet-500/60 group-hover:text-violet-200',
+                badgeSelected: 'bg-violet-500/20 text-violet-300 border-violet-400/50',
+                badgeDefault: 'bg-slate-800/80 text-violet-300 border-slate-700/60',
+                textTitleSelected: 'text-violet-300',
+                arrowSelected: 'text-violet-400',
+                sparkleColor: 'text-violet-400',
+              },
+              {
+                accent: 'emerald',
+                topBar: 'from-emerald-500 via-teal-500 to-cyan-500',
+                selectedBorder: 'border-emerald-400 ring-2 ring-emerald-500/40 shadow-xl shadow-emerald-500/20',
+                selectedBg: 'from-emerald-950/40 via-slate-900 to-slate-950',
+                iconSelected: 'bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/30',
+                iconDefault: 'bg-emerald-950/50 text-emerald-400 border border-emerald-800/60 group-hover:bg-emerald-900/60 group-hover:border-emerald-500/60 group-hover:text-emerald-200',
+                badgeSelected: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/50',
+                badgeDefault: 'bg-slate-800/80 text-emerald-300 border-slate-700/60',
+                textTitleSelected: 'text-emerald-300',
+                arrowSelected: 'text-emerald-400',
+                sparkleColor: 'text-emerald-400',
+              },
+              {
+                accent: 'amber',
+                topBar: 'from-amber-500 via-orange-500 to-rose-500',
+                selectedBorder: 'border-amber-400 ring-2 ring-amber-500/40 shadow-xl shadow-amber-500/20',
+                selectedBg: 'from-amber-950/40 via-slate-900 to-slate-950',
+                iconSelected: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/30',
+                iconDefault: 'bg-amber-950/50 text-amber-400 border border-amber-800/60 group-hover:bg-amber-900/60 group-hover:border-amber-500/60 group-hover:text-amber-200',
+                badgeSelected: 'bg-amber-500/20 text-amber-300 border-amber-400/50',
+                badgeDefault: 'bg-slate-800/80 text-amber-300 border-slate-700/60',
+                textTitleSelected: 'text-amber-300',
+                arrowSelected: 'text-amber-400',
+                sparkleColor: 'text-amber-400',
+              },
+              {
+                accent: 'rose',
+                topBar: 'from-rose-500 via-pink-500 to-purple-500',
+                selectedBorder: 'border-rose-400 ring-2 ring-rose-500/40 shadow-xl shadow-rose-500/20',
+                selectedBg: 'from-rose-950/40 via-slate-900 to-slate-950',
+                iconSelected: 'bg-gradient-to-tr from-rose-500 to-pink-600 text-white shadow-md shadow-rose-500/30',
+                iconDefault: 'bg-rose-950/50 text-rose-400 border border-rose-800/60 group-hover:bg-rose-900/60 group-hover:border-rose-500/60 group-hover:text-rose-200',
+                badgeSelected: 'bg-rose-500/20 text-rose-300 border-rose-400/50',
+                badgeDefault: 'bg-slate-800/80 text-rose-300 border-slate-700/60',
+                textTitleSelected: 'text-rose-300',
+                arrowSelected: 'text-rose-400',
+                sparkleColor: 'text-rose-400',
+              },
+            ];
+
+            const theme = palettes[domIdx % palettes.length];
+
             return (
               <div
                 key={dom.id}
                 id={`domain-card-${dom.id}`}
                 onClick={() => setSelectedDomain(dom.id)}
-                className={`cursor-pointer p-5 rounded-2xl border transition relative flex flex-col justify-between ${
-                  isSelected
-                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 ring-2 ring-blue-500/30 shadow-md'
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs'
+                className={`technical-domain-card group cursor-pointer p-5 rounded-2xl border relative flex flex-col justify-between ${
+                  isSelected ? `selected ${theme.selectedBorder} bg-gradient-to-b ${theme.selectedBg}` : 'border-slate-800/90 bg-gradient-to-b from-slate-900/90 via-slate-900/70 to-slate-950'
                 }`}
               >
+                {/* Decorative Top Accent Glow Bar */}
+                <div
+                  className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${theme.topBar} transition-opacity duration-300 ${
+                    isSelected ? 'opacity-100' : 'opacity-30 group-hover:opacity-100'
+                  }`}
+                />
+
                 <div>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-3.5 pt-1">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        isSelected
-                          ? 'bg-blue-600 text-white shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                        isSelected ? theme.iconSelected : theme.iconDefault
                       }`}
                     >
                       <IconComp className="w-5 h-5" />
                     </div>
-                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                    <span
+                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                        isSelected ? theme.badgeSelected : theme.badgeDefault
+                      }`}
+                    >
                       {dom.category}
                     </span>
                   </div>
 
-                  <h3 className="font-semibold text-slate-900 dark:text-white text-base mb-1.5">{dom.name}</h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mb-3">{dom.description}</p>
+                  <h3
+                    className={`font-bold text-base mb-1.5 transition-colors ${
+                      isSelected ? theme.textTitleSelected : 'text-white group-hover:text-slate-100'
+                    }`}
+                  >
+                    {dom.name}
+                  </h3>
+                  <p className="text-xs text-slate-300/90 leading-relaxed line-clamp-2 mb-4 font-normal">
+                    {dom.description}
+                  </p>
                 </div>
 
                 <div>
-                  <div className="flex flex-wrap gap-1 mb-4">
+                  <div className="flex flex-wrap gap-1.5 mb-4">
                     {dom.topics.slice(0, 3).map((t, idx) => (
                       <span
                         key={idx}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400"
+                        className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-800/90 text-slate-200 border border-slate-700/50"
                       >
                         {t}
                       </span>
                     ))}
                     {dom.topics.length > 3 && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-md text-slate-400">
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md text-slate-400 bg-slate-850/60 border border-slate-800">
                         +{dom.topics.length - 3} more
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800/80 text-xs">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">30 Live Questions</span>
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-800/90 text-xs">
+                    <span className="text-slate-400 font-medium flex items-center gap-1">
+                      <Sparkles className={`w-3 h-3 ${theme.sparkleColor}`} /> 30 Live Questions
+                    </span>
                     <span
-                      className={`font-semibold flex items-center gap-1 ${
-                        isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'
+                      className={`font-semibold text-xs flex items-center gap-1 transition-all ${
+                        isSelected ? `${theme.arrowSelected} font-bold` : 'text-slate-400 group-hover:text-white'
                       }`}
                     >
-                      {isSelected ? 'Selected' : 'Select'} <ArrowRight className="w-3.5 h-3.5" />
+                      {isSelected ? 'Selected' : 'Select'} <ArrowRight className={`w-3.5 h-3.5 transition-transform ${isSelected ? `translate-x-0.5 ${theme.arrowSelected}` : 'group-hover:translate-x-0.5'}`} />
                     </span>
                   </div>
                 </div>
@@ -884,14 +964,14 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
             </div>
           )}
 
-          <div className="p-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                <Sparkles className="w-5 h-5" />
+          <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-cyan-500/30 shadow-2xl shadow-cyan-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center space-x-3.5">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20 flex items-center justify-center shrink-0">
+                <Sparkles className="w-5 h-5 text-cyan-200" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Ready for Live AI Technical Round</p>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">{selectedDomainMeta?.name || 'Selected Domain'}</h3>
+                <p className="text-xs text-slate-400 font-medium">Ready for Live AI Technical Round</p>
+                <h3 className="text-base sm:text-lg font-bold text-white">{selectedDomainMeta?.name || 'Selected Domain'}</h3>
               </div>
             </div>
 
@@ -900,7 +980,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
                 id="btn-start-technical-interview"
                 onClick={() => handleStartInterview(false)}
                 disabled={isStarting}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-semibold text-sm bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md transition flex items-center justify-center space-x-2 disabled:opacity-50"
+                className="w-full sm:w-auto px-7 py-3 rounded-xl font-extrabold text-sm bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
               >
                 {isStarting ? (
                   <>

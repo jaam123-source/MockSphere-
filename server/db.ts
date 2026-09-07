@@ -318,10 +318,13 @@ class Database {
 
   public getUserById(userId?: string): User | null {
     if (!userId) return null;
-    if (!this.data.users || this.data.users.length === 0) {
-      return null;
+    if (!this.data.users) {
+      this.data.users = [];
     }
     const found = this.data.users.find((u) => u.user_id === userId);
+    if (!found && (userId === Database.DEMO_USER_ID || userId === 'user_demo' || userId === 'user_demo_presentation')) {
+      return this.getOrCreateDemoUser().user;
+    }
     return found || null;
   }
 

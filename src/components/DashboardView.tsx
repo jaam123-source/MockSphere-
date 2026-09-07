@@ -36,39 +36,47 @@ interface DashboardViewProps {
 
 const TOPIC_ICONS: Record<AptitudeTopicId, React.ReactNode> = {
   quantitative: <Calculator className="w-6 h-6 text-blue-400" />,
-  logical: <BrainCircuit className="w-6 h-6 text-indigo-400" />,
-  verbal: <BookOpenCheck className="w-6 h-6 text-emerald-400" />,
-  specialized: <Cpu className="w-6 h-6 text-cyan-400" />,
+  logical: <BrainCircuit className="w-6 h-6 text-purple-400" />,
+  verbal: <BookOpenCheck className="w-6 h-6 text-teal-400" />,
+  specialized: <Cpu className="w-6 h-6 text-pink-400" />,
 };
 
-const TOPIC_COLORS: Record<AptitudeTopicId, { bg: string; border: string; bar: string; text: string; badge: string }> = {
+const TOPIC_COLORS: Record<AptitudeTopicId, { bg: string; border: string; bar: string; text: string; badge: string; glow: string; cornerGlow: string }> = {
   quantitative: {
-    bg: 'from-blue-950/40 to-slate-900',
-    border: 'border-blue-500/20 hover:border-blue-500/50',
-    bar: 'bg-gradient-to-r from-blue-600 to-cyan-500',
+    bg: 'from-blue-950/50 via-slate-900 to-slate-950',
+    border: 'border-blue-500/30 hover:border-blue-400/80 shadow-[0_0_20px_rgba(59,130,246,0.12)] hover:shadow-[0_0_28px_rgba(59,130,246,0.28)]',
+    bar: 'bg-gradient-to-r from-blue-500 to-cyan-400',
     text: 'text-blue-400',
-    badge: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    badge: 'bg-blue-500/15 text-blue-300 border-blue-500/35',
+    glow: 'blue',
+    cornerGlow: 'from-blue-600 to-cyan-500',
   },
   logical: {
-    bg: 'from-indigo-950/40 to-slate-900',
-    border: 'border-indigo-500/20 hover:border-indigo-500/50',
-    bar: 'bg-gradient-to-r from-indigo-600 to-purple-500',
-    text: 'text-indigo-400',
-    badge: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+    bg: 'from-purple-950/50 via-slate-900 to-slate-950',
+    border: 'border-purple-500/30 hover:border-purple-400/80 shadow-[0_0_20px_rgba(168,85,247,0.12)] hover:shadow-[0_0_28px_rgba(168,85,247,0.28)]',
+    bar: 'bg-gradient-to-r from-purple-500 to-indigo-400',
+    text: 'text-purple-400',
+    badge: 'bg-purple-500/15 text-purple-300 border-purple-500/35',
+    glow: 'purple',
+    cornerGlow: 'from-purple-600 to-indigo-500',
   },
   verbal: {
-    bg: 'from-emerald-950/40 to-slate-900',
-    border: 'border-emerald-500/20 hover:border-emerald-500/50',
-    bar: 'bg-gradient-to-r from-emerald-600 to-teal-400',
-    text: 'text-emerald-400',
-    badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    bg: 'from-teal-950/50 via-slate-900 to-slate-950',
+    border: 'border-teal-500/30 hover:border-teal-400/80 shadow-[0_0_20px_rgba(20,184,166,0.12)] hover:shadow-[0_0_28px_rgba(20,184,166,0.28)]',
+    bar: 'bg-gradient-to-r from-teal-500 to-cyan-400',
+    text: 'text-teal-400',
+    badge: 'bg-teal-500/15 text-teal-300 border-teal-500/35',
+    glow: 'teal',
+    cornerGlow: 'from-teal-600 to-cyan-500',
   },
   specialized: {
-    bg: 'from-cyan-950/40 to-slate-900',
-    border: 'border-cyan-500/20 hover:border-cyan-500/50',
-    bar: 'bg-gradient-to-r from-cyan-600 to-blue-500',
-    text: 'text-cyan-400',
-    badge: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    bg: 'from-pink-950/50 via-slate-900 to-slate-950',
+    border: 'border-pink-500/30 hover:border-pink-400/80 shadow-[0_0_20px_rgba(236,72,153,0.12)] hover:shadow-[0_0_28px_rgba(236,72,153,0.28)]',
+    bar: 'bg-gradient-to-r from-pink-500 to-violet-400',
+    text: 'text-pink-400',
+    badge: 'bg-pink-500/15 text-pink-300 border-pink-500/35',
+    glow: 'pink',
+    cornerGlow: 'from-pink-600 to-violet-500',
   },
 };
 
@@ -539,19 +547,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 key={topic.id}
                 id={`topic-card-${topic.id}`}
                 onClick={() => onSelectTopic(topic.id)}
-                className={`relative rounded-2xl bg-gradient-to-br ${style.bg} border ${style.border} p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 cursor-pointer group`}
+                className={`relative rounded-2xl bg-gradient-to-br ${style.bg} border ${style.border} p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer group overflow-hidden backdrop-blur-xl`}
               >
-                <div className="flex items-start justify-between gap-4 mb-4">
+                {/* Decorative subtle corner gradient highlight */}
+                <div className={`absolute -top-12 -right-12 w-32 h-32 rounded-full bg-gradient-to-br ${style.cornerGlow} opacity-30 blur-2xl pointer-events-none transition-opacity group-hover:opacity-60`} />
+
+                <div className="relative z-10 flex items-start justify-between gap-4 mb-4">
                   <div className="flex items-center gap-3.5">
-                    <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 shadow-inner">
+                    <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 shadow-inner group-hover:scale-105 transition-transform">
                       {TOPIC_ICONS[topic.id]}
                     </div>
                     <div>
-                      <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-cyan-300 transition-colors">
+                      <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-cyan-200 transition-colors">
                         {topic.name}
                       </h3>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${style.badge}`}>
+                        <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${style.badge}`}>
                           {topic.isCompleted
                             ? 'Topic Completed ✓'
                             : `Current: Level ${topic.currentLevel} of 10`}
@@ -569,19 +580,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {/* Chevron indicator */}
+                  <div className="w-8 h-8 rounded-full bg-slate-800/80 border border-slate-700/80 flex items-center justify-center text-slate-400 group-hover:text-white group-hover:border-cyan-500/50 group-hover:bg-slate-800 transition-all shadow-xs shrink-0">
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
                 </div>
 
-                <p className="text-xs text-slate-300 line-clamp-2 mb-5">
+                <p className="relative z-10 text-xs text-slate-300 line-clamp-1 mb-5 font-normal">
                   {topic.description}
                 </p>
 
                 {/* Progress Bar & Level Markers */}
-                <div className="space-y-2 mb-5">
+                <div className="relative z-10 space-y-2 mb-5">
                   <div className="flex justify-between text-xs font-semibold">
                     <span className="text-slate-400">Progression Completion</span>
                     <span className={style.text}>{topic.progressPercentage}%</span>
                   </div>
-                  <div className="w-full h-2.5 bg-slate-900/80 rounded-full overflow-hidden border border-slate-800/80">
+                  <div className="w-full h-2.5 bg-slate-900/90 rounded-full overflow-hidden border border-slate-800/90">
                     <div
                       className={`h-full ${style.bar} transition-all duration-700`}
                       style={{ width: `${topic.progressPercentage}%` }}
@@ -590,8 +606,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
 
                 {/* Card Action Footer */}
-                <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
-                  <div className="text-xs text-slate-400 flex items-center gap-3">
+                <div className="relative z-10 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                  <div className="flex items-center gap-3">
                     <span>
                       <strong className="text-slate-200">{topic.completedLevels}</strong>/10 Levels
                     </span>
@@ -603,13 +619,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       /2 Tests
                     </span>
                   </div>
-                  <button
-                    id={`btn-continue-topic-${topic.id}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-white px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors group-hover:border-cyan-500/50 cursor-pointer"
-                  >
-                    {topic.isCompleted ? 'Review Topic' : 'Open Level Map'}{' '}
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
+                  <span className={`font-bold text-xs ${style.text} flex items-center gap-1 group-hover:underline`}>
+                    {topic.isCompleted ? 'Review Topic' : 'Open Level Map'}
+                  </span>
                 </div>
               </div>
             );
