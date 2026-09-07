@@ -44,7 +44,7 @@ const TOPIC_ICONS: Record<AptitudeTopicId, React.ReactNode> = {
 const TOPIC_COLORS: Record<AptitudeTopicId, { bg: string; border: string; bar: string; text: string; badge: string; glow: string; cornerGlow: string; iconBg: string }> = {
 
   quantitative: {
-    bg: 'from-white/95 via-cyan-50/80 to-blue-100/60',
+    bg: 'lightpink',
     border: 'border-cyan-300/80 hover:border-cyan-500 shadow-[0_8px_30px_rgb(6,182,212,0.14)] hover:shadow-[0_12px_35px_rgb(6,182,212,0.28)]',
     bar: 'bg-gradient-to-r from-cyan-500 to-blue-500',
     text: 'text-cyan-700',
