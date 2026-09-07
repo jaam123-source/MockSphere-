@@ -250,22 +250,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Welcome & Stage Banner */}
       <section
         id="dashboard-welcome-banner"
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/90 via-indigo-50/70 to-blue-50/50 border border-indigo-200 p-6 sm:p-8 shadow-xl relative backdrop-blur-xl"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/60 to-slate-900 border border-indigo-500/20 p-6 sm:p-8 shadow-xl"
       >
-        {/* Blurred gradient background blobs */}
-        <div className="absolute -top-20 -left-20 w-72 h-72 rounded-full bg-blue-400/20 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-20 -right-20 w-72 h-72 rounded-full bg-purple-400/20 blur-3xl pointer-events-none" />
-
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="space-y-2.5">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-bold shadow-xs">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold">
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Full Qualification Assessment Pathway</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 bg-clip-text text-transparent tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               Welcome back, {user?.name || 'Candidate'}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed font-normal">
+            <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
               Advance through 4 parallel aptitude domains (10 levels + 2 tests each), qualify in the Final Aptitude Assessment, then complete multimodal AI Technical and HR Behavioral interviews.
             </p>
           </div>
@@ -274,18 +270,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               id="btn-quick-history"
               onClick={onOpenHistory}
-              className="px-4 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 flex items-center gap-2 transition-all shadow-sm cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-2 transition-all cursor-pointer"
             >
-              <TrendingUp className="w-4 h-4 text-cyan-600" />
+              <TrendingUp className="w-4 h-4 text-cyan-400" />
               <span>Timeline & Logs</span>
             </button>
             {user && user.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
               <button
                 id="btn-quick-simulation"
                 onClick={onOpenAdmin}
-                className="px-4 py-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200 flex items-center gap-2 transition-all shadow-sm cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30 flex items-center gap-2 transition-all cursor-pointer"
               >
-                <Sparkles className="w-4 h-4 text-amber-600" />
+                <Sparkles className="w-4 h-4 text-amber-400" />
                 <span>Admin & Demo Controls</span>
               </button>
             )}
@@ -293,123 +289,123 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* 5-Stage Qualification Pipeline Progress Tracker */}
-        <div className="mt-8 pt-6 border-t border-indigo-100/80 space-y-3">
-          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+        <div className="mt-8 pt-6 border-t border-slate-800/80 space-y-3">
+          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
             <span>5-Stage Qualification Milestones</span>
-            <span className="text-blue-700 font-mono font-extrabold">{stats.overall_progress}% Overall Completion</span>
+            <span className="text-cyan-400 font-mono">{stats.overall_progress}% Overall Completion</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             {/* Step 1: 4 Topics */}
             <div
-              className={`p-3.5 rounded-2xl border text-xs transition-all ${
+              className={`p-3 rounded-xl border text-xs transition-all ${
                 progression.all_topics_completed
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-sm'
-                  : 'bg-white/80 border-slate-200 text-slate-700 shadow-xs'
+                  ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
+                  : 'bg-slate-900/60 border-slate-800 text-slate-300'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-extrabold text-[11px] text-slate-900">STAGE 1</span>
+                <span className="font-bold text-[11px]">STAGE 1</span>
                 {progression.all_topics_completed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 ) : (
-                  <span className="text-[10px] text-blue-700 font-mono font-bold">{stats.total_levels_completed}/40</span>
+                  <span className="text-[10px] text-cyan-400 font-mono">{stats.total_levels_completed}/40</span>
                 )}
               </div>
-              <div className="font-bold text-slate-900">4-Topic Mastery</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">40 Levels + 8 Tests</div>
+              <div className="font-semibold text-slate-200">4-Topic Mastery</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">40 Levels + 8 Tests</div>
             </div>
 
             {/* Step 2: Final Aptitude */}
             <div
               onClick={() => progression.final_aptitude_unlocked && onStartFinalTest()}
-              className={`p-3.5 rounded-2xl border text-xs transition-all ${
+              className={`p-3 rounded-xl border text-xs transition-all cursor-pointer ${
                 progression.final_aptitude_passed
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-sm'
+                  ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
                   : progression.final_aptitude_unlocked
-                  ? 'bg-amber-50 border-amber-300 text-amber-900 hover:scale-[1.02] shadow-md shadow-amber-500/10 cursor-pointer'
-                  : 'bg-slate-100/60 border-slate-200 text-slate-400 cursor-not-allowed'
+                  ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 hover:scale-[1.02] shadow-lg shadow-amber-500/10'
+                  : 'bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-extrabold text-[11px] text-slate-900">STAGE 2</span>
+                <span className="font-bold text-[11px]">STAGE 2</span>
                 {progression.final_aptitude_passed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 ) : progression.final_aptitude_unlocked ? (
-                  <Award className="w-4 h-4 text-amber-600 animate-pulse" />
+                  <Award className="w-4 h-4 text-amber-400 animate-pulse" />
                 ) : (
-                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  <Lock className="w-3.5 h-3.5 text-slate-600" />
                 )}
               </div>
-              <div className="font-bold text-slate-900">Final Aptitude</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">25 Mixed Qs ({cutoffs.finalTestCutoff}%)</div>
+              <div className="font-semibold text-slate-200">Final Aptitude</div>
+              <div className="text-[11px] mt-0.5">25 Mixed Questions ({cutoffs.finalTestCutoff}% Cutoff)</div>
             </div>
 
             {/* Step 3: AI Technical Interview */}
             <div
               onClick={() => progression.technical_unlocked && onStartTechnicalInterview()}
-              className={`p-3.5 rounded-2xl border text-xs transition-all ${
+              className={`p-3 rounded-xl border text-xs transition-all cursor-pointer ${
                 progression.technical_passed
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-sm'
+                  ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
                   : progression.technical_unlocked
-                  ? 'bg-cyan-50 border-cyan-300 text-cyan-950 hover:scale-[1.02] shadow-md shadow-cyan-500/10 cursor-pointer'
-                  : 'bg-slate-100/60 border-slate-200 text-slate-400 cursor-not-allowed'
+                  ? 'bg-cyan-950/40 border-cyan-500/50 text-cyan-300 hover:scale-[1.02] shadow-lg shadow-cyan-500/10'
+                  : 'bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-extrabold text-[11px] text-slate-900">STAGE 3</span>
+                <span className="font-bold text-[11px]">STAGE 3</span>
                 {progression.technical_passed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 ) : progression.technical_unlocked ? (
-                  <Code2 className="w-4 h-4 text-cyan-600 animate-pulse" />
+                  <Code2 className="w-4 h-4 text-cyan-400 animate-pulse" />
                 ) : (
-                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  <Lock className="w-3.5 h-3.5 text-slate-600" />
                 )}
               </div>
-              <div className="font-bold text-slate-900">AI Technical Round</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Multimodal Voice/Code</div>
+              <div className="font-semibold text-slate-200">AI Technical Round</div>
+              <div className="text-[11px] mt-0.5">Multimodal (Voice/Code/Text)</div>
             </div>
 
             {/* Step 4: AI HR Round */}
             <div
               onClick={() => progression.hr_unlocked && onStartHRInterview()}
-              className={`p-3.5 rounded-2xl border text-xs transition-all ${
+              className={`p-3 rounded-xl border text-xs transition-all cursor-pointer ${
                 progression.hr_passed
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-sm'
+                  ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
                   : progression.hr_unlocked
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950 hover:scale-[1.02] shadow-md shadow-emerald-500/10 cursor-pointer'
-                  : 'bg-slate-100/60 border-slate-200 text-slate-400 cursor-not-allowed'
+                  ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300 hover:scale-[1.02] shadow-lg shadow-emerald-500/10'
+                  : 'bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-extrabold text-[11px] text-slate-900">STAGE 4</span>
+                <span className="font-bold text-[11px]">STAGE 4</span>
                 {progression.hr_passed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 ) : progression.hr_unlocked ? (
-                  <Users2 className="w-4 h-4 text-emerald-600 animate-pulse" />
+                  <Users2 className="w-4 h-4 text-emerald-400 animate-pulse" />
                 ) : (
-                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  <Lock className="w-3.5 h-3.5 text-slate-600" />
                 )}
               </div>
-              <div className="font-bold text-slate-900">AI HR Round</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Behavioral STAR Rubric</div>
+              <div className="font-semibold text-slate-200">AI HR Round</div>
+              <div className="text-[11px] mt-0.5">Behavioral & STAR Rubric</div>
             </div>
 
             {/* Step 5: Final Report */}
             <div
               onClick={onViewFinalReport}
-              className={`p-3.5 rounded-2xl border text-xs transition-all cursor-pointer col-span-2 sm:col-span-1 ${
+              className={`p-3 rounded-xl border text-xs transition-all cursor-pointer col-span-2 sm:col-span-1 ${
                 progression.final_report_available
-                  ? 'bg-purple-50 border-purple-300 text-purple-950 hover:scale-[1.02] shadow-md shadow-purple-500/10'
-                  : 'bg-slate-100/60 border-slate-200 text-slate-500 hover:bg-slate-200/50'
+                  ? 'bg-purple-950/40 border-purple-500/40 text-purple-300 hover:scale-[1.02] shadow-lg shadow-purple-500/10'
+                  : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:bg-slate-800/60'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-extrabold text-[11px] text-slate-900">STAGE 5</span>
-                <Trophy className="w-4 h-4 text-purple-600" />
+                <span className="font-bold text-[11px]">STAGE 5</span>
+                <Trophy className="w-4 h-4 text-purple-400" />
               </div>
-              <div className="font-bold text-slate-900">Dossier & Report</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">AI Coach Action Plan</div>
+              <div className="font-semibold text-slate-200">Dossier & Report</div>
+              <div className="text-[11px] mt-0.5">AI Coach Action Plan</div>
             </div>
           </div>
         </div>
@@ -418,18 +414,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* PRIMARY ACTION CARD: CONTINUE PREPARATION */}
       <section
         id="dashboard-continue-preparation-card"
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 border border-blue-400/50 p-6 sm:p-8 shadow-2xl shadow-indigo-500/20 text-white"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-cyan-950 border-2 border-indigo-500/40 p-6 sm:p-7 shadow-2xl shadow-indigo-950/60 transition-all hover:border-indigo-400/60"
       >
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-3 max-w-2xl">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold bg-white/20 text-white border border-white/30 backdrop-blur-md">
-                <Flame className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${nextAction.badgeBg}`}>
+                <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                 <span>{nextAction.stage}</span>
               </span>
-              <span className="text-xs font-semibold text-blue-100">
+              <span className="text-xs font-semibold text-slate-400">
                 • Saved Progress Active
               </span>
             </div>
@@ -438,20 +432,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span>{nextAction.title}</span>
             </h2>
 
-            <p className="text-xs sm:text-sm text-blue-50 leading-relaxed font-normal">
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
               {nextAction.description}
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-blue-100 font-medium">
-              <span className="flex items-center gap-1.5">
-                <Check className="w-4 h-4 text-cyan-300" />
+            <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-400 font-medium">
+              <span className="flex items-center gap-1 text-cyan-300">
+                <Check className="w-4 h-4 text-cyan-400" />
                 <strong>{stats.total_levels_completed}</strong>/40 Levels Cleared
               </span>
-              <span className="flex items-center gap-1.5">
-                <Check className="w-4 h-4 text-purple-300" />
+              <span className="flex items-center gap-1 text-indigo-300">
+                <Check className="w-4 h-4 text-indigo-400" />
                 <strong>{stats.total_tests_passed}</strong>/8 Tests Cleared
               </span>
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1 text-emerald-300">
                 <strong>{stats.overall_progress}%</strong> Prep Score
               </span>
             </div>
@@ -461,14 +455,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               id="btn-primary-continue-preparation"
               onClick={nextAction.action}
-              className="px-7 py-4 rounded-2xl bg-white hover:bg-blue-50 text-slate-900 text-sm sm:text-base font-extrabold shadow-xl shadow-black/15 flex items-center justify-center gap-3 transition-all hover:scale-[1.03] cursor-pointer"
+              className="px-6 py-4 rounded-xl bg-gradient-to-r from-indigo-500 via-blue-600 to-cyan-500 hover:from-indigo-400 hover:via-blue-500 hover:to-cyan-400 text-white text-sm sm:text-base font-black shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-3 transition-all hover:scale-[1.03] cursor-pointer"
             >
               {nextAction.icon}
               <span>{nextAction.buttonLabel}</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
-            <div className="text-[11px] text-blue-100 text-center lg:text-right font-medium">
-              All progress is securely auto-saved
+            <div className="text-[11px] text-slate-400 text-center lg:text-right">
+              All progress is securely auto-saved to your Google account
             </div>
           </div>
         </div>
@@ -478,37 +472,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {progression.technical_unlocked && !progression.technical_passed && (
         <section
           id="dashboard-technical-ready-banner"
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-cyan-50 via-blue-50 to-indigo-50 border border-cyan-200 p-6 sm:p-8 shadow-xl shadow-cyan-500/10"
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-950/80 via-slate-900 to-blue-950/80 border border-cyan-500/40 p-6 sm:p-7 shadow-2xl shadow-cyan-950/50"
         >
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-            <div className="space-y-3 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-100 border border-cyan-300 text-cyan-900 text-xs font-bold">
-                <Code2 className="w-3.5 h-3.5 text-cyan-700 animate-pulse" />
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-bold">
+                <Code2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
                 <span>STAGE 3 UNLOCKED • TECHNICAL ROUND</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
                 Ready for the AI Technical Round
               </h2>
-              <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                 You have qualified the Aptitude Learning & Testing tracks. Advance into the multimodal AI Technical Interview featuring the top 5 trending tech domains with a 3-level progressive question flow (30 Questions Total: Basic → Intermediate → Practical) with live AI voice questioning, webcam streaming, and real-time code evaluation.
               </p>
 
               {/* 5 Trending Domains Badges */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[11px] font-bold text-slate-600 mr-1">Trending Tracks:</span>
-                <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-blue-100 border border-blue-200 text-blue-900">
+                <span className="text-[11px] font-bold text-slate-400 mr-1">Trending Tracks:</span>
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-300">
                   Full Stack Development
                 </span>
-                <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-purple-100 border border-purple-200 text-purple-900">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300">
                   Generative AI & LLMs
                 </span>
-                <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-cyan-100 border border-cyan-200 text-cyan-900">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300">
                   Cloud & DevOps
                 </span>
-                <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-900">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
                   Data Science & ML
                 </span>
-                <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-rose-100 border border-rose-200 text-rose-900">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300">
                   Cyber Security
                 </span>
               </div>
@@ -518,13 +512,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 id="btn-launch-technical-round"
                 onClick={onStartTechnicalInterview}
-                className="px-7 py-4 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs sm:text-sm font-extrabold shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2.5 transition-all hover:scale-[1.03] cursor-pointer"
+                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2.5 transition-all hover:scale-[1.03] cursor-pointer"
               >
                 <Code2 className="w-4 h-4" />
                 <span>Launch AI Technical Round</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-              <div className="text-[11px] text-slate-500 text-center lg:text-right font-medium">
+              <div className="text-[11px] text-slate-400 text-center lg:text-right">
                 30 Questions • Level 1, 2 & 3 • Audio & Video Ready
               </div>
             </div>

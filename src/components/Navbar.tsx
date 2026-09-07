@@ -50,11 +50,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-indigo-100 text-slate-800 shadow-sm relative overflow-hidden">
-        {/* Subtle background glow behind header */}
-        <div className="absolute top-0 left-1/4 w-96 h-20 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 blur-2xl pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 relative z-10">
+      <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white shadow-lg">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo & Title */}
             <div
@@ -62,33 +59,33 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleMobileNav('dashboard')}
               className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none min-w-0"
             >
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl overflow-hidden shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-200 shrink-0 border border-indigo-200">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-200 shrink-0">
                 <img src="/logo.png" alt="Mock Sphere" className="w-full h-full object-cover" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 sm:gap-2">
-                  <span className="font-extrabold tracking-tight text-base sm:text-lg md:text-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent group-hover:opacity-90 transition-opacity">
+                  <span className="font-extrabold tracking-tight text-base sm:text-lg md:text-xl text-white group-hover:text-blue-400 transition-colors">
                     Mock-Sphere
                   </span>
-                  <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0 shadow-xs">
-                    <Sparkles className="w-2.5 h-2.5 text-indigo-500" /> Pro AI
+                  <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                    <Sparkles className="w-2.5 h-2.5 text-cyan-400" /> Pro
                   </span>
                 </div>
-                <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">
+                <p className="text-[11px] sm:text-xs text-slate-400 font-medium truncate">
                   AI Virtual Interview Trainer
                 </p>
               </div>
             </div>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80 shadow-inner">
+            <nav className="hidden lg:flex items-center gap-1">
               <button
                 id="nav-btn-dashboard"
                 onClick={() => onNavigate('dashboard')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   selectedView === 'dashboard'
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-500/25'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" /> Dashboard
@@ -98,12 +95,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="nav-btn-final-aptitude"
                 onClick={() => onNavigate('final-test')}
                 disabled={!dashboard?.progression.final_aptitude_unlocked}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   selectedView === 'final-test' || selectedView === 'final-aptitude'
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/25'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
                     : dashboard?.progression.final_aptitude_unlocked
-                    ? 'text-amber-700 hover:bg-amber-50'
-                    : 'text-slate-400 cursor-not-allowed'
+                    ? 'text-amber-400 hover:bg-amber-500/10'
+                    : 'text-slate-600 cursor-not-allowed'
                 }`}
               >
                 <Award className="w-3.5 h-3.5" /> Final Aptitude
@@ -113,12 +110,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="nav-btn-technical"
                 onClick={() => onNavigate('technical-interview')}
                 disabled={!dashboard?.progression.technical_unlocked}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   selectedView === 'technical-interview' || selectedView === 'technical'
-                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/25'
+                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
                     : dashboard?.progression.technical_unlocked
-                    ? 'text-cyan-700 hover:bg-cyan-50'
-                    : 'text-slate-400 cursor-not-allowed'
+                    ? 'text-cyan-400 hover:bg-cyan-500/10'
+                    : 'text-slate-600 cursor-not-allowed'
                 }`}
               >
                 <Code2 className="w-3.5 h-3.5" /> AI Technical
@@ -128,12 +125,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="nav-btn-hr"
                 onClick={() => onNavigate('hr-interview')}
                 disabled={!dashboard?.progression.hr_unlocked}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   selectedView === 'hr-interview' || selectedView === 'hr'
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/25'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                     : dashboard?.progression.hr_unlocked
-                    ? 'text-emerald-700 hover:bg-emerald-50'
-                    : 'text-slate-400 cursor-not-allowed'
+                    ? 'text-emerald-400 hover:bg-emerald-500/10'
+                    : 'text-slate-600 cursor-not-allowed'
                 }`}
               >
                 <Users2 className="w-3.5 h-3.5" /> AI HR Round
@@ -142,10 +139,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 id="nav-btn-report"
                 onClick={() => onNavigate('final-report')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   selectedView === 'final-report' || selectedView === 'report'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/25'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" /> Final Report
@@ -154,10 +151,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 id="nav-btn-history"
                 onClick={() => onNavigate('history')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   selectedView === 'history'
-                    ? 'bg-slate-800 text-white shadow-md'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
                 }`}
               >
                 <History className="w-3.5 h-3.5" /> History
