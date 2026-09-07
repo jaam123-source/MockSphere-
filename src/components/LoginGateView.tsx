@@ -168,6 +168,7 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
             )}
 
             <div className="space-y-4 pt-1">
+              {/* Primary Google Sign In Button */}
               <button
                 type="button"
                 id="btn-continue-with-google"
@@ -203,17 +204,6 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
                     <span>Continue with Google</span>
                   </>
                 )}
-              </button>
-
-              <button
-                type="button"
-                id="btn-quick-sign-in"
-                onClick={handleQuickSignIn}
-                disabled={loading}
-                className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer border border-indigo-500/40 disabled:opacity-60"
-              >
-                <Sparkles className="w-4 h-4 text-cyan-300" />
-                <span>Quick Sign In as jaammaaj123@gmail.com (Instant Bypass)</span>
               </button>
 
               <div className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-2xl flex items-center gap-3">
