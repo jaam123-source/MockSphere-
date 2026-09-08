@@ -66,7 +66,7 @@ export function isSmtpConfigured(): {
 }
 
 /**
- * Creates Nodemailer Transporter using Gmail SMTP (smtp.gmail.com:587 TLS) or custom SMTP.
+ * Creates Nodemailer Transporter using Gmail SMTP or custom SMTP.
  */
 export function createTransporter(): nodemailer.Transporter | null {
   const gmailUser = (process.env.GMAIL_USER || process.env.SMTP_USER || '').trim();
@@ -78,13 +78,26 @@ export function createTransporter(): nodemailer.Transporter | null {
 
   const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
-  const isDirectGmail = host.toLowerCase().includes('gmail.com') || host === 'smtp.gmail.com';
+  const isDirectGmail =
+    !process.env.SMTP_HOST ||
+    host.toLowerCase().includes('gmail.com') ||
+    host === 'smtp.gmail.com';
+
+  if (isDirectGmail) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: gmailUser,
+        pass: gmailPass,
+      },
+    });
+  }
 
   return nodemailer.createTransport({
     host: host || 'smtp.gmail.com',
     port: port || 587,
-    secure: port === 465, // false for 587 (STARTTLS)
-    requireTLS: true,
+    secure: port === 465,
+    requireTLS: port === 587,
     auth: {
       user: gmailUser,
       pass: gmailPass,
@@ -401,7 +414,7 @@ export async function sendContactUsEmail(payload: ContactUsEmailPayload): Promis
     process.env.CONTACT_RECEIVER_EMAIL ||
     process.env.GMAIL_USER ||
     process.env.SMTP_USER ||
-    'supportmocksphere@gmail.com'
+    'jaammaaj123@gmail.com'
   ).trim();
 
   const userSubject = payload.subject?.trim() || 'General Inquiry';
@@ -491,7 +504,18 @@ export async function sendContactUsEmail(payload: ContactUsEmailPayload): Promis
   }
 
   // Fallback if SMTP credentials not provided in environment
-  console.warn(`[EmailService] SMTP credentials not set. Contact inquiry from ${payload.name} (${payload.email}) recorded.`);
+  const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+  console.warn(`[EmailService] SMTP credentials not set in environment. Live dispatch requires GMAIL_USER and GMAIL_APP_PASSWORD.`);
+  
+  if (isProd) {
+    return {
+      success: false,
+      status: 'FAILED',
+      error: 'Live email service is not configured on this server. Please add GMAIL_USER and GMAIL_APP_PASSWORD (16-character Google App Password) in your hosting Environment Variables.',
+      deliveryProvider: smtpInfo.provider,
+    };
+  }
+
   return {
     success: true,
     status: 'SIMULATED',

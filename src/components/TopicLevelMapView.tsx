@@ -200,28 +200,30 @@ export const TopicLevelMapView: React.FC<TopicLevelMapViewProps> = ({
               <div
                 key={lvl}
                 id={`level-card-${lvl}`}
-                className={`relative rounded-xl border p-4 transition-all duration-200 flex flex-col justify-between ${
+                className={`relative rounded-2xl border p-4 transition-all duration-300 flex flex-col justify-between ${
                   passed
-                    ? 'bg-white border-emerald-300 shadow-sm hover:border-emerald-400'
-                    : isCurrent
-                    ? 'bg-gradient-to-b from-indigo-50/70 to-white border-indigo-400 shadow-md shadow-indigo-100 ring-1 ring-indigo-300'
-                    : 'bg-slate-50 border-slate-200 text-slate-400'
+                    ? 'bg-gradient-to-br from-sky-50/80 via-blue-50/90 to-indigo-50/80 border-sky-300/80 shadow-md shadow-sky-500/10 hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-1 hover:border-sky-400'
+                    : unlocked
+                    ? 'bg-gradient-to-br from-sky-100/90 via-blue-100/80 to-indigo-100/80 border-blue-400/90 shadow-lg shadow-blue-500/15 hover:shadow-2xl hover:shadow-blue-600/25 hover:-translate-y-1 hover:border-blue-500 ring-2 ring-blue-400/30'
+                    : 'bg-slate-50/80 border-slate-200 text-slate-400'
                 }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-800">Level {lvl}</span>
+                    <span className="text-xs font-bold text-slate-900">Level {lvl}</span>
                     {passed ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300/60 shadow-xs">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Passed
+                      </span>
                     ) : unlocked ? (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-600 text-white shadow-sm shadow-blue-500/30">
                         Active
                       </span>
                     ) : (
                       <Lock className="w-3.5 h-3.5 text-slate-400" />
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-500 line-clamp-2 mb-3">
+                  <p className="text-[11px] text-slate-600 line-clamp-2 mb-3">
                     {LEVEL_DESCRIPTIONS[lvl]}
                   </p>
                 </div>
@@ -230,11 +232,11 @@ export const TopicLevelMapView: React.FC<TopicLevelMapViewProps> = ({
                   id={`btn-start-level-${lvl}`}
                   onClick={() => unlocked && onStartLevel(topicId, lvl)}
                   disabled={!unlocked}
-                  className={`w-full py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     passed
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                      : isCurrent
-                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200'
+                      ? 'bg-blue-600/10 hover:bg-blue-600/20 text-blue-900 border border-blue-300/60 shadow-xs'
+                      : unlocked
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-600/35'
                       : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
                   }`}
                 >
@@ -350,28 +352,30 @@ export const TopicLevelMapView: React.FC<TopicLevelMapViewProps> = ({
               <div
                 key={lvl}
                 id={`level-card-${lvl}`}
-                className={`relative rounded-xl border p-4 transition-all duration-200 flex flex-col justify-between ${
+                className={`relative rounded-2xl border p-4 transition-all duration-300 flex flex-col justify-between ${
                   passed
-                    ? 'bg-white border-emerald-300 shadow-sm hover:border-emerald-400'
-                    : isCurrent
-                    ? 'bg-gradient-to-b from-cyan-50/70 to-white border-cyan-400 shadow-md shadow-cyan-100 ring-1 ring-cyan-300'
-                    : 'bg-slate-50 border-slate-200 text-slate-400'
+                    ? 'bg-gradient-to-br from-sky-50/80 via-blue-50/90 to-indigo-50/80 border-sky-300/80 shadow-md shadow-sky-500/10 hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-1 hover:border-sky-400'
+                    : unlocked
+                    ? 'bg-gradient-to-br from-sky-100/90 via-blue-100/80 to-indigo-100/80 border-blue-400/90 shadow-lg shadow-blue-500/15 hover:shadow-2xl hover:shadow-blue-600/25 hover:-translate-y-1 hover:border-blue-500 ring-2 ring-blue-400/30'
+                    : 'bg-slate-50/80 border-slate-200 text-slate-400'
                 }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-800">Level {lvl}</span>
+                    <span className="text-xs font-bold text-slate-900">Level {lvl}</span>
                     {passed ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300/60 shadow-xs">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Passed
+                      </span>
                     ) : unlocked ? (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-cyan-50 text-cyan-700 border border-cyan-200">
+                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-600 text-white shadow-sm shadow-blue-500/30">
                         Active
                       </span>
                     ) : (
                       <Lock className="w-3.5 h-3.5 text-slate-400" />
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-500 line-clamp-2 mb-3">
+                  <p className="text-[11px] text-slate-600 line-clamp-2 mb-3">
                     {LEVEL_DESCRIPTIONS[lvl]}
                   </p>
                 </div>
@@ -380,11 +384,11 @@ export const TopicLevelMapView: React.FC<TopicLevelMapViewProps> = ({
                   id={`btn-start-level-${lvl}`}
                   onClick={() => unlocked && onStartLevel(topicId, lvl)}
                   disabled={!unlocked}
-                  className={`w-full py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     passed
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                      : isCurrent
-                      ? 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-md shadow-cyan-200'
+                      ? 'bg-blue-600/10 hover:bg-blue-600/20 text-blue-900 border border-blue-300/60 shadow-xs'
+                      : unlocked
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-600/35'
                       : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
                   }`}
                 >

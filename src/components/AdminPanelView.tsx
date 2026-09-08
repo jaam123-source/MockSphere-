@@ -21,6 +21,9 @@ import {
   ToggleLeft,
   ToggleRight,
   Check,
+  Mail,
+  Send,
+  Loader2,
 } from 'lucide-react';
 import { AdminSettings, User, UserDashboardState } from '../types';
 import { ApiService } from '../services/api';
@@ -58,6 +61,21 @@ export const AdminPanelView: React.FC<AdminPanelViewProps> = ({
   const [isTogglingDemo, setIsTogglingDemo] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Email / SMTP Diagnostics State
+  const [smtpStatus, setSmtpStatus] = useState<{
+    configured: boolean;
+    provider: string;
+    fromAddress: string;
+    user?: string;
+  } | null>(null);
+  const [testEmailInput, setTestEmailInput] = useState<string>(dashboard?.user?.email || 'jaammaaj123@gmail.com');
+  const [isTestingSmtp, setIsTestingSmtp] = useState<boolean>(false);
+  const [smtpTestResult, setSmtpTestResult] = useState<{
+    success: boolean;
+    message: string;
+    details?: any;
+  } | null>(null);
+
   useEffect(() => {
     async function load() {
       try {
@@ -66,9 +84,45 @@ export const AdminPanelView: React.FC<AdminPanelViewProps> = ({
       } catch (err: any) {
         console.error('Error loading admin settings:', err);
       }
+      try {
+        const smtp = await ApiService.getSmtpStatus();
+        setSmtpStatus(smtp);
+      } catch (err: any) {
+        console.warn('Error checking SMTP status:', err);
+      }
     }
     load();
   }, []);
+
+  const handleTestSmtp = async () => {
+    if (!testEmailInput || !testEmailInput.includes('@')) {
+      setSmtpTestResult({
+        success: false,
+        message: 'Please enter a valid target email address.',
+      });
+      return;
+    }
+    setIsTestingSmtp(true);
+    setSmtpTestResult(null);
+    try {
+      const res = await ApiService.testSmtpConnection({ email: testEmailInput.trim() });
+      setSmtpTestResult({
+        success: res.connected,
+        message: res.message || (res.connected ? 'Real email dispatched successfully!' : 'SMTP connection failed.'),
+        details: res.error ? { error: res.error } : undefined,
+      });
+      // Refresh SMTP status
+      const updatedSmtp = await ApiService.getSmtpStatus();
+      setSmtpStatus(updatedSmtp);
+    } catch (err: any) {
+      setSmtpTestResult({
+        success: false,
+        message: err.message || 'Failed to dispatch test email',
+      });
+    } finally {
+      setIsTestingSmtp(false);
+    }
+  };
 
   const handleToggleGlobalDemo = async (targetState: boolean) => {
     setIsTogglingDemo(true);
@@ -496,6 +550,116 @@ export const AdminPanelView: React.FC<AdminPanelViewProps> = ({
           >
             {isSaving ? 'Saving...' : 'Save Configuration Changes'}
           </button>
+        </div>
+      </div>
+
+      {/* Live Email & SMTP Diagnostics */}
+      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-2">
+            <Mail className="w-5 h-5 text-sky-400" />
+            <h2 className="text-base font-bold text-white">Live Email Delivery & SMTP Diagnostics</h2>
+          </div>
+          <span className="text-xs text-slate-400">Gmail SMTP & Contact form outbound testing</span>
+        </div>
+
+        {/* Current SMTP Configuration Status */}
+        <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-300">Live Delivery Status</span>
+            {smtpStatus?.configured ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Configured & Active
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <AlertTriangle className="w-3.5 h-3.5" /> In-App Simulation Mode
+              </span>
+            )}
+          </div>
+
+          <div className="text-xs space-y-1.5 text-slate-400">
+            <div>
+              <strong className="text-slate-300">Provider:</strong> {smtpStatus?.provider || 'Checking...'}
+            </div>
+            {smtpStatus?.user && (
+              <div>
+                <strong className="text-slate-300">Sender Account:</strong> {smtpStatus.user}
+              </div>
+            )}
+            {smtpStatus?.fromAddress && (
+              <div>
+                <strong className="text-slate-300">From Address:</strong> {smtpStatus.fromAddress}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Test Email Dispatch Form */}
+        <div className="space-y-3">
+          <label className="text-xs font-semibold text-slate-300">Send Live Test Email</label>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <input
+              type="email"
+              value={testEmailInput}
+              onChange={(e) => setTestEmailInput(e.target.value)}
+              placeholder="Enter recipient email (e.g. jaammaaj123@gmail.com)"
+              className="w-full sm:flex-1 px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-sky-500"
+            />
+            <button
+              onClick={handleTestSmtp}
+              disabled={isTestingSmtp}
+              className="w-full sm:w-auto px-5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md shadow-sky-600/30 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              {isTestingSmtp ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Connecting & Sending...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send Test Email</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {smtpTestResult && (
+            <div
+              className={`p-3 rounded-xl border text-xs ${
+                smtpTestResult.success
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+              }`}
+            >
+              <div className="font-semibold">{smtpTestResult.message}</div>
+              {smtpTestResult.details?.error && (
+                <div className="mt-1 text-[11px] text-rose-400 font-mono">
+                  {smtpTestResult.details.error}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Live Hosting Environment Variables Checklist */}
+        <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-900/40 text-xs space-y-2">
+          <div className="font-semibold text-indigo-300 flex items-center gap-1.5">
+            <Info className="w-4 h-4" /> Vercel / Live Deployment Environment Variables Guide
+          </div>
+          <p className="text-slate-400 leading-relaxed">
+            If deployed on Vercel or live hosting, add these 3 variables in your{' '}
+            <strong className="text-slate-200">Vercel Project Settings → Environment Variables</strong>:
+          </p>
+          <div className="font-mono text-[11px] bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 space-y-1 text-slate-300">
+            <div><span className="text-sky-400">GMAIL_USER</span>=jaammaaj123@gmail.com</div>
+            <div><span className="text-sky-400">GMAIL_APP_PASSWORD</span>=&lt;16-character-app-password&gt;</div>
+            <div><span className="text-sky-400">CONTACT_RECEIVER_EMAIL</span>=jaammaaj123@gmail.com</div>
+          </div>
+          <p className="text-[11px] text-slate-500">
+            * Note: After saving variables in Vercel, click <strong>Deployments → Redeploy</strong> to apply changes.
+          </p>
         </div>
       </div>
     </div>
