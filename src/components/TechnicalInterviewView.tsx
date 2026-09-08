@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import { AIAvatarInterviewer } from './AIAvatarInterviewer';
+import { TechnicalDomainIcon } from './TechnicalDomainIcons';
 import {
   Code2,
   Mic,
@@ -35,8 +36,6 @@ import {
   RotateCcw,
   BookOpen,
   Search,
-  Video,
-  VideoOff,
   Clock,
   Zap,
   HelpCircle,
@@ -186,13 +185,6 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   const [voiceVolumeLevel, setVoiceVolumeLevel] = useState<number>(0);
   const [isAudioFeedbackEnabled, setIsAudioFeedbackEnabled] = useState<boolean>(true);
 
-  // Webcam stream & status
-  const [isCameraActive, setIsCameraActive] = useState<boolean>(true);
-  const [isCameraLoading, setIsCameraLoading] = useState<boolean>(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-
   // Timer & pacing
   const [timeSpentSeconds, setTimeSpentSeconds] = useState<number>(0);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
@@ -213,114 +205,6 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     topic: string;
     missingCount: number;
   } | null>(null);
-
-  // Stop camera tracks cleanly
-  const stopCamera = useCallback(() => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((t) => {
-        try {
-          t.stop();
-        } catch {}
-      });
-      mediaStreamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  }, []);
-
-  // Start / Request Camera Stream
-  const startCamera = useCallback(async () => {
-    setIsCameraLoading(true);
-    setCameraError(null);
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera is not supported on this browser device.');
-      }
-
-      // Stop any existing tracks before requesting fresh stream
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((t) => {
-          try {
-            t.stop();
-          } catch {}
-        });
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640, min: 320 },
-          height: { ideal: 480, min: 240 },
-          facingMode: 'user',
-        },
-        audio: false,
-      });
-
-      mediaStreamRef.current = stream;
-      setIsCameraActive(true);
-      setCameraError(null);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.muted = true;
-        try {
-          await videoRef.current.play();
-        } catch (playErr) {
-          console.warn('Video auto-play catch:', playErr);
-        }
-      }
-    } catch (err: any) {
-      console.warn('Camera access denied or unavailable:', err);
-      const isDenied = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError';
-      setCameraError(
-        isDenied
-          ? 'Camera permission denied. Please allow camera in browser settings.'
-          : 'Camera device unavailable or busy.'
-      );
-      setIsCameraActive(false);
-    } finally {
-      setIsCameraLoading(false);
-    }
-  }, []);
-
-  // Callback ref for <video> element to immediately attach stream upon DOM mount
-  const bindVideoElement = useCallback((element: HTMLVideoElement | null) => {
-    videoRef.current = element;
-    if (element && mediaStreamRef.current && mediaStreamRef.current.active) {
-      element.srcObject = mediaStreamRef.current;
-      element.muted = true;
-      element.play().catch((err) => {
-        console.warn('Video play error on element bind:', err);
-      });
-    }
-  }, []);
-
-  const toggleCamera = () => {
-    if (isCameraActive) {
-      stopCamera();
-      setIsCameraActive(false);
-      setCameraError(null);
-    } else {
-      setIsCameraActive(true);
-      startCamera();
-    }
-  };
-
-  // Automatically start camera when an active in-progress session is present and camera is enabled
-  useEffect(() => {
-    if (session && session.status === 'IN_PROGRESS' && isCameraActive) {
-      const activeStream = mediaStreamRef.current;
-      const hasActiveTracks = activeStream && activeStream.active && activeStream.getVideoTracks().some((t) => t.readyState === 'live');
-
-      if (!hasActiveTracks) {
-        startCamera();
-      } else if (videoRef.current && videoRef.current.srcObject !== activeStream) {
-        videoRef.current.srcObject = activeStream;
-        videoRef.current.muted = true;
-        videoRef.current.play().catch(() => {});
-      }
-    }
-  }, [session?.status, isCameraActive, startCamera]);
 
   // Load domains on mount & check active session
   useEffect(() => {
@@ -344,7 +228,6 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
     return () => {
       isMounted = false;
-      stopCamera();
       SpeechService.stopSpeaking();
     };
   }, []);
@@ -463,7 +346,6 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       setSession(newSession);
       setLatestEval(null);
       setShowStepFeedbackModal(false);
-      startCamera();
     } catch (err: any) {
       console.error('Failed to start interview:', err);
       setStartError(err.message || 'Failed to start interview. Please try again.');
@@ -482,7 +364,6 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       setPendingNextSession(null);
       setLatestEval(null);
       setShowStepFeedbackModal(false);
-      stopCamera();
       SpeechService.stopSpeaking();
       setIsSpeakingInterviewer(false);
     } catch (err: any) {
@@ -504,9 +385,6 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       setIsRecording(false);
       setVoiceVolumeLevel(0);
     }
-
-    // Stop camera stream cleanly
-    stopCamera();
 
     // Reset modals and state synchronously
     setShowStepFeedbackModal(false);
@@ -884,12 +762,8 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
                 <div>
                   <div className="flex items-center justify-between mb-3.5 pt-1">
-                    <div
-                      className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${
-                        isSelected ? theme.iconSelected : theme.iconDefault
-                      }`}
-                    >
-                      <IconComp className="w-5 h-5" />
+                    <div className="w-12 h-12 rounded-xl p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm shrink-0 flex items-center justify-center">
+                      <TechnicalDomainIcon domainId={dom.id as TechnicalDomainId} className="w-full h-full rounded-lg object-contain" />
                     </div>
                     <span
                       className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
@@ -1386,133 +1260,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
               </div>
             )}
 
-            {/* Expected Focus Point Drawer */}
-            <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-              <button
-                onClick={() => setShowHint(!showHint)}
-                className="text-slate-400 hover:text-cyan-400 flex items-center gap-1 transition text-xs"
-              >
-                <Lightbulb className="w-3.5 h-3.5" />
-                <span>{showHint ? 'Hide Key Focus Points' : 'View Key Focus Points'}</span>
-              </button>
-
-              <span className="text-[11px] text-slate-500">
-                Difficulty: <span className="text-slate-300 font-medium">{currentQ.difficulty}</span>
-              </span>
-            </div>
-
-            {showHint && currentQ.expected_key_points && currentQ.expected_key_points.length > 0 && (
-              <div className="mt-3 p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-slate-300 space-y-1">
-                <div className="font-semibold text-cyan-300 text-[11px] uppercase tracking-wider">
-                  Target Competencies for this Question:
-                </div>
-                <ul className="list-disc list-inside space-y-0.5 text-slate-300">
-                  {currentQ.expected_key_points.map((pt, idx) => (
-                    <li key={idx}>{pt}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-          {/* Candidate Webcam & Audio Preview */}
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center space-x-3 min-w-0">
-              <div className="relative w-28 h-20 sm:w-32 sm:h-22 rounded-xl bg-slate-950 overflow-hidden border border-slate-800 shrink-0 flex items-center justify-center">
-                {isCameraLoading ? (
-                  <div className="flex flex-col items-center justify-center p-2 text-center text-slate-400 text-[10px] space-y-1">
-                    <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
-                    <span>Connecting cam...</span>
-                  </div>
-                ) : isCameraActive ? (
-                  <video
-                    ref={bindVideoElement}
-                    autoPlay
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover scale-x-[-1]"
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 text-[10px] p-2 text-center">
-                    <VideoOff className="w-4 h-4 mb-0.5" />
-                    <span>Camera Off</span>
-                  </div>
-                )}
-                {isCameraActive && !isCameraLoading && (
-                  <div className="absolute bottom-1 left-1.5 flex items-center space-x-1 bg-slate-950/70 px-1 py-0.5 rounded">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[8px] font-semibold text-white/90">LIVE</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white truncate">Candidate Video Stream</h4>
-                  {isCameraActive && !isCameraLoading && (
-                    <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">
-                      ON
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[220px] sm:max-w-xs">
-                  {cameraError ? (
-                    <span className="text-amber-500 dark:text-amber-400">{cameraError}</span>
-                  ) : isRecording ? (
-                    'Listening to speech...'
-                  ) : (
-                    'Proctored candidate video feed'
-                  )}
-                </p>
-                <div className="flex items-center space-x-2 mt-1.5">
-                  <button
-                    id="btn-toggle-candidate-camera"
-                    onClick={toggleCamera}
-                    disabled={isCameraLoading}
-                    className={`px-2.5 py-1 rounded-md text-[10px] font-medium border transition flex items-center gap-1 ${
-                      isCameraActive
-                        ? 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        : 'border-blue-500/50 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20'
-                    }`}
-                  >
-                    {isCameraActive ? (
-                      <>
-                        <VideoOff className="w-3 h-3" /> Turn Off Cam
-                      </>
-                    ) : (
-                      <>
-                        <Video className="w-3 h-3 text-blue-500" /> Enable Camera
-                      </>
-                    )}
-                  </button>
-                  {cameraError && (
-                    <button
-                      onClick={startCamera}
-                      className="text-[10px] text-blue-500 hover:underline font-medium"
-                    >
-                      Retry
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Voice Audio Waveform */}
-            <div className="flex items-center justify-between sm:justify-end space-x-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
-              <div className="text-left sm:text-right">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">Microphone</span>
-                <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  {isRecording ? 'Active Stream' : 'Ready'}
-                </div>
-              </div>
-              <div
-                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center ${
-                  isRecording ? 'bg-rose-500 text-white animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                }`}
-              >
-                <Mic className="w-4 h-4" />
-              </div>
-            </div>
-          </div>
+            
         </div>
 
         {/* Right Column: Candidate Interactive Workspace & Submit (5 cols) */}
@@ -1694,7 +1442,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
             {/* Submit Bar */}
             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              {/* Technical Keywords Detection Indicator */}
+              {/* Technical Keywords Detection & Attempt Metadata */}
               <div className="flex items-center gap-2 flex-wrap">
                 <div
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
@@ -1702,7 +1450,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
                       ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                       : liveKwResult.detectedCount === 1
                       ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                   }`}
                   title={
                     liveKwResult.hasAtLeastTwoKeywords
@@ -1710,51 +1458,42 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
                       : `Requires at least 2 keywords. Suggestions: ${liveKwResult.requiredKeywords.slice(0, 4).join(', ')}`
                   }
                 >
-                  <Tag className="w-3.5 h-3.5 shrink-0" />
-                  <span>
-                    {liveKwResult.hasAtLeastTwoKeywords ? (
-                      <>
-                        <span className="font-bold">{liveKwResult.detectedCount}/2 Keywords</span>
-                        <span className="hidden md:inline"> ({liveKwResult.detectedKeywords.slice(0, 2).join(', ')})</span>
-                      </>
-                    ) : liveKwResult.detectedCount === 1 ? (
-                      <>
-                        <span className="font-bold">1/2 Keywords</span>
-                        <span className="hidden md:inline"> ("{liveKwResult.detectedKeywords[0]}") — 1 more needed</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="font-bold">0/2 Keywords</span>
-                        <span className="hidden md:inline"> — Need at least 2 technical terms</span>
-                      </>
-                    )}
+                  <Tag className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+                  <span className="font-bold">
+                    {liveKwResult.hasAtLeastTwoKeywords
+                      ? `${liveKwResult.detectedCount}/2 Keywords Met`
+                      : liveKwResult.detectedCount === 1
+                      ? '1/2 Keywords Matched'
+                      : '0/2 Keywords (Include Technical Terms)'}
                   </span>
                 </div>
 
-                <span className="text-[11px] text-slate-400">
-                  {currentAttemptCount === 2 ? 'Attempt 2 of 2' : 'Attempt 1 of 2'}
-                </span>
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    {currentAttemptCount === 2 ? 'Attempt 2 of 2' : 'Attempt 1 of 2'}
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    {currentIdx < 29 ? `Next: Q${currentIdx + 2}` : 'Final Submission'}
+                  </span>
+                </div>
               </div>
 
-              <div className="flex items-center justify-end space-x-3">
-                <span className="text-[11px] text-slate-400 hidden sm:inline">
-                  {currentIdx < 29 ? `Next: Q${currentIdx + 2}` : 'Final Submission'}
-                </span>
-
+              {/* Submit Action Button */}
+              <div className="flex items-center justify-end">
                 <button
                   id="btn-submit-answer"
                   onClick={handleSubmitAnswer}
                   disabled={isSubmitting}
-                  className={`w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white shadow-md transition flex items-center justify-center space-x-2 disabled:opacity-50 shrink-0 ${
+                  className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm text-white shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 shrink-0 cursor-pointer ${
                     currentAttemptCount === 2
-                      ? 'bg-amber-600 hover:bg-amber-500 active:bg-amber-700'
-                      : 'bg-blue-600 hover:bg-blue-500 active:bg-blue-700'
-                  }`}
+                      ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 shadow-amber-600/20'
+                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-600/20'
+                  } hover:scale-[1.02] active:scale-[0.98]`}
                 >
                   {isSubmitting ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Evaluating...</span>
+                      <span>Evaluating Answer...</span>
                     </>
                   ) : currentAttemptCount === 2 ? (
                     <>

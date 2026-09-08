@@ -19,6 +19,7 @@ import {
   Check,
 } from 'lucide-react';
 import { AptitudeTopicId, AptitudeTopicInfo, UserDashboardState } from '../types';
+import { AptitudeTopicIcon } from './AptitudeTopicIcons';
 
 interface DashboardViewProps {
   dashboard: UserDashboardState;
@@ -277,22 +278,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Welcome back, {user?.name || 'Candidate'}
             </h1>
-            <p className="text-sm text-slate-600 max-w-2xl leading-relaxed">
-              Advance through 4 parallel aptitude domains (10 levels + 2 tests each), qualify in the Final Aptitude Assessment, then complete multimodal AI Technical and HR Behavioral interviews.
-            </p>
+           
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              id="btn-quick-history"
-              onClick={onOpenHistory}
-              className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 flex items-center gap-2 transition-all cursor-pointer shadow-sm"
-            >
-              <TrendingUp className="w-4 h-4 text-cyan-600" />
-              <span>Timeline & Logs</span>
-            </button>
-            
-          </div>
+         
         </div>
 
         {/* 5-Stage Qualification Pipeline Progress Tracker */}
@@ -484,9 +473,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <Target className="w-5 h-5 text-indigo-600" />
               <span>Aptitude Learning & Testing Tracks</span>
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Each topic contains 10 difficulty-ranked levels with mid-way (Test 1) and comprehensive (Test 2) checkpoints.
-            </p>
+           
           </div>
           <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500">
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" /> Pass Cutoff: {cutoffs.levelCutoff}%
@@ -508,8 +495,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                 <div className="relative z-10 flex items-start justify-between gap-4 mb-4">
                   <div className="flex items-center gap-4">
-                    <div className={`p-3.5 rounded-2xl ${style.iconBg} group-hover:scale-110 transition-transform duration-300`}>
-                      {TOPIC_ICONS[topic.id]}
+                    <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-white p-1.5 border border-slate-200/80 shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0 flex items-center justify-center overflow-hidden">
+                      <AptitudeTopicIcon topicId={topic.id} className="w-full h-full object-contain rounded-xl" />
                     </div>
                     <div>
                       <h3 className={`text-base sm:text-lg font-bold text-slate-900 ${style.titleHover} transition-colors`}>

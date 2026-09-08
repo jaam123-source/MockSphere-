@@ -27,20 +27,24 @@ interface FinalReportViewProps {
 export const FinalReportView: React.FC<FinalReportViewProps> = ({ dashboard, onBack }) => {
   const [report, setReport] = useState<FinalReportData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const loadReport = async () => {
+    try {
+      setLoading(true);
+      setFetchError(null);
+      const data = await ApiService.getFinalReport();
+      setReport(data);
+    } catch (err: any) {
+      console.error('Error fetching report:', err);
+      setFetchError(err?.message || 'Failed to generate performance report');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true);
-        const data = await ApiService.getFinalReport();
-        setReport(data);
-      } catch (err: any) {
-        console.error('Error fetching report:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    loadReport();
   }, []);
 
   const handlePrint = () => {
@@ -52,6 +56,52 @@ export const FinalReportView: React.FC<FinalReportViewProps> = ({ dashboard, onB
       <div className="flex flex-col items-center justify-center p-16 space-y-4">
         <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
         <p className="text-sm font-semibold text-slate-300">Generating Aptitude Performance Report from actual test data...</p>
+      </div>
+    );
+  }
+
+  if (fetchError && !report) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6 animate-fadeIn">
+        <div className="flex items-center gap-3 print:hidden">
+          <button
+            onClick={onBack}
+            className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h1 className="text-xl font-bold text-white">Aptitude Performance Report</h1>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-12 text-center space-y-6 shadow-2xl">
+          <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center mx-auto text-amber-400">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2 max-w-lg mx-auto">
+            <h2 className="text-xl sm:text-2xl font-black text-white">
+              Unable to Fetch Performance Report
+            </h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              {fetchError}
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={loadReport}
+              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm transition-colors shadow-lg shadow-indigo-600/20 cursor-pointer"
+            >
+              Retry Generating Report
+            </button>
+            <button
+              onClick={onBack}
+              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-sm transition-colors border border-slate-700 cursor-pointer"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

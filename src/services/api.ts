@@ -72,15 +72,18 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     if (!res.ok) {
       throw new Error(`Server returned error (${res.status})`);
     }
+    if (rawText.trim().startsWith('<') || contentType.includes('text/html')) {
+      throw new Error('Server returned HTML response instead of JSON. Endpoint may be unavailable.');
+    }
     try {
       data = JSON.parse(rawText);
     } catch {
-      throw new Error('Received unexpected response format from server');
+      data = { message: rawText };
     }
   }
 
   if (!res.ok) {
-    throw new Error(data.error || `Request failed with status ${res.status}`);
+    throw new Error(data?.error || data?.message || `Request failed with status ${res.status}`);
   }
   return data as T;
 }

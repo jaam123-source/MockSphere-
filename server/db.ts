@@ -355,7 +355,20 @@ class Database {
       this.data.user_progress[userId] = this.createDefaultUserProgress(userId);
       this.saveDatabase();
     }
-    return this.data.user_progress[userId];
+    const prog = this.data.user_progress[userId];
+    if (!prog.topic_levels_passed) prog.topic_levels_passed = { quantitative: [], logical: [], verbal: [], specialized: [] };
+    if (!prog.topic_test1_passed) prog.topic_test1_passed = { quantitative: false, logical: false, verbal: false, specialized: false };
+    if (!prog.topic_test2_passed) prog.topic_test2_passed = { quantitative: false, logical: false, verbal: false, specialized: false };
+    if (!prog.level_attempts) prog.level_attempts = [];
+    if (!prog.test_attempts) prog.test_attempts = [];
+    if (!prog.final_aptitude_attempts) prog.final_aptitude_attempts = [];
+    if (!prog.technical_sessions) prog.technical_sessions = [];
+    if (!prog.hr_sessions) prog.hr_sessions = [];
+    if (!prog.question_attempts) prog.question_attempts = [];
+    if (!prog.recent_questions_answered) prog.recent_questions_answered = [];
+    if (!prog.concept_performance) prog.concept_performance = {};
+    if (!prog.active_level_attempts) prog.active_level_attempts = {};
+    return prog;
   }
 
   public getSettings(): AdminSettings {
@@ -1552,7 +1565,15 @@ class Database {
 
   // Final Performance Report Generator
   public async getFinalReport(userId: string): Promise<FinalReportData> {
-    const user = this.getUserById(userId) || this.data.users[0];
+    const user =
+      this.getUserById(userId) ||
+      (this.data.users && this.data.users.length > 0 ? this.data.users[0] : null) || {
+        user_id: userId || 'usr_default',
+        name: 'Candidate',
+        email: 'candidate@interview.com',
+        password_hash: '',
+        created_at: new Date().toISOString(),
+      };
     const prog = this.getUserProgress(user.user_id);
     const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -1787,7 +1808,8 @@ class Database {
       };
     }
 
-    const latestFinalApt = prog.final_aptitude_attempts[prog.final_aptitude_attempts.length - 1] || {
+    const finalAptAttempts = prog.final_aptitude_attempts || [];
+    const latestFinalApt = finalAptAttempts[finalAptAttempts.length - 1] || {
       score: compReport.overall_score,
       total_questions: compReport.total_questions || 10,
       percentage: compReport.overall_percentage,
@@ -1800,7 +1822,13 @@ class Database {
       },
     };
 
-    const completedTech = prog.technical_sessions.filter((s) => s.status === 'COMPLETED');
+    const quantPct = latestFinalApt.topic_scores?.quantitative?.percentage ?? compReport.overall_percentage;
+    const logPct = latestFinalApt.topic_scores?.logical?.percentage ?? compReport.overall_percentage;
+    const verbPct = latestFinalApt.topic_scores?.verbal?.percentage ?? compReport.overall_percentage;
+    const specPct = latestFinalApt.topic_scores?.specialized?.percentage ?? compReport.overall_percentage;
+
+    const techSessions = prog.technical_sessions || [];
+    const completedTech = techSessions.filter((s) => s && s.status === 'COMPLETED');
     const latestTech = completedTech[completedTech.length - 1] || {
       domain: 'fullstack' as TechnicalDomainId,
       overall_score: compReport.overall_percentage,
@@ -1808,7 +1836,8 @@ class Database {
       questions: [{ question_id: 'q1' }, { question_id: 'q2' }, { question_id: 'q3' }],
     };
 
-    const completedHR = prog.hr_sessions.filter((s) => s.status === 'COMPLETED');
+    const hrSessions = prog.hr_sessions || [];
+    const completedHR = hrSessions.filter((s) => s && s.status === 'COMPLETED');
     const latestHR = completedHR[completedHR.length - 1] || {
       overall_score: compReport.overall_percentage,
       passed: compReport.overall_percentage >= 70,
@@ -1825,10 +1854,10 @@ class Database {
       candidate_name: user.name,
       domain: latestTech.domain,
       aptitude_scores: {
-        quantitative: latestFinalApt.topic_scores.quantitative.percentage,
-        logical: latestFinalApt.topic_scores.logical.percentage,
-        verbal: latestFinalApt.topic_scores.verbal.percentage,
-        specialized: latestFinalApt.topic_scores.specialized.percentage,
+        quantitative: quantPct,
+        logical: logPct,
+        verbal: verbPct,
+        specialized: specPct,
       },
       technical_score: latestTech.overall_score,
       hr_score: latestHR.overall_score,
@@ -1840,13 +1869,13 @@ class Database {
       user_name: user.name,
       user_email: user.email,
       date: dateStr,
-      selected_domain: latestTech.domain.toUpperCase(),
+      selected_domain: (latestTech.domain || 'fullstack').toUpperCase(),
       comprehensive_aptitude: compReport,
       aptitude: {
-        quantitative: latestFinalApt.topic_scores.quantitative.percentage,
-        logical: latestFinalApt.topic_scores.logical.percentage,
-        verbal: latestFinalApt.topic_scores.verbal.percentage,
-        specialized: latestFinalApt.topic_scores.specialized.percentage,
+        quantitative: quantPct,
+        logical: logPct,
+        verbal: verbPct,
+        specialized: specPct,
         final_aptitude_score: latestFinalApt.percentage,
         status: latestFinalApt.status,
       },

@@ -13,6 +13,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { AptitudeTopicId, AptitudeTopicInfo, UserDashboardState } from '../types';
+import { AptitudeTopicIcon } from './AptitudeTopicIcons';
 
 interface TopicLevelMapViewProps {
   topicId: AptitudeTopicId;
@@ -103,18 +104,23 @@ export const TopicLevelMapView: React.FC<TopicLevelMapViewProps> = ({
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{topic.name}</h1>
-              {topic.isCompleted && (
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> 100% Cleared
-                </span>
-              )}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white p-1 border border-slate-200 shadow-sm shrink-0 flex items-center justify-center">
+              <AptitudeTopicIcon topicId={topicId} className="w-full h-full object-contain rounded-lg" />
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              10 Levels • 2 Checkpoint Tests • 70% Cutoff Required to Unlock Each Subsequent Stage
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{topic.name}</h1>
+                {topic.isCompleted && (
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> 100% Cleared
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                10 Levels • 2 Checkpoint Tests • 70% Cutoff Required to Unlock Each Subsequent Stage
+              </p>
+            </div>
           </div>
         </div>
 
