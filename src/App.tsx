@@ -174,15 +174,15 @@ export default function App() {
 
   if (loading || !dashboard) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 space-y-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/40 to-indigo-50/30 text-slate-800 flex flex-col items-center justify-center p-6 space-y-4">
         {loadError ? (
-          <div className="max-w-md w-full p-6 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-4 shadow-xl">
-            <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-400 mx-auto flex items-center justify-center border border-rose-500/20">
+          <div className="max-w-md w-full p-6 rounded-2xl bg-white border border-slate-200 text-center space-y-4 shadow-xl">
+            <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-500 mx-auto flex items-center justify-center border border-rose-200">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Connection Error</h3>
-              <p className="text-xs text-slate-400 mt-1">{loadError}</p>
+              <h3 className="text-base font-bold text-slate-900">Connection Error</h3>
+              <p className="text-xs text-slate-500 mt-1">{loadError}</p>
             </div>
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
@@ -194,7 +194,7 @@ export default function App() {
               </button>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer border border-slate-200"
               >
                 Sign In Again
               </button>
@@ -202,12 +202,12 @@ export default function App() {
           </div>
         ) : (
           <>
-            <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
             <div className="text-center space-y-1">
-              <p className="text-sm font-bold text-white tracking-wide">
+              <p className="text-sm font-bold text-slate-900 tracking-wide">
                 AI Multimodal Interview Assessment System
               </p>
-              <p className="text-xs text-slate-400">Loading candidate progress and diagnostic engines...</p>
+              <p className="text-xs text-slate-500">Loading candidate progress and diagnostic engines...</p>
             </div>
           </>
         )}
@@ -216,21 +216,27 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/30 to-indigo-50/20 text-slate-800 flex flex-col antialiased selection:bg-indigo-500 selection:text-white relative">
+      {/* Background ambient lighting blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-10 w-96 h-96 bg-cyan-200/20 rounded-full blur-3xl" />
+      </div>
+
       {/* Top Banner when in DEMO MODE (Admin only) */}
       {isDemoMode && currentUser?.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
         <aside
           id="demo-mode-top-banner"
           aria-label="Demo Mode Notification"
-          className="bg-gradient-to-r from-amber-950 via-slate-900 to-indigo-950 border-b border-amber-500/40 px-4 py-2 sm:px-6 shadow-lg z-50 sticky top-0"
+          className="bg-gradient-to-r from-amber-500 via-amber-600 to-indigo-600 text-white border-b border-amber-400 px-4 py-2 sm:px-6 shadow-md z-50 sticky top-0"
         >
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5">
             <div className="flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-500 text-slate-950 tracking-wider shadow-sm animate-pulse">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-white text-amber-800 tracking-wider shadow-sm animate-pulse">
                 DEMO MODE
               </span>
-              <span className="text-xs font-medium text-amber-200">
-                College Project Presentation • Candidate: <span className="font-mono text-cyan-300 font-bold">{currentUser.email}</span> • Aptitude Complete ✓ (Technical & HR Live Ready)
+              <span className="text-xs font-medium text-amber-100">
+                College Project Presentation • Candidate: <span className="font-mono text-white font-bold">{currentUser.email}</span> • Aptitude Complete ✓ (Technical & HR Live Ready)
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -238,7 +244,7 @@ export default function App() {
                 id="banner-btn-reset-demo"
                 onClick={handleResetDemoData}
                 disabled={isResettingDemo}
-                className="px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white border border-white/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <RotateCcw className={`w-3.5 h-3.5 ${isResettingDemo ? 'animate-spin' : ''}`} />
                 <span>{isResettingDemo ? 'Resetting...' : 'Reset Demo Data'}</span>
@@ -246,7 +252,7 @@ export default function App() {
               <button
                 id="banner-btn-exit-demo"
                 onClick={handleLogout}
-                className="px-3 py-1 bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-1 bg-black/20 hover:bg-black/40 text-white border border-white/20 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Exit Demo Mode</span>
@@ -388,9 +394,9 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950/60 py-4 px-4 sm:px-6 mb-16 lg:mb-0 text-center text-xs text-slate-400 print:hidden">
+      <footer className="border-t border-slate-200 bg-white/80 backdrop-blur-md py-4 px-4 sm:px-6 mb-16 lg:mb-0 text-center text-xs text-slate-500 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>AI-Powered Multimodal Interview Learning & Assessment System</span>
+          <span className="font-medium text-slate-600">AI-Powered Multimodal Interview Learning & Assessment System</span>
           <span>4-Topic Aptitude • Multimodal Technical Round • Behavioral STAR HR • Gemini Evaluation</span>
         </div>
       </footer>

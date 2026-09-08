@@ -3,6 +3,9 @@
 @layer base {
   body {
     font-family: 'Space Grotesk', sans-serif;
+    background-color: #f8fafc;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
   }
 }
 

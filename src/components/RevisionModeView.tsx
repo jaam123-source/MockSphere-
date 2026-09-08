@@ -194,23 +194,23 @@ export const RevisionModeView: React.FC<RevisionModeViewProps> = ({
   return (
     <div className="space-y-6 animate-fadeIn px-3 sm:px-4 py-4 sm:py-6 pb-28 sm:pb-8">
       {/* Header */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3 sm:gap-4">
           <button
             onClick={onBack}
-            className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
+            className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
             title="Return to Level Map"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-1">
-              <Sparkles className="w-3 h-3" /> Diagnostic Revision & Practice
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 mb-1">
+              <Sparkles className="w-3 h-3 text-amber-600" /> Diagnostic Revision & Practice
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {topic.name} – Revision Mode
             </h1>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Review diagnostic formulas, rules, and worked problems before taking your assessment.
             </p>
           </div>
@@ -222,7 +222,7 @@ export const RevisionModeView: React.FC<RevisionModeViewProps> = ({
             <button
               id="btn-revision-retake-level"
               onClick={() => onRetakeLevel(currentLvl)}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" /> Retake Level {currentLvl}
             </button>
@@ -232,7 +232,7 @@ export const RevisionModeView: React.FC<RevisionModeViewProps> = ({
             <button
               id="btn-revision-retake-test1"
               onClick={() => onRetakeTest(1)}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all hover:scale-105 cursor-pointer"
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all hover:scale-105 cursor-pointer"
             >
               <Award className="w-3.5 h-3.5" /> {topic.test1Passed ? 'Retake Test 1' : 'Take Test 1'}
             </button>
@@ -242,7 +242,7 @@ export const RevisionModeView: React.FC<RevisionModeViewProps> = ({
             <button
               id="btn-revision-retake-test2"
               onClick={() => onRetakeTest(2)}
-              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs rounded-xl shadow-md shadow-cyan-500/20 flex items-center gap-1.5 transition-all hover:scale-105 cursor-pointer"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all hover:scale-105 cursor-pointer"
             >
               <Award className="w-3.5 h-3.5" /> {topic.test2Passed ? 'Retake Test 2' : 'Take Test 2'}
             </button>
@@ -255,10 +255,10 @@ export const RevisionModeView: React.FC<RevisionModeViewProps> = ({
         {/* Left Side: Module list */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Diagnostic Study Modules
             </h2>
-            <span className="text-[11px] font-mono text-cyan-400 font-semibold">
+            <span className="text-[11px] font-mono text-indigo-600 font-semibold">
               {drills.length} Modules Available
             </span>
           </div>
@@ -270,13 +270,13 @@ export const RevisionModeView: React.FC<RevisionModeViewProps> = ({
                 onClick={() => setActiveTab(idx)}
                 className={`p-4 rounded-xl border transition-all cursor-pointer ${
                   activeTab === idx
-                    ? 'bg-indigo-600/20 border-indigo-500 shadow-md ring-1 ring-indigo-500 text-white'
-                    : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                    ? 'bg-indigo-50 border-indigo-500 shadow-sm ring-1 ring-indigo-400 text-indigo-950'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-indigo-400">Module {idx + 1}</span>
-                  {activeTab === idx && <Lightbulb className="w-4 h-4 text-amber-400" />}
+                  <span className="text-xs font-bold text-indigo-600">Module {idx + 1}</span>
+                  {activeTab === idx && <Lightbulb className="w-4 h-4 text-amber-500" />}
                 </div>
                 <div className="font-semibold text-sm mt-1">{drill.title}</div>
               </div>
@@ -284,23 +284,23 @@ export const RevisionModeView: React.FC<RevisionModeViewProps> = ({
           </div>
 
           {/* Quick status card */}
-          <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-800/80 space-y-2">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-cyan-400" /> Current Stage
+          <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-2 shadow-sm">
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-indigo-600" /> Current Stage
             </div>
-            <div className="text-xs text-slate-300 flex items-center justify-between">
+            <div className="text-xs text-slate-600 flex items-center justify-between">
               <span>Active Level:</span>
-              <strong className="text-white">Level {currentLvl}</strong>
+              <strong className="text-slate-900 font-bold">Level {currentLvl}</strong>
             </div>
-            <div className="text-xs text-slate-300 flex items-center justify-between">
+            <div className="text-xs text-slate-600 flex items-center justify-between">
               <span>Test 1 (Levels 1–5):</span>
-              <strong className={topic.test1Passed ? 'text-emerald-400' : isTest1Unlocked ? 'text-amber-400' : 'text-slate-500'}>
+              <strong className={topic.test1Passed ? 'text-emerald-700 font-bold' : isTest1Unlocked ? 'text-amber-700 font-bold' : 'text-slate-400'}>
                 {topic.test1Passed ? 'Passed ✓' : isTest1Unlocked ? 'Unlocked (Ready)' : 'Locked'}
               </strong>
             </div>
-            <div className="text-xs text-slate-300 flex items-center justify-between">
+            <div className="text-xs text-slate-600 flex items-center justify-between">
               <span>Test 2 (Levels 6–10):</span>
-              <strong className={topic.test2Passed ? 'text-emerald-400' : isTest2Unlocked ? 'text-cyan-400' : 'text-slate-500'}>
+              <strong className={topic.test2Passed ? 'text-emerald-700 font-bold' : isTest2Unlocked ? 'text-indigo-700 font-bold' : 'text-slate-400'}>
                 {topic.test2Passed ? 'Passed ✓' : isTest2Unlocked ? 'Unlocked (Ready)' : 'Locked'}
               </strong>
             </div>
@@ -310,62 +310,62 @@ export const RevisionModeView: React.FC<RevisionModeViewProps> = ({
         {/* Right Side: Active Module Detailed Breakdown */}
         <div className="lg:col-span-2 space-y-4">
           {drills[activeTab] && (
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl">
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-md border border-cyan-500/20">
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200">
                   Concept Mastery Drill #{activeTab + 1}
                 </span>
-                <h3 className="text-xl font-bold text-white mt-2">
+                <h3 className="text-xl font-bold text-slate-900 mt-2">
                   {drills[activeTab].title}
                 </h3>
               </div>
 
               {/* Core Concept */}
               <div className="space-y-2">
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <BookOpen className="w-3.5 h-3.5 text-indigo-400" /> Key Theoretical Principle
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-indigo-600" /> Key Theoretical Principle
                 </div>
-                <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800 text-sm text-slate-200 leading-relaxed">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-700 leading-relaxed">
                   {drills[activeTab].concept}
                 </div>
               </div>
 
               {/* Mathematical Formula / Grammar Rules */}
               <div className="space-y-2">
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> Governing Principles & Syntax Rules
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> Governing Principles & Syntax Rules
                 </div>
-                <div className="p-4 bg-indigo-950/30 rounded-xl border border-indigo-500/30 text-sm font-mono text-cyan-300 font-bold leading-relaxed">
+                <div className="p-4 bg-indigo-50/70 rounded-xl border border-indigo-200 text-sm font-mono text-indigo-950 font-bold leading-relaxed">
                   {drills[activeTab].formula}
                 </div>
               </div>
 
               {/* Worked Example */}
               <div className="space-y-2">
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Lightbulb className="w-3.5 h-3.5 text-amber-400" /> Worked Practice Drill
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Lightbulb className="w-3.5 h-3.5 text-amber-600" /> Worked Practice Drill
                 </div>
-                <div className="p-4 bg-slate-950/80 rounded-xl border border-slate-800 space-y-3 text-xs">
-                  <div className="font-semibold text-slate-200 text-sm">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 text-xs">
+                  <div className="font-semibold text-slate-900 text-sm">
                     {drills[activeTab].sample}
                   </div>
-                  <div className="pt-2 border-t border-slate-800 text-emerald-400 text-xs leading-relaxed">
-                    <strong className="text-white">Solution & Explanation: </strong>
+                  <div className="pt-2 border-t border-slate-200 text-emerald-800 text-xs leading-relaxed">
+                    <strong className="text-slate-900">Solution & Explanation: </strong>
                     {drills[activeTab].solution}
                   </div>
                 </div>
               </div>
 
               {/* Ready to Retake Action Container */}
-              <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="text-xs text-slate-400 text-center sm:text-left">
+              <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs text-slate-500 text-center sm:text-left">
                   Finished reviewing? Click below to resume your assessment with fresh questions.
                 </div>
                 <div className="flex flex-wrap items-center gap-2.5">
                   <button
                     id="btn-ready-to-retake-primary"
                     onClick={handlePrimaryRetake}
-                    className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all hover:scale-105 cursor-pointer"
+                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-2 transition-all hover:scale-105 cursor-pointer"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" /> {primaryBtnInfo.text}
                   </button>

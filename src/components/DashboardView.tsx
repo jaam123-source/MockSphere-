@@ -2,8 +2,7 @@ import React from 'react';
 import {
   Calculator,
   BrainCircuit,
-  BookOpenCheck,
-  Cpu,
+  MessageSquareQuote,
   CheckCircle2,
   Lock,
   ArrowRight,
@@ -35,58 +34,70 @@ interface DashboardViewProps {
 }
 
 const TOPIC_ICONS: Record<AptitudeTopicId, React.ReactNode> = {
-  quantitative: <Calculator className="w-6 h-6 text-blue-400" />,
-  logical: <BrainCircuit className="w-6 h-6 text-purple-400" />,
-  verbal: <BookOpenCheck className="w-6 h-6 text-teal-400" />,
-  specialized: <Cpu className="w-6 h-6 text-pink-400" />,
+  quantitative: <Calculator className="w-6 h-6 text-white" />,
+  logical: <BrainCircuit className="w-6 h-6 text-white" />,
+  verbal: <MessageSquareQuote className="w-6 h-6 text-white" />,
+  specialized: <Code2 className="w-6 h-6 text-white" />,
 };
 
-const TOPIC_COLORS: Record<AptitudeTopicId, { bg: string; border: string; bar: string; text: string; badge: string; glow: string; cornerGlow: string; iconBg: string }> = {
-
+const TOPIC_COLORS: Record<AptitudeTopicId, {
+  bg: string;
+  border: string;
+  bar: string;
+  text: string;
+  badge: string;
+  glow: string;
+  cornerGlow: string;
+  iconBg: string;
+  titleHover: string;
+}> = {
   quantitative: {
-    bg: 'from-white/95 via-cyan-50/80 to-blue-100/60',
-    border: 'border-cyan-300/80 hover:border-cyan-500 shadow-[0_8px_30px_rgb(6,182,212,0.14)] hover:shadow-[0_12px_35px_rgb(6,182,212,0.28)]',
-    bar: 'bg-gradient-to-r from-cyan-500 to-blue-500',
-    text: 'text-cyan-700',
-    badge: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-    glow: 'cyan',
-    cornerGlow: 'from-cyan-400/35 to-blue-300/15',
-    iconBg: 'bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/35',
+    bg: 'from-white/95 via-sky-50/80 to-blue-50/70',
+    border: 'border-sky-200/90 hover:border-sky-400 shadow-[0_10px_30px_rgba(14,165,233,0.14)] hover:shadow-[0_16px_36px_rgba(14,165,233,0.28)]',
+    bar: 'bg-gradient-to-r from-blue-600 to-sky-500',
+    text: 'text-blue-700',
+    badge: 'bg-blue-50 text-blue-800 border-blue-200',
+    glow: 'sky',
+    cornerGlow: 'from-sky-400/35 to-blue-400/20',
+    iconBg: 'bg-gradient-to-br from-blue-600 via-blue-500 to-sky-400 shadow-md shadow-blue-500/35',
+    titleHover: 'group-hover:text-blue-700',
   },
 
   logical: {
-    bg: 'from-white/95 via-violet-50/80 to-fuchsia-50/60',
-    border: 'border-violet-300/80 hover:border-violet-500 shadow-[0_8px_30px_rgb(139,92,246,0.14)] hover:shadow-[0_12px_35px_rgb(139,92,246,0.28)]',
-    bar: 'bg-gradient-to-r from-violet-600 to-fuchsia-500',
-    text: 'text-violet-700',
-    badge: 'bg-violet-100 text-violet-800 border-violet-200',
-    glow: 'violet',
-    cornerGlow: 'from-violet-400/35 to-fuchsia-300/15',
-    iconBg: 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-md shadow-violet-500/35',
+    bg: 'from-white/95 via-purple-50/80 to-violet-50/70',
+    border: 'border-purple-200/90 hover:border-purple-400 shadow-[0_10px_30px_rgba(168,85,247,0.14)] hover:shadow-[0_16px_36px_rgba(168,85,247,0.28)]',
+    bar: 'bg-gradient-to-r from-purple-600 to-violet-500',
+    text: 'text-purple-700',
+    badge: 'bg-purple-50 text-purple-800 border-purple-200',
+    glow: 'purple',
+    cornerGlow: 'from-purple-400/35 to-violet-400/20',
+    iconBg: 'bg-gradient-to-br from-purple-600 via-purple-500 to-violet-400 shadow-md shadow-purple-500/35',
+    titleHover: 'group-hover:text-purple-700',
   },
 
   verbal: {
-    bg: 'from-white/95 via-emerald-50/80 to-teal-50/60',
-    border: 'border-emerald-300/80 hover:border-emerald-500 shadow-[0_8px_30px_rgb(16,185,129,0.14)] hover:shadow-[0_12px_35px_rgb(16,185,129,0.28)]',
-    bar: 'bg-gradient-to-r from-emerald-500 to-teal-500',
-    text: 'text-emerald-700',
-    badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    glow: 'emerald',
-    cornerGlow: 'from-emerald-400/35 to-teal-300/15',
-    iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/35',
+    bg: 'from-white/95 via-cyan-50/80 to-teal-50/70',
+    border: 'border-cyan-200/90 hover:border-cyan-400 shadow-[0_10px_30px_rgba(6,182,212,0.14)] hover:shadow-[0_16px_36px_rgba(6,182,212,0.28)]',
+    bar: 'bg-gradient-to-r from-cyan-600 to-teal-500',
+    text: 'text-teal-700',
+    badge: 'bg-teal-50 text-teal-800 border-teal-200',
+    glow: 'teal',
+    cornerGlow: 'from-cyan-400/35 to-teal-400/20',
+    iconBg: 'bg-gradient-to-br from-cyan-600 via-teal-500 to-teal-400 shadow-md shadow-teal-500/35',
+    titleHover: 'group-hover:text-teal-700',
   },
 
   specialized: {
-    bg: 'from-white/95 via-orange-50/80 to-rose-50/60',
-    border: 'border-orange-300/80 hover:border-orange-500 shadow-[0_8px_30px_rgb(249,115,22,0.14)] hover:shadow-[0_12px_35px_rgb(249,115,22,0.28)]',
-    bar: 'bg-gradient-to-r from-orange-500 to-rose-500',
-    text: 'text-orange-700',
-    badge: 'bg-orange-100 text-orange-800 border-orange-200',
-    glow: 'orange',
-    cornerGlow: 'from-orange-400/35 to-rose-300/15',
-    iconBg: 'bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-md shadow-orange-500/35',
+    bg: 'from-white/95 via-pink-50/80 to-rose-50/70',
+    border: 'border-pink-200/90 hover:border-pink-400 shadow-[0_10px_30px_rgba(236,72,153,0.14)] hover:shadow-[0_16px_36px_rgba(236,72,153,0.28)]',
+    bar: 'bg-gradient-to-r from-pink-500 to-violet-600',
+    text: 'text-pink-700',
+    badge: 'bg-pink-50 text-pink-800 border-pink-200',
+    glow: 'pink',
+    cornerGlow: 'from-pink-400/35 to-violet-400/20',
+    iconBg: 'bg-gradient-to-br from-pink-500 via-rose-500 to-violet-600 shadow-md shadow-pink-500/35',
+    titleHover: 'group-hover:text-pink-700',
   },
-
 };
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -255,18 +266,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Welcome & Stage Banner */}
       <section
         id="dashboard-welcome-banner"
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/60 to-slate-900 border border-indigo-500/20 p-6 sm:p-8 shadow-xl"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white via-indigo-50/40 to-sky-50/30 border border-slate-200 p-6 sm:p-8 shadow-lg"
       >
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Full Qualification Assessment Pathway</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Welcome back, {user?.name || 'Candidate'}
             </h1>
-            <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
+            <p className="text-sm text-slate-600 max-w-2xl leading-relaxed">
               Advance through 4 parallel aptitude domains (10 levels + 2 tests each), qualify in the Final Aptitude Assessment, then complete multimodal AI Technical and HR Behavioral interviews.
             </p>
           </div>
@@ -275,18 +286,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               id="btn-quick-history"
               onClick={onOpenHistory}
-              className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 flex items-center gap-2 transition-all cursor-pointer shadow-sm"
             >
-              <TrendingUp className="w-4 h-4 text-cyan-400" />
+              <TrendingUp className="w-4 h-4 text-cyan-600" />
               <span>Timeline & Logs</span>
             </button>
             {user && user.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
               <button
                 id="btn-quick-simulation"
                 onClick={onOpenAdmin}
-                className="px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30 flex items-center gap-2 transition-all cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-200 flex items-center gap-2 transition-all cursor-pointer"
               >
-                <Sparkles className="w-4 h-4 text-amber-400" />
+                <Sparkles className="w-4 h-4 text-amber-600" />
                 <span>Admin & Demo Controls</span>
               </button>
             )}
@@ -294,10 +305,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* 5-Stage Qualification Pipeline Progress Tracker */}
-        <div className="mt-8 pt-6 border-t border-slate-800/80 space-y-3">
-          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
+        <div className="mt-8 pt-6 border-t border-slate-200 space-y-3">
+          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
             <span>5-Stage Qualification Milestones</span>
-            <span className="text-cyan-400 font-mono">{stats.overall_progress}% Overall Completion</span>
+            <span className="text-indigo-600 font-mono font-bold">{stats.overall_progress}% Overall Completion</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
@@ -305,20 +316,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div
               className={`p-3 rounded-xl border text-xs transition-all ${
                 progression.all_topics_completed
-                  ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
-                  : 'bg-slate-900/60 border-slate-800 text-slate-300'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-white border-slate-200 text-slate-700 shadow-sm'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-[11px]">STAGE 1</span>
+                <span className="font-bold text-[11px] text-slate-600">STAGE 1</span>
                 {progression.all_topics_completed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 ) : (
-                  <span className="text-[10px] text-cyan-400 font-mono">{stats.total_levels_completed}/40</span>
+                  <span className="text-[10px] text-indigo-600 font-mono font-bold">{stats.total_levels_completed}/40</span>
                 )}
               </div>
-              <div className="font-semibold text-slate-200">4-Topic Mastery</div>
-              <div className="text-[11px] text-slate-400 mt-0.5">40 Levels + 8 Tests</div>
+              <div className="font-bold text-slate-900">4-Topic Mastery</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">40 Levels + 8 Tests</div>
             </div>
 
             {/* Step 2: Final Aptitude */}
@@ -326,24 +337,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={() => progression.final_aptitude_unlocked && onStartFinalTest()}
               className={`p-3 rounded-xl border text-xs transition-all cursor-pointer ${
                 progression.final_aptitude_passed
-                  ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                   : progression.final_aptitude_unlocked
-                  ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 hover:scale-[1.02] shadow-lg shadow-amber-500/10'
-                  : 'bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed'
+                  ? 'bg-amber-50 border-amber-300 text-amber-900 hover:scale-[1.02] shadow-sm'
+                  : 'bg-slate-100/80 border-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-[11px]">STAGE 2</span>
+                <span className="font-bold text-[11px] text-slate-600">STAGE 2</span>
                 {progression.final_aptitude_passed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 ) : progression.final_aptitude_unlocked ? (
-                  <Award className="w-4 h-4 text-amber-400 animate-pulse" />
+                  <Award className="w-4 h-4 text-amber-600 animate-pulse" />
                 ) : (
-                  <Lock className="w-3.5 h-3.5 text-slate-600" />
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
                 )}
               </div>
-              <div className="font-semibold text-slate-200">Final Aptitude</div>
-              <div className="text-[11px] mt-0.5">25 Mixed Questions ({cutoffs.finalTestCutoff}% Cutoff)</div>
+              <div className="font-bold text-slate-900">Final Aptitude</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">25 Mixed Questions ({cutoffs.finalTestCutoff}% Cutoff)</div>
             </div>
 
             {/* Step 3: AI Technical Interview */}
@@ -351,24 +362,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={() => progression.technical_unlocked && onStartTechnicalInterview()}
               className={`p-3 rounded-xl border text-xs transition-all cursor-pointer ${
                 progression.technical_passed
-                  ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                   : progression.technical_unlocked
-                  ? 'bg-cyan-950/40 border-cyan-500/50 text-cyan-300 hover:scale-[1.02] shadow-lg shadow-cyan-500/10'
-                  : 'bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed'
+                  ? 'bg-cyan-50 border-cyan-300 text-cyan-900 hover:scale-[1.02] shadow-sm'
+                  : 'bg-slate-100/80 border-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-[11px]">STAGE 3</span>
+                <span className="font-bold text-[11px] text-slate-600">STAGE 3</span>
                 {progression.technical_passed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 ) : progression.technical_unlocked ? (
-                  <Code2 className="w-4 h-4 text-cyan-400 animate-pulse" />
+                  <Code2 className="w-4 h-4 text-cyan-600 animate-pulse" />
                 ) : (
-                  <Lock className="w-3.5 h-3.5 text-slate-600" />
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
                 )}
               </div>
-              <div className="font-semibold text-slate-200">AI Technical Round</div>
-              <div className="text-[11px] mt-0.5">Multimodal (Voice/Code/Text)</div>
+              <div className="font-bold text-slate-900">AI Technical Round</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">Multimodal (Voice/Code/Text)</div>
             </div>
 
             {/* Step 4: AI HR Round */}
@@ -376,24 +387,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={() => progression.hr_unlocked && onStartHRInterview()}
               className={`p-3 rounded-xl border text-xs transition-all cursor-pointer ${
                 progression.hr_passed
-                  ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                   : progression.hr_unlocked
-                  ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300 hover:scale-[1.02] shadow-lg shadow-emerald-500/10'
-                  : 'bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed'
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-900 hover:scale-[1.02] shadow-sm'
+                  : 'bg-slate-100/80 border-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-[11px]">STAGE 4</span>
+                <span className="font-bold text-[11px] text-slate-600">STAGE 4</span>
                 {progression.hr_passed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 ) : progression.hr_unlocked ? (
-                  <Users2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+                  <Users2 className="w-4 h-4 text-emerald-600 animate-pulse" />
                 ) : (
-                  <Lock className="w-3.5 h-3.5 text-slate-600" />
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
                 )}
               </div>
-              <div className="font-semibold text-slate-200">AI HR Round</div>
-              <div className="text-[11px] mt-0.5">Behavioral & STAR Rubric</div>
+              <div className="font-bold text-slate-900">AI HR Round</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">Behavioral & STAR Rubric</div>
             </div>
 
             {/* Step 5: Final Report */}
@@ -401,16 +412,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={onViewFinalReport}
               className={`p-3 rounded-xl border text-xs transition-all cursor-pointer col-span-2 sm:col-span-1 ${
                 progression.final_report_available
-                  ? 'bg-purple-950/40 border-purple-500/40 text-purple-300 hover:scale-[1.02] shadow-lg shadow-purple-500/10'
-                  : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:bg-slate-800/60'
+                  ? 'bg-purple-50 border-purple-300 text-purple-900 hover:scale-[1.02] shadow-sm'
+                  : 'bg-slate-100/80 border-slate-200 text-slate-500 hover:bg-slate-200/60'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-[11px]">STAGE 5</span>
-                <Trophy className="w-4 h-4 text-purple-400" />
+                <span className="font-bold text-[11px] text-slate-600">STAGE 5</span>
+                <Trophy className="w-4 h-4 text-purple-600" />
               </div>
-              <div className="font-semibold text-slate-200">Dossier & Report</div>
-              <div className="text-[11px] mt-0.5">AI Coach Action Plan</div>
+              <div className="font-bold text-slate-900">Dossier & Report</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">AI Coach Action Plan</div>
             </div>
           </div>
         </div>
@@ -420,37 +431,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {progression.technical_unlocked && !progression.technical_passed && (
         <section
           id="dashboard-technical-ready-banner"
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-950/80 via-slate-900 to-blue-950/80 border border-cyan-500/40 p-6 sm:p-7 shadow-2xl shadow-cyan-950/50"
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-50 via-white to-blue-50 border border-cyan-200 p-6 sm:p-7 shadow-lg"
         >
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-bold">
-                <Code2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-100 border border-cyan-200 text-cyan-800 text-xs font-bold">
+                <Code2 className="w-3.5 h-3.5 text-cyan-600 animate-pulse" />
                 <span>STAGE 3 UNLOCKED • TECHNICAL ROUND</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                 Ready for the AI Technical Round
               </h2>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 You have qualified the Aptitude Learning & Testing tracks. Advance into the multimodal AI Technical Interview featuring the top 5 trending tech domains with a 3-level progressive question flow (30 Questions Total: Basic → Intermediate → Practical) with live AI voice questioning, webcam streaming, and real-time code evaluation.
               </p>
 
               {/* 5 Trending Domains Badges */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[11px] font-bold text-slate-400 mr-1">Trending Tracks:</span>
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-300">
+                <span className="text-[11px] font-bold text-slate-500 mr-1">Trending Tracks:</span>
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700">
                   Full Stack Development
                 </span>
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-purple-50 border border-purple-200 text-purple-700">
                   Generative AI & LLMs
                 </span>
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-cyan-50 border border-cyan-200 text-cyan-700">
                   Cloud & DevOps
                 </span>
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700">
                   Data Science & ML
                 </span>
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-rose-50 border border-rose-200 text-rose-700">
                   Cyber Security
                 </span>
               </div>
@@ -460,13 +471,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 id="btn-launch-technical-round"
                 onClick={onStartTechnicalInterview}
-                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2.5 transition-all hover:scale-[1.03] cursor-pointer"
+                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-cyan-600/20 flex items-center justify-center gap-2.5 transition-all hover:scale-[1.02] cursor-pointer"
               >
                 <Code2 className="w-4 h-4" />
                 <span>Launch AI Technical Round</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-              <div className="text-[11px] text-slate-400 text-center lg:text-right">
+              <div className="text-[11px] text-slate-500 text-center lg:text-right">
                 30 Questions • Level 1, 2 & 3 • Audio & Video Ready
               </div>
             </div>
@@ -478,15 +489,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <section id="dashboard-topics-section" className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-              <Target className="w-5 h-5 text-indigo-400" />
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <Target className="w-5 h-5 text-indigo-600" />
               <span>Aptitude Learning & Testing Tracks</span>
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Each topic contains 10 difficulty-ranked levels with mid-way (Test 1) and comprehensive (Test 2) checkpoints.
             </p>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-400">
+          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500">
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" /> Pass Cutoff: {cutoffs.levelCutoff}%
           </div>
         </div>
@@ -510,7 +521,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       {TOPIC_ICONS[topic.id]}
                     </div>
                     <div>
-                      <h3 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                      <h3 className={`text-base sm:text-lg font-bold text-slate-900 ${style.titleHover} transition-colors`}>
                         {topic.name}
                       </h3>
                       <div className="flex flex-wrap items-center gap-2 mt-1">
