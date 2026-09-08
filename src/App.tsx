@@ -14,6 +14,7 @@ import { PerformanceHistoryView } from './components/PerformanceHistoryView';
 import { AdminPanelView } from './components/AdminPanelView';
 import { AuthModal } from './components/AuthModal';
 import { EmailOutboxModal } from './components/EmailOutboxModal';
+import { Footer } from './components/Footer';
 import { ApiService } from './services/api';
 import { SpeechService } from './utils/speech';
 import {
@@ -399,12 +400,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white/80 backdrop-blur-md py-4 px-4 sm:px-6 mb-16 lg:mb-0 text-center text-xs text-slate-500 print:hidden">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span className="font-medium text-slate-600">AI-Powered Multimodal Interview Learning & Assessment System</span>
-          <span>4-Topic Aptitude • Multimodal Technical Round • Behavioral STAR HR • Gemini Evaluation</span>
-        </div>
-      </footer>
+      <Footer />
 
       {/* Candidate Auth Modal */}
       <AuthModal
