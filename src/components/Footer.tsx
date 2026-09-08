@@ -10,7 +10,10 @@ import {
   ExternalLink,
   Globe,
   Lock,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
+import { ApiService } from '../services/api';
 
 export const Footer: React.FC = () => {
   const [activeModal, setActiveModal] = useState<'privacy' | 'terms' | 'contact' | null>(null);
@@ -20,19 +23,66 @@ export const Footer: React.FC = () => {
   const [contactEmail, setContactEmail] = useState('');
   const [contactSubject, setContactSubject] = useState('General Inquiry');
   const [contactMessage, setContactMessage] = useState('');
-  const [contactSent, setContactSent] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [contactSuccess, setContactSuccess] = useState(false);
 
-  const handleSendContact = (e: React.FormEvent) => {
+  const handleSendContact = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contactName || !contactEmail || !contactMessage) return;
-    setContactSent(true);
-    setTimeout(() => {
-      setContactSent(false);
-      setContactName('');
-      setContactEmail('');
-      setContactMessage('');
-      setActiveModal(null);
-    }, 2200);
+    setContactError(null);
+
+    const nameTrimmed = contactName.trim();
+    const emailTrimmed = contactEmail.trim().toLowerCase();
+    const messageTrimmed = contactMessage.trim();
+
+    // Frontend Validations
+    if (!nameTrimmed || nameTrimmed.length < 2) {
+      setContactError('Please enter your name (at least 2 characters).');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailTrimmed || !emailRegex.test(emailTrimmed)) {
+      setContactError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!messageTrimmed || messageTrimmed.length < 10) {
+      setContactError('Please write a message with at least 10 characters.');
+      return;
+    }
+
+    setIsSending(true);
+
+    try {
+      const response = await ApiService.sendContactForm({
+        name: nameTrimmed,
+        email: emailTrimmed,
+        subject: contactSubject,
+        message: messageTrimmed,
+      });
+
+      if (response.success) {
+        setContactSuccess(true);
+        setContactName('');
+        setContactEmail('');
+        setContactMessage('');
+      } else {
+        setContactError(response.error || 'Failed to send message. Please check your network and try again.');
+      }
+    } catch (err: any) {
+      console.error('Contact Form Send Error:', err);
+      setContactError(err.message || 'Unable to connect to contact service. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleOpenModal = (modal: 'privacy' | 'terms' | 'contact') => {
+    setActiveModal(modal);
+    if (modal === 'contact') {
+      setContactError(null);
+    }
   };
 
   return (
@@ -62,7 +112,7 @@ export const Footer: React.FC = () => {
             <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5 sm:gap-6 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">
               <button
                 id="btn-footer-privacy"
-                onClick={() => setActiveModal('privacy')}
+                onClick={() => handleOpenModal('privacy')}
                 className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer flex items-center gap-1.5 py-1 px-1.5 rounded-lg active:bg-slate-100 dark:active:bg-slate-800"
               >
                 <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0" />
@@ -71,7 +121,7 @@ export const Footer: React.FC = () => {
 
               <button
                 id="btn-footer-terms"
-                onClick={() => setActiveModal('terms')}
+                onClick={() => handleOpenModal('terms')}
                 className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer flex items-center gap-1.5 py-1 px-1.5 rounded-lg active:bg-slate-100 dark:active:bg-slate-800"
               >
                 <FileText className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
@@ -80,7 +130,7 @@ export const Footer: React.FC = () => {
 
               <button
                 id="btn-footer-contact"
-                onClick={() => setActiveModal('contact')}
+                onClick={() => handleOpenModal('contact')}
                 className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer flex items-center gap-1.5 py-1 px-1.5 rounded-lg active:bg-slate-100 dark:active:bg-slate-800"
               >
                 <Mail className="w-4 h-4 text-amber-500 shrink-0" />
@@ -241,18 +291,51 @@ export const Footer: React.FC = () => {
               </button>
             </div>
 
-            {contactSent ? (
-              <div className="py-8 text-center space-y-3">
+            {contactSuccess ? (
+              <div className="py-8 text-center space-y-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center animate-bounce">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
-                <h4 className="font-bold text-base text-slate-900 dark:text-white">Message Transmitted!</h4>
+                <h4 className="font-bold text-base text-slate-900 dark:text-white">Message sent successfully.</h4>
                 <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                  Thank you for reaching out to Mock-Sphere support. Our technical team will get back to you shortly.
+                  Thank you for reaching out to Mock Sphere support. Our team will review your message and reply to your email shortly.
                 </p>
+                <div className="pt-2 flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setContactSuccess(false)}
+                    className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition cursor-pointer"
+                  >
+                    Send Another Message
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveModal(null)}
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             ) : (
               <form onSubmit={handleSendContact} className="space-y-4 text-xs">
+                {contactError && (
+                  <div className="p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-xl text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <span className="font-bold block">Submission Error</span>
+                      <span>{contactError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setContactError(null)}
+                      className="text-rose-400 hover:text-rose-600 cursor-pointer p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Your Name
@@ -263,7 +346,8 @@ export const Footer: React.FC = () => {
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
                     placeholder="e.g. Alex Johnson"
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isSending}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                   />
                 </div>
 
@@ -277,7 +361,8 @@ export const Footer: React.FC = () => {
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
                     placeholder="alex@example.com"
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isSending}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                   />
                 </div>
 
@@ -288,7 +373,8 @@ export const Footer: React.FC = () => {
                   <select
                     value={contactSubject}
                     onChange={(e) => setContactSubject(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isSending}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                   >
                     <option value="General Inquiry">General Inquiry</option>
                     <option value="Technical Support">Technical Support</option>
@@ -307,17 +393,29 @@ export const Footer: React.FC = () => {
                     value={contactMessage}
                     onChange={(e) => setContactMessage(e.target.value)}
                     placeholder="How can we assist you with Mock Sphere?"
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    disabled={isSending}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-60"
                   />
                 </div>
 
-                <div className="pt-2 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">Direct Email: support@mock-sphere.com</span>
+                <div className="pt-2 flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-slate-400 truncate">Direct Email: support@mock-sphere.com</span>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-blue-600/20"
+                    disabled={isSending}
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-400 text-white rounded-xl font-bold flex items-center gap-2 transition cursor-pointer shadow-md shadow-blue-600/20 disabled:cursor-not-allowed shrink-0"
                   >
-                    <Send className="w-3.5 h-3.5" /> Send Message
+                    {isSending ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Send Message</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

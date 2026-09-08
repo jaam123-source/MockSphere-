@@ -91,14 +91,28 @@ export default function App() {
         setCurrentUser(null);
         setDashboard(null);
         setLoadError(null);
-      } else if (retryCount < 2 && (errMsg.includes('fetch') || errMsg.includes('network') || errMsg.includes('connect'))) {
-        // Transient network retry (e.g. during dev server boot/restart)
-        setTimeout(() => loadDashboard(retryCount + 1), 800);
+      } else if (
+        retryCount < 3 &&
+        (errMsg.includes('fetch') ||
+          errMsg.includes('network') ||
+          errMsg.includes('connect') ||
+          errMsg.includes('429') ||
+          errMsg.includes('rate') ||
+          errMsg.includes('too many'))
+      ) {
+        // Transient network or rate limit retry with exponential backoff
+        const backoffMs = Math.min(1200 * Math.pow(1.8, retryCount), 4000);
+        console.warn(`[Dashboard] Transient error (${err.message}). Retrying in ${backoffMs}ms... (attempt ${retryCount + 1})`);
+        setTimeout(() => loadDashboard(retryCount + 1), backoffMs);
         return;
       } else {
         console.error('Failed to load dashboard state:', err);
         if (!dashboard) {
-          setLoadError(err.message || 'Failed to connect to backend server');
+          if (errMsg.includes('429') || errMsg.includes('rate') || errMsg.includes('too many')) {
+            setLoadError('Server rate limit reached (HTTP 429). Please wait a few seconds and click Retry Connection below.');
+          } else {
+            setLoadError(err.message || 'Failed to connect to backend server');
+          }
         }
       }
     } finally {

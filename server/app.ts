@@ -8,6 +8,7 @@ import {
   getEmailLogs,
   isSmtpConfigured,
   testGmailSmtpConnection,
+  sendContactUsEmail,
 } from './emailService';
 
 dotenv.config();
@@ -786,6 +787,84 @@ app.post('/api/notifications/test-smtp', async (req, res) => {
       message: 'SMTP Test Failed',
       error: err.message,
     });
+  }
+});
+
+// Contact Us Form Submission API
+const recentContactSubmissions = new Map<string, number>();
+
+app.post('/api/contact', async (req, res) => {
+  try {
+    const { name, email, subject, message } = req.body || {};
+
+    // 1. Validate inputs
+    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    const trimmedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const trimmedSubject = typeof subject === 'string' ? subject.trim() : 'General Inquiry';
+    const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+
+    if (!trimmedName || trimmedName.length < 2) {
+      return res.status(400).json({ error: 'Please enter your name (at least 2 characters).' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+
+    if (!trimmedMessage || trimmedMessage.length < 10) {
+      return res.status(400).json({ error: 'Please enter a message with at least 10 characters.' });
+    }
+
+    if (trimmedMessage.length > 3000) {
+      return res.status(400).json({ error: 'Message is too long (maximum 3000 characters).' });
+    }
+
+    // 2. Anti-spam / rate-limiting (30s cooldown per email + IP)
+    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const rateKey = `${trimmedEmail}_${clientIp}`;
+    const lastSub = recentContactSubmissions.get(rateKey);
+    const now = Date.now();
+
+    if (lastSub && now - lastSub < 30000) {
+      const waitSec = Math.ceil((30000 - (now - lastSub)) / 1000);
+      return res.status(429).json({
+        error: `Please wait ${waitSec} seconds before sending another message.`,
+      });
+    }
+
+    recentContactSubmissions.set(rateKey, now);
+
+    // Periodic cleanup of stale rate limits
+    if (recentContactSubmissions.size > 200) {
+      for (const [k, v] of recentContactSubmissions.entries()) {
+        if (now - v > 60000) recentContactSubmissions.delete(k);
+      }
+    }
+
+    // 3. Dispatch Email via backend service
+    const result = await sendContactUsEmail({
+      name: trimmedName,
+      email: trimmedEmail,
+      subject: trimmedSubject,
+      message: trimmedMessage,
+    });
+
+    if (result.status === 'FAILED') {
+      return res.status(502).json({
+        error: result.error || 'Email dispatch failed. Please try again later.',
+        details: result,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Message sent successfully. Our support team will get back to you shortly.',
+      status: result.status,
+    });
+  } catch (err: any) {
+    console.error('[App] Contact form endpoint error:', err);
+    res.status(500).json({ error: err.message || 'Internal server error processing contact request.' });
   }
 });
 

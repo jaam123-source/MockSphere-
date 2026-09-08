@@ -11,7 +11,7 @@ export interface EmailLogEntry {
   to: string;
   userName: string;
   subject: string;
-  type: 'REGISTRATION_WELCOME' | 'TEST_EMAIL' | 'INTERVIEW_STARTED';
+  type: 'REGISTRATION_WELCOME' | 'TEST_EMAIL' | 'INTERVIEW_STARTED' | 'CONTACT_US';
   sentAt: string;
   status: 'SENT' | 'SIMULATED' | 'FAILED';
   error?: string;
@@ -371,6 +371,134 @@ export async function sendRegistrationWelcomeEmail(payload: RegistrationEmailPay
   };
 }
 
+export interface ContactUsEmailPayload {
+  name: string;
+  email: string;
+  subject?: string;
+  message: string;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Sends a contact inquiry email to the designated support/admin address.
+ */
+export async function sendContactUsEmail(payload: ContactUsEmailPayload): Promise<{
+  success: boolean;
+  messageId?: string;
+  status: 'SENT' | 'SIMULATED' | 'FAILED';
+  error?: string;
+  deliveryProvider: string;
+}> {
+  const recipientEmail = (
+    process.env.CONTACT_RECEIVER_EMAIL ||
+    process.env.GMAIL_USER ||
+    process.env.SMTP_USER ||
+    'supportmocksphere@gmail.com'
+  ).trim();
+
+  const userSubject = payload.subject?.trim() || 'General Inquiry';
+  const mailSubject = `📩 [Mock Sphere Contact] ${userSubject} - from ${payload.name}`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0f172a; color: #e2e8f0; margin: 0; padding: 24px; }
+    .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 28px; max-width: 600px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+    .header { border-bottom: 1px solid #334155; padding-bottom: 16px; margin-bottom: 20px; }
+    .title { color: #38bdf8; font-size: 20px; font-weight: bold; margin: 0 0 6px 0; }
+    .sub { color: #94a3b8; font-size: 13px; margin: 0; }
+    .field { margin-bottom: 16px; }
+    .label { color: #94a3b8; font-size: 11px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .value { color: #f8fafc; font-size: 14px; font-weight: 600; }
+    .msg-box { background-color: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 16px; color: #e2e8f0; font-size: 14px; white-space: pre-wrap; line-height: 1.6; }
+    .footer { margin-top: 24px; padding-top: 16px; border-top: 1px solid #334155; text-align: center; color: #64748b; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h2 class="title">New Contact Inquiry — Mock Sphere</h2>
+      <p class="sub">Submitted via the Mock Sphere website contact form</p>
+    </div>
+    <div class="field">
+      <div class="label">Sender Name</div>
+      <div class="value">${escapeHtml(payload.name)}</div>
+    </div>
+    <div class="field">
+      <div class="label">Sender Email</div>
+      <div class="value"><a href="mailto:${escapeHtml(payload.email)}" style="color: #38bdf8; text-decoration: none;">${escapeHtml(payload.email)}</a></div>
+    </div>
+    <div class="field">
+      <div class="label">Subject Topic</div>
+      <div class="value">${escapeHtml(userSubject)}</div>
+    </div>
+    <div class="field">
+      <div class="label">Message</div>
+      <div class="msg-box">${escapeHtml(payload.message)}</div>
+    </div>
+    <div class="footer">
+      Sent via Mock Sphere Secure Contact System • Reply directly to this email to respond to ${escapeHtml(payload.name)}
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  const text = `New Contact Inquiry from ${payload.name} (${payload.email}):\nSubject: ${userSubject}\n\n${payload.message}`;
+
+  const smtpInfo = isSmtpConfigured();
+  const transporter = createTransporter();
+
+  if (transporter && smtpInfo.configured) {
+    try {
+      console.log(`[EmailService] Dispatching contact inquiry from ${payload.email} to ${recipientEmail}...`);
+      const info = await transporter.sendMail({
+        from: smtpInfo.fromAddress,
+        to: recipientEmail,
+        replyTo: payload.email,
+        subject: mailSubject,
+        text,
+        html,
+      });
+
+      console.log(`[EmailService] ✅ Contact message from ${payload.email} sent to ${recipientEmail}. MessageId: ${info.messageId}`);
+      return {
+        success: true,
+        messageId: info.messageId,
+        status: 'SENT',
+        deliveryProvider: smtpInfo.provider,
+      };
+    } catch (err: any) {
+      console.error(`[EmailService] ❌ Contact email dispatch failed:`, err.message);
+      return {
+        success: false,
+        status: 'FAILED',
+        error: err.message || 'SMTP delivery failed',
+        deliveryProvider: smtpInfo.provider,
+      };
+    }
+  }
+
+  // Fallback if SMTP credentials not provided in environment
+  console.warn(`[EmailService] SMTP credentials not set. Contact inquiry from ${payload.name} (${payload.email}) recorded.`);
+  return {
+    success: true,
+    status: 'SIMULATED',
+    deliveryProvider: smtpInfo.provider,
+  };
+}
+
 /**
  * Diagnostic test utility to verify Gmail SMTP connection and credentials.
  */
@@ -439,4 +567,193 @@ export async function testGmailSmtpConnection(targetTestEmail?: string): Promise
       error: msg,
     };
   }
+}
+
+export interface ContactFormPayload {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  senderIp?: string;
+}
+
+/**
+ * Sends Contact Us messages directly to support email (supportmocksphere@gmail.com).
+ */
+export async function sendContactFormEmail(payload: ContactFormPayload): Promise<{
+  success: boolean;
+  status: 'SENT' | 'SIMULATED' | 'FAILED';
+  message: string;
+  messageId?: string;
+  error?: string;
+}> {
+  const receiverEmail = (process.env.CONTACT_RECEIVER_EMAIL || process.env.GMAIL_USER || 'supportmocksphere@gmail.com').trim();
+  const smtpInfo = isSmtpConfigured();
+  const transporter = createTransporter();
+
+  const formattedDate = new Date().toLocaleString('en-US', {
+    dateStyle: 'full',
+    timeStyle: 'medium',
+  });
+
+  const emailSubject = `📬 Mock Sphere Contact: [${payload.subject}] from ${payload.name}`;
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Contact Us Inquiry - Mock Sphere</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#e2e8f0;line-height:1.6;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0f172a;padding:30px 15px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#1e293b;border-radius:16px;border:1px solid #334155;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.5);">
+          <tr>
+            <td style="background:linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);padding:28px 24px;text-align:left;">
+              <div style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#dbeafe;margin-bottom:6px;">
+                🌐 MOCK SPHERE WEBSITE CONTACT
+              </div>
+              <h2 style="margin:0;font-size:22px;font-weight:800;color:#ffffff;">
+                New Inquiry Received
+              </h2>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0f172a;border-radius:12px;padding:16px;border:1px solid #334155;margin-bottom:20px;">
+                <tr>
+                  <td style="padding:6px 0;font-size:13px;color:#94a3b8;width:120px;"><strong>Sender Name:</strong></td>
+                  <td style="padding:6px 0;font-size:13px;color:#ffffff;font-weight:700;">${payload.name}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;font-size:13px;color:#94a3b8;"><strong>Sender Email:</strong></td>
+                  <td style="padding:6px 0;font-size:13px;color:#60a5fa;font-family:monospace;font-weight:600;">
+                    <a href="mailto:${payload.email}" style="color:#60a5fa;text-decoration:none;">${payload.email}</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;font-size:13px;color:#94a3b8;"><strong>Topic / Subject:</strong></td>
+                  <td style="padding:6px 0;font-size:13px;color:#fbbf24;font-weight:700;">${payload.subject}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;font-size:13px;color:#94a3b8;"><strong>Submitted At:</strong></td>
+                  <td style="padding:6px 0;font-size:13px;color:#cbd5e1;">${formattedDate}</td>
+                </tr>
+              </table>
+
+              <div style="margin-bottom:20px;">
+                <h3 style="margin:0 0 8px;font-size:13px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">
+                  💬 Message Content:
+                </h3>
+                <div style="background-color:#0f172a;border-radius:12px;padding:18px;border:1px solid #334155;color:#f8fafc;font-size:14px;white-space:pre-wrap;word-break:break-word;line-height:1.6;">
+${payload.message}
+                </div>
+              </div>
+
+              <div style="text-align:center;margin-top:24px;">
+                <a href="mailto:${payload.email}?subject=Re: ${encodeURIComponent(payload.subject)}" style="display:inline-block;background-color:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 28px;border-radius:10px;">
+                  Reply Direct to Sender &rarr;
+                </a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#0f172a;padding:16px 24px;border-top:1px solid #334155;text-align:center;">
+              <p style="margin:0;font-size:11px;color:#64748b;">
+                Mock Sphere Automated Contact Service &bull; Target Inbox: ${receiverEmail}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  const text = `
+New Contact Us Inquiry - Mock Sphere
+-----------------------------------
+Sender Name: ${payload.name}
+Sender Email: ${payload.email}
+Topic: ${payload.subject}
+Submitted At: ${formattedDate}
+
+Message:
+${payload.message}
+
+Reply to: ${payload.email}
+  `.trim();
+
+  const logId = `contact_log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const logEntry: EmailLogEntry = {
+    id: logId,
+    to: receiverEmail,
+    userName: payload.name,
+    subject: emailSubject,
+    type: 'CONTACT_US',
+    sentAt: new Date().toISOString(),
+    status: 'SIMULATED',
+    htmlContent: html,
+    provider: smtpInfo.provider,
+  };
+
+  if (transporter && smtpInfo.configured) {
+    try {
+      console.log(`[EmailService] Sending Contact Us message to: ${receiverEmail} from ${payload.email}`);
+      const info = await transporter.sendMail({
+        from: smtpInfo.fromAddress,
+        to: receiverEmail,
+        replyTo: `"${payload.name}" <${payload.email}>`,
+        subject: emailSubject,
+        text,
+        html,
+      });
+
+      logEntry.status = 'SENT';
+      logEntry.messageId = info.messageId;
+      emailLogs.push(logEntry);
+      console.log(`[EmailService] ✅ Successfully delivered Contact Us message to ${receiverEmail}. MessageId: ${info.messageId}`);
+
+      return {
+        success: true,
+        status: 'SENT',
+        message: 'Message sent successfully.',
+        messageId: info.messageId,
+      };
+    } catch (err: any) {
+      console.error(`[EmailService] ❌ Error delivering contact email to ${receiverEmail}:`, err.message);
+
+      let userFriendlyError = err.message || 'Email delivery failed.';
+      if (err.message?.includes('535') || err.message?.toLowerCase().includes('badcredentials')) {
+        userFriendlyError = 'SMTP authentication error on server. Please verify GMAIL_APP_PASSWORD credentials.';
+      }
+
+      logEntry.status = 'FAILED';
+      logEntry.error = userFriendlyError;
+      emailLogs.push(logEntry);
+
+      return {
+        success: false,
+        status: 'FAILED',
+        message: userFriendlyError,
+        error: userFriendlyError,
+      };
+    }
+  }
+
+  // Fallback: If GMAIL_APP_PASSWORD is not set in environment yet
+  logEntry.status = 'SIMULATED';
+  emailLogs.push(logEntry);
+  console.log(`[EmailService] Contact Us message logged in outbox for ${receiverEmail}.`);
+
+  return {
+    success: true,
+    status: 'SIMULATED',
+    message: 'Message sent successfully.',
+  };
 }

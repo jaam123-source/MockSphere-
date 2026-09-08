@@ -43,7 +43,12 @@ export function getStoredUser(): User | null {
   }
 }
 
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  retries = 3,
+  delayMs = 800
+): Promise<T> {
   const token = getStoredToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -53,10 +58,35 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(endpoint, {
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(endpoint, {
+      ...options,
+      headers,
+    });
+  } catch (netErr: any) {
+    if (retries > 0) {
+      console.warn(`[API] Network error fetching ${endpoint}, retrying in ${delayMs}ms...`);
+      await new Promise((r) => setTimeout(r, delayMs));
+      return request<T>(endpoint, options, retries - 1, delayMs * 1.5);
+    }
+    throw netErr;
+  }
+
+  // Handle Rate Limiting (429) or transient Gateway errors (502/503/504) with exponential backoff
+  if ((res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504) && retries > 0) {
+    const retryAfterHeader = res.headers.get('Retry-After');
+    let waitMs = delayMs;
+    if (retryAfterHeader) {
+      const parsedSec = parseInt(retryAfterHeader, 10);
+      if (!isNaN(parsedSec) && parsedSec > 0) {
+        waitMs = parsedSec * 1000;
+      }
+    }
+    console.warn(`[API] HTTP ${res.status} for ${endpoint}. Auto-retrying in ${waitMs}ms (${retries} attempts remaining)...`);
+    await new Promise((r) => setTimeout(r, waitMs));
+    return request<T>(endpoint, options, retries - 1, Math.min(delayMs * 2, 4000));
+  }
 
   const contentType = res.headers.get('content-type') || '';
   let data: any;
@@ -70,6 +100,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   } else {
     const rawText = await res.text();
     if (!res.ok) {
+      if (res.status === 429) {
+        throw new Error('Rate limit exceeded (HTTP 429). Please wait a moment and try again.');
+      }
       throw new Error(`Server returned error (${res.status})`);
     }
     if (rawText.trim().startsWith('<') || contentType.includes('text/html')) {
@@ -83,7 +116,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 
   if (!res.ok) {
-    throw new Error(data?.error || data?.message || `Request failed with status ${res.status}`);
+    let errMsg = data?.error || data?.message;
+    if (!errMsg && res.status === 429) {
+      errMsg = 'Rate limit exceeded (HTTP 429). Please wait a few seconds and try again.';
+    }
+    throw new Error(errMsg || `Request failed with status ${res.status}`);
   }
   return data as T;
 }
@@ -408,6 +445,23 @@ export const ApiService = {
     return request('/api/notifications/test-smtp', {
       method: 'POST',
       body: JSON.stringify(payload || {}),
+    });
+  },
+
+  async sendContactForm(data: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    error?: string;
+    status?: string;
+  }> {
+    return request('/api/contact', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   },
 };
