@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   GraduationCap,
   Sparkles,
@@ -15,7 +15,9 @@ import {
   Menu,
   X,
   ChevronRight,
+  ChevronDown,
   Lock,
+  ShieldCheck,
 } from 'lucide-react';
 import { User, UserDashboardState } from '../types';
 
@@ -41,7 +43,31 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenOutbox,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState<boolean>(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
   const selectedView = activeView || currentView || 'dashboard';
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+
+    if (isProfileDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileDropdownOpen]);
 
   const handleMobileNav = (view: string) => {
     onNavigate(view);
@@ -78,13 +104,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center gap-1">
+            <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5">
               <button
                 id="nav-btn-dashboard"
                 onClick={() => onNavigate('dashboard')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                   selectedView === 'dashboard'
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                    ? 'bg-indigo-600 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
@@ -95,9 +121,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="nav-btn-final-aptitude"
                 onClick={() => onNavigate('final-test')}
                 disabled={!dashboard?.progression.final_aptitude_unlocked}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                   selectedView === 'final-test' || selectedView === 'final-aptitude'
-                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                    ? 'bg-amber-600 text-white shadow-sm'
                     : dashboard?.progression.final_aptitude_unlocked
                     ? 'text-amber-700 hover:bg-amber-50'
                     : 'text-slate-400 cursor-not-allowed opacity-60'
@@ -110,9 +136,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="nav-btn-technical"
                 onClick={() => onNavigate('technical-interview')}
                 disabled={!dashboard?.progression.technical_unlocked}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                   selectedView === 'technical-interview' || selectedView === 'technical'
-                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/20'
+                    ? 'bg-cyan-600 text-white shadow-sm'
                     : dashboard?.progression.technical_unlocked
                     ? 'text-cyan-700 hover:bg-cyan-50'
                     : 'text-slate-400 cursor-not-allowed opacity-60'
@@ -125,9 +151,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="nav-btn-hr"
                 onClick={() => onNavigate('hr-interview')}
                 disabled={!dashboard?.progression.hr_unlocked}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                   selectedView === 'hr-interview' || selectedView === 'hr'
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                    ? 'bg-emerald-600 text-white shadow-sm'
                     : dashboard?.progression.hr_unlocked
                     ? 'text-emerald-700 hover:bg-emerald-50'
                     : 'text-slate-400 cursor-not-allowed opacity-60'
@@ -139,87 +165,127 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 id="nav-btn-report"
                 onClick={() => onNavigate('final-report')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                   selectedView === 'final-report' || selectedView === 'report'
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                    ? 'bg-purple-600 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" /> Final Report
               </button>
 
-              <button
-                id="nav-btn-history"
-                onClick={() => onNavigate('history')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                  selectedView === 'history'
-                    ? 'bg-slate-800 text-white shadow-md'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <History className="w-3.5 h-3.5" /> History
-              </button>
+              
             </nav>
 
             {/* Right Actions: User Profile / Admin / Outbox / Auth / Mobile Toggle */}
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              {onOpenOutbox && (
-                <button
-                  id="nav-btn-email-outbox"
-                  onClick={onOpenOutbox}
-                  title="View Dispatched Emails"
-                  className="p-2 rounded-lg text-xs font-medium text-slate-500 hover:text-cyan-600 hover:bg-slate-100 transition-all relative border border-slate-200"
-                >
-                  <Mail className="w-4 h-4" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
-                </button>
-              )}
-
-              {/* Admin Panel Button - Strictly restricted to jaammaaj123@gmail.com */}
-              {user && user.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
-                <button
-                  id="nav-btn-admin"
-                  onClick={() => onNavigate('admin')}
-                  title="Admin Settings & Global Demo Mode"
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                    selectedView === 'admin'
-                      ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-sm'
-                      : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200'
-                  }`}
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Admin</span>
-                </button>
-              )}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              
+             
 
               {user ? (
-                <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-slate-200">
-                  {user.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                      ADMIN
-                    </span>
-                  )}
-                  <div className="hidden md:block text-right">
-                    <div className="text-xs font-semibold text-slate-800 max-w-[110px] truncate">
-                      {user.name}
-                    </div>
-                    <div className="text-[10px] text-slate-500 truncate max-w-[110px]">{user.email}</div>
-                  </div>
-
+                <div className="relative pl-1.5 sm:pl-2 border-l border-slate-200" ref={profileDropdownRef}>
                   <button
-                    id="nav-btn-logout"
-                    onClick={onLogout}
-                    title="Sign Out"
-                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    id="nav-btn-profile-trigger"
+                    onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                    title="User Profile & Account Menu"
+                    className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition-all cursor-pointer border border-slate-200 bg-white shadow-2xs group"
                   >
-                    <LogOut className="w-4 h-4" />
+                    <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs group-hover:bg-indigo-700 transition-colors">
+                      {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div className="hidden sm:block text-left pr-0.5">
+                      <div className="text-xs font-bold text-slate-800 max-w-[100px] truncate leading-tight">
+                        {user.name}
+                      </div>
+                    </div>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180 text-indigo-600' : ''}`} />
                   </button>
+
+                  {/* Profile Dropdown Menu */}
+                  {isProfileDropdownOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      {/* User Information Header */}
+                      <div className="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100 mb-2">
+                        <div className="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                          {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-bold text-slate-900 truncate leading-snug">
+                            {user.name}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono truncate leading-snug">
+                            {user.email}
+                          </div>
+                          {user.email?.toLowerCase() === 'jaammaaj123@gmail.com' ? (
+                            <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                              <ShieldCheck className="w-3 h-3 text-amber-700" /> ADMIN
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200/80 text-slate-700">
+                              Candidate
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Menu Links */}
+                      <div className="space-y-0.5">
+                        {user.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
+                          <button
+                            onClick={() => {
+                              onNavigate('admin');
+                              setIsProfileDropdownOpen(false);
+                            }}
+                            className="w-full text-left px-2.5 py-2 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                          >
+                            <Settings className="w-4 h-4 text-amber-600" /> Admin Controls
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            onNavigate('history');
+                            setIsProfileDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-2.5 transition-colors cursor-pointer"
+                        >
+                          <History className="w-4 h-4 text-slate-500" /> Performance History
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            onNavigate('final-report');
+                            setIsProfileDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-2.5 transition-colors cursor-pointer"
+                        >
+                          <FileText className="w-4 h-4 text-slate-500" /> Final Assessment Report
+                        </button>
+                      </div>
+
+                      <div className="pt-2 mt-2 border-t border-slate-100">
+                        <button
+                          id="nav-btn-logout"
+                          onClick={() => {
+                            setIsProfileDropdownOpen(false);
+                            onLogout();
+                          }}
+                          className="w-full text-left px-2.5 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center justify-between transition-colors cursor-pointer"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <LogOut className="w-4 h-4 text-rose-500" /> Sign Out
+                          </span>
+                          <ChevronRight className="w-3.5 h-3.5 text-rose-400" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button
                   id="nav-btn-login"
                   onClick={onOpenAuth}
-                  className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-indigo-500/20 flex items-center gap-1.5 transition-all"
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <UserIcon className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Sign In</span>
                 </button>
@@ -381,6 +447,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <ChevronRight className="w-3.5 h-3.5 opacity-50" />
               </button>
+            )}
+
+            {user && (
+              <div className="pt-2 mt-2 border-t border-slate-100">
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onLogout();
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center justify-between transition-colors border border-rose-100"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <LogOut className="w-4 h-4 text-rose-500" />
+                    <span>Sign Out</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-rose-400" />
+                </button>
+              </div>
             )}
           </div>
         )}

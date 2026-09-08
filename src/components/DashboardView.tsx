@@ -291,16 +291,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <TrendingUp className="w-4 h-4 text-cyan-600" />
               <span>Timeline & Logs</span>
             </button>
-            {user && user.email?.toLowerCase() === 'jaammaaj123@gmail.com' && (
-              <button
-                id="btn-quick-simulation"
-                onClick={onOpenAdmin}
-                className="px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-200 flex items-center gap-2 transition-all cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4 text-amber-600" />
-                <span>Admin & Demo Controls</span>
-              </button>
-            )}
+            
           </div>
         </div>
 

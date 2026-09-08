@@ -55,7 +55,8 @@ export default function App() {
   // Fetch Dashboard State
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const loadDashboard = async () => {
+  const loadDashboard = async (retryParam?: number | React.MouseEvent) => {
+    const retryCount = typeof retryParam === 'number' ? retryParam : 0;
     const user = ApiService.getCurrentUser();
     if (!user) {
       setLoading(false);
@@ -89,6 +90,10 @@ export default function App() {
         setCurrentUser(null);
         setDashboard(null);
         setLoadError(null);
+      } else if (retryCount < 2 && (errMsg.includes('fetch') || errMsg.includes('network') || errMsg.includes('connect'))) {
+        // Transient network retry (e.g. during dev server boot/restart)
+        setTimeout(() => loadDashboard(retryCount + 1), 800);
+        return;
       } else {
         console.error('Failed to load dashboard state:', err);
         if (!dashboard) {
