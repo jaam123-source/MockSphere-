@@ -2,10 +2,11 @@
 
 @layer base {
   body {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Acme', sans-serif;
     background-color: #f8fafc;
     color: #0f172a;
     -webkit-font-smoothing: antialiased;
+    letter-spacing: 0.015em;
   }
 }
 
@@ -14,7 +15,7 @@
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Acme', sans-serif;
   }
 
   .technical-domain-card:hover {
