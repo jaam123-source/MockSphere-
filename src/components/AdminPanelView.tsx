@@ -263,9 +263,7 @@ export const AdminPanelView: React.FC<AdminPanelViewProps> = ({
                   {settings.adminDemoMode || settings.globalDemoMode ? '● ACTIVE FOR ADMIN ACCOUNT ONLY' : '○ DISABLED'}
                 </span>
               </div>
-              <p className="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
-                Applies <strong>exclusively to your admin account</strong> (<strong className="text-amber-300 font-mono">jaammaaj123@gmail.com</strong>). Bypasses prerequisite locks to unlock the Final Aptitude Test, AI Technical Round, and AI HR Behavioral Interview for live presentation and testing without affecting candidates or other accounts.
-              </p>
+             
             </div>
           </div>
 
@@ -293,28 +291,9 @@ export const AdminPanelView: React.FC<AdminPanelViewProps> = ({
             )}
           </div>
         </div>
-
-        {/* Demo Mode Details Card */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
-            <div className="font-bold text-amber-400 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4" /> Admin Account Access:
-            </div>
-            <p className="text-slate-300 text-[11px] leading-relaxed">
-              When enabled, your account (jaammaaj123@gmail.com) gains instant access to all 4 aptitude domains, Final Test, AI Technical, and AI HR rounds for live feature demonstration.
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
-            <div className="font-bold text-emerald-400 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4" /> Zero Impact on Other Users:
-            </div>
-            <p className="text-slate-300 text-[11px] leading-relaxed">
-              Student and candidate accounts remain strictly governed by standard qualification cutoffs. Other users must pass each level and test sequentially as required.
-            </p>
-          </div>
-        </div>
       </div>
+
+
 
       {/* SECTION 2: MILESTONE QUICK UNLOCKS (SIMULATOR) */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-4">
