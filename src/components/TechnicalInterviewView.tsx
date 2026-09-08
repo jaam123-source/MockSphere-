@@ -682,65 +682,65 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     return (
       <div id="technical-domain-selector" className="space-y-6 sm:space-y-8 max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-28 sm:pb-8">
         {/* Header Bar */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 pb-6">
           <div>
             <div className="flex items-center space-x-3 mb-2">
               <button
                 id="btn-back-dashboard"
                 onClick={onBack}
-                className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                className="p-2 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer border border-slate-200"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
                 Technical Interview Round
               </h1>
             </div>
-            <p className="text-slate-200 text-xs sm:text-sm md:text-base font-medium max-w-3xl leading-relaxed">
+            <p className="text-slate-600 text-xs sm:text-sm md:text-base font-medium max-w-3xl leading-relaxed">
               Experience a realistic, 3-level AI-powered live technical interview. Select your engineering domain, answer conceptual questions, analyze code snippets, and solve practical architectural challenges.
             </p>
           </div>
 
           <div className="flex items-center space-x-3">
-            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-800/80 flex items-center gap-1.5">
+            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5 shadow-xs">
               <Check className="w-3.5 h-3.5" /> Final Aptitude Cleared
             </span>
           </div>
         </div>
 
         {/* 3-Level Progressive Flow Banner */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 bg-slate-900/90 p-4 sm:p-5 rounded-2xl border border-slate-800">
-          <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow-xs">
-            <div className="w-8 h-8 rounded-lg bg-blue-950/80 text-blue-400 border border-blue-800/60 flex items-center justify-center font-bold text-sm shrink-0">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-50 border border-slate-200 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 border border-blue-200 flex items-center justify-center font-bold text-sm shrink-0">
               L1
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">Level 1 — Basic</h4>
-              <p className="text-xs text-slate-300 mt-0.5">
+              <h4 className="text-sm font-bold text-slate-900">Level 1 — Basic</h4>
+              <p className="text-xs text-slate-600 mt-0.5">
                 10 Questions: Fundamentals, primitives, core syntax, definitions & standard lifecycles.
               </p>
             </div>
           </div>
 
-          <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow-xs">
-            <div className="w-8 h-8 rounded-lg bg-purple-950/80 text-purple-400 border border-purple-800/60 flex items-center justify-center font-bold text-sm shrink-0">
+          <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-50 border border-slate-200 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 border border-purple-200 flex items-center justify-center font-bold text-sm shrink-0">
               L2
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">Level 2 — Intermediate</h4>
-              <p className="text-xs text-slate-300 mt-0.5">
+              <h4 className="text-sm font-bold text-slate-900">Level 2 — Intermediate</h4>
+              <p className="text-xs text-slate-600 mt-0.5">
                 10 Questions: Architecture comparisons, code output tracing, debugging & performance tradeoffs.
               </p>
             </div>
           </div>
 
-          <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow-xs">
-            <div className="w-8 h-8 rounded-lg bg-amber-950/80 text-amber-400 border border-amber-800/60 flex items-center justify-center font-bold text-sm shrink-0">
+          <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-50 border border-slate-200 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 border border-amber-200 flex items-center justify-center font-bold text-sm shrink-0">
               L3
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">Level 3 — Practical</h4>
-              <p className="text-xs text-slate-300 mt-0.5">
+              <h4 className="text-sm font-bold text-slate-900">Level 3 — Practical</h4>
+              <p className="text-xs text-slate-600 mt-0.5">
                 10 Questions: Real-world coding problems, system design scenarios & production edge cases.
               </p>
             </div>
@@ -751,8 +751,8 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">Choose Your Technical Domain</h2>
-              <p className="text-xs text-slate-300">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">Choose Your Technical Domain</h2>
+              <p className="text-xs text-slate-600">
                 Select from the top 5 high-demand industry domains widely running in tech companies.
               </p>
             </div>
