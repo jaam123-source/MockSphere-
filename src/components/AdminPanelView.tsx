@@ -50,6 +50,7 @@ export const AdminPanelView: React.FC<AdminPanelViewProps> = ({
     testTimerMinutes: 20,
     finalTestTimerMinutes: 30,
     aiModel: 'gemini-3.7-flash',
+    adminDemoMode: false,
     globalDemoMode: false,
   });
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -242,7 +243,7 @@ export const AdminPanelView: React.FC<AdminPanelViewProps> = ({
         </div>
       )}
 
-      {/* SECTION 1: GLOBAL DEMO MODE CONTROL */}
+      {/* SECTION 1: ADMIN SESSION DEMO MODE CONTROL */}
       <div className="bg-gradient-to-br from-amber-950/30 via-slate-900 to-indigo-950/30 border-2 border-amber-500/40 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
           <div className="flex items-start sm:items-center gap-3">
@@ -251,43 +252,43 @@ export const AdminPanelView: React.FC<AdminPanelViewProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h2 className="text-base sm:text-lg font-bold text-white">Global Demo Mode for All Users</h2>
+                <h2 className="text-base sm:text-lg font-bold text-white">Admin Session Demo Mode</h2>
                 <span
                   className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                    settings.globalDemoMode
+                    settings.adminDemoMode || settings.globalDemoMode
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse'
                       : 'bg-slate-800 text-slate-400 border border-slate-700'
                   }`}
                 >
-                  {settings.globalDemoMode ? '● ACTIVE FOR ALL USERS' : '○ DISABLED (STANDARD QUALIFICATION)'}
+                  {settings.adminDemoMode || settings.globalDemoMode ? '● ACTIVE FOR ADMIN ACCOUNT ONLY' : '○ DISABLED'}
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
-                When enabled, all logged-in Google users have prerequisite checks bypassed, unlocking the Final Aptitude Test, AI Technical Round, and AI HR Behavioral Interview for live presentation and testing.
+                Applies <strong>exclusively to your admin account</strong> (<strong className="text-amber-300 font-mono">jaammaaj123@gmail.com</strong>). Bypasses prerequisite locks to unlock the Final Aptitude Test, AI Technical Round, and AI HR Behavioral Interview for live presentation and testing without affecting candidates or other accounts.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            {settings.globalDemoMode ? (
+            {settings.adminDemoMode || settings.globalDemoMode ? (
               <button
-                id="btn-disable-global-demo"
+                id="btn-disable-admin-demo"
                 onClick={() => handleToggleGlobalDemo(false)}
                 disabled={isTogglingDemo}
-                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-bold flex items-center gap-2 shadow-lg transition-all"
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-bold flex items-center gap-2 shadow-lg transition-all cursor-pointer"
               >
                 <ToggleRight className="w-5 h-5 text-emerald-400" />
-                <span>{isTogglingDemo ? 'Updating...' : 'Disable Demo Mode'}</span>
+                <span>{isTogglingDemo ? 'Updating...' : 'Disable Admin Demo Mode'}</span>
               </button>
             ) : (
               <button
-                id="btn-enable-global-demo"
+                id="btn-enable-admin-demo"
                 onClick={() => handleToggleGlobalDemo(true)}
                 disabled={isTogglingDemo}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white border border-amber-500/50 text-xs font-bold flex items-center gap-2 shadow-lg shadow-amber-600/30 transition-all"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white border border-amber-500/50 text-xs font-bold flex items-center gap-2 shadow-lg shadow-amber-600/30 transition-all cursor-pointer"
               >
                 <ToggleLeft className="w-5 h-5 text-amber-300" />
-                <span>{isTogglingDemo ? 'Activating...' : 'Enable Demo Mode for All'}</span>
+                <span>{isTogglingDemo ? 'Activating...' : 'Enable Admin Demo Mode'}</span>
               </button>
             )}
           </div>
@@ -297,19 +298,19 @@ export const AdminPanelView: React.FC<AdminPanelViewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
             <div className="font-bold text-amber-400 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4" /> When Demo Mode is Enabled:
+              <Sparkles className="w-4 h-4" /> Admin Account Access:
             </div>
             <p className="text-slate-300 text-[11px] leading-relaxed">
-              All 4 aptitude domains (40 levels + 8 topic tests) and Final Aptitude are marked as qualified, enabling instant demonstration of multimodal speech interview features.
+              When enabled, your account (jaammaaj123@gmail.com) gains instant access to all 4 aptitude domains, Final Test, AI Technical, and AI HR rounds for live feature demonstration.
             </p>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
-            <div className="font-bold text-cyan-400 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4" /> When Demo Mode is Disabled:
+            <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4" /> Zero Impact on Other Users:
             </div>
             <p className="text-slate-300 text-[11px] leading-relaxed">
-              Strict sequential qualification is enforced: Candidates must pass each level (cutoffs below) and topic tests in order before accessing advanced interview stages.
+              Student and candidate accounts remain strictly governed by standard qualification cutoffs. Other users must pass each level and test sequentially as required.
             </p>
           </div>
         </div>

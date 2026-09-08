@@ -484,6 +484,7 @@ export interface AdminSettings {
   testTimerMinutes: number;
   finalTestTimerMinutes: number;
   aiModel: string;
+  adminDemoMode?: boolean;
   globalDemoMode?: boolean;
 }
 

@@ -71,7 +71,7 @@ const DEFAULT_SETTINGS: AdminSettings = {
   testTimerMinutes: 20,
   finalTestTimerMinutes: 30,
   aiModel: 'gemini-3.7-flash',
-  globalDemoMode: false,
+  adminDemoMode: false,
 };
 
 const HR_QUESTIONS_BANK: HRQuestion[] = [
@@ -150,7 +150,8 @@ class Database {
         if (!parsed.settings) {
           parsed.settings = { ...DEFAULT_SETTINGS };
         } else {
-          parsed.settings.globalDemoMode = false;
+          parsed.settings.adminDemoMode = Boolean(parsed.settings.adminDemoMode || (parsed.settings as any).globalDemoMode);
+          delete (parsed.settings as any).globalDemoMode;
         }
 
         this.saveDatabase(parsed);
@@ -367,24 +368,35 @@ class Database {
     return this.data.settings;
   }
 
-  public setGlobalDemoMode(enabled: boolean): AdminSettings {
+  public setAdminDemoMode(enabled: boolean): AdminSettings {
     if (!this.data.settings) {
       this.data.settings = { ...DEFAULT_SETTINGS };
     }
-    this.data.settings.globalDemoMode = !!enabled;
+    this.data.settings.adminDemoMode = !!enabled;
+    delete (this.data.settings as any).globalDemoMode;
     this.saveDatabase();
     return this.data.settings;
   }
 
+  public setGlobalDemoMode(enabled: boolean): AdminSettings {
+    return this.setAdminDemoMode(enabled);
+  }
+
   public isGlobalDemoMode(): boolean {
-    return Boolean(this.data.settings?.globalDemoMode);
+    return Boolean(this.data.settings?.adminDemoMode);
   }
 
   public isDemoUser(userId?: string): boolean {
-    // Demo Mode is OFF by default. It is ONLY active if explicitly enabled globally by the Administrator.
-    if (this.data.settings?.globalDemoMode) {
-      return true;
+    if (!userId) return false;
+    const user = this.getUserById(userId);
+    if (!user) return false;
+
+    // Demo Mode MUST ONLY apply to the admin's own account/session when enabled.
+    // There is no global Demo Mode that can affect other users or candidates.
+    if (user.email?.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()) {
+      return Boolean(this.data.settings?.adminDemoMode);
     }
+
     return false;
   }
 

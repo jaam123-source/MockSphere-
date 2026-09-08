@@ -671,17 +671,18 @@ app.post('/api/admin/reset-progress', requireAdmin, (req, res) => {
   }
 });
 
-// --- ADMIN DEMO MODE (Global & College Presentation) ---
+// --- ADMIN DEMO MODE (Admin Account Presentation) ---
 app.post('/api/admin/demo-mode/toggle-global', requireAdmin, (req, res) => {
   try {
     const { enabled } = req.body;
-    const updatedSettings = db.setGlobalDemoMode(enabled);
+    const updatedSettings = db.setAdminDemoMode(enabled);
     res.json({
       success: true,
-      globalDemoMode: !!updatedSettings.globalDemoMode,
-      message: updatedSettings.globalDemoMode
-        ? 'Global Demo Mode ENABLED: All users can now access full testing and interview rounds.'
-        : 'Global Demo Mode DISABLED: Standard sequential qualification enforced for all candidates.',
+      adminDemoMode: !!updatedSettings.adminDemoMode,
+      globalDemoMode: false,
+      message: updatedSettings.adminDemoMode
+        ? 'Admin Session Demo Mode ENABLED: Full interview stages unlocked for jaammaaj123@gmail.com. Candidate accounts remain unaffected.'
+        : 'Admin Session Demo Mode DISABLED: Standard qualification enforced for your admin account.',
       settings: updatedSettings,
     });
   } catch (err: any) {
@@ -721,15 +722,15 @@ app.get('/api/admin/demo-mode/status', (req, res) => {
   try {
     const userId = getAuthUserId(req);
     const user = db.getUserById(userId);
-    const globalDemo = db.isGlobalDemoMode();
-    const isDemo = globalDemo || (user ? db.isDemoUser(user.user_id) : false);
+    const isDemo = user ? db.isDemoUser(user.user_id) : false;
     res.json({
       isDemoMode: isDemo,
-      globalDemoMode: globalDemo,
+      adminDemoMode: Boolean(db.getSettings().adminDemoMode),
+      globalDemoMode: false,
       user: isDemo ? user : null,
     });
   } catch {
-    res.json({ isDemoMode: false, globalDemoMode: false, user: null });
+    res.json({ isDemoMode: false, adminDemoMode: false, globalDemoMode: false, user: null });
   }
 });
 
