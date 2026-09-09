@@ -72,9 +72,9 @@ export const LoginGateView: React.FC<LoginGateViewProps> = ({ onAuthSuccess }) =
             </div>
             <div>
               <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                <span>Campus Placement Preparation Portal</span>
+                <Sparkles className="w-3 h-3 text-indigo-500" />
+                <span>Official AI Assessment Suite</span>
               </div>
-              <p className="text-xs text-slate-500 mt-1">Official AI Assessment Suite</p>
             </div>
           </div>
 
