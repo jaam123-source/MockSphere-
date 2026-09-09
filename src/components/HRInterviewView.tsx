@@ -201,8 +201,8 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
       }
       try {
         const recognizer = SpeechService.createSpeechRecognizer(
-          (transcript, isFinal) => {
-            setTextResponse((prev) => (isFinal ? (prev ? prev + ' ' + transcript : transcript) : prev));
+          (transcript) => {
+            setTextResponse(transcript);
           },
           (err) => {
             console.warn('Voice error:', err);

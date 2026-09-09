@@ -63,18 +63,17 @@ export class SpeechService {
     recognizer.lang = 'en-US';
 
     recognizer.onresult = (event: any) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
+      let fullTranscript = '';
+      let isFinal = false;
 
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
+      for (let i = 0; i < event.results.length; ++i) {
+        fullTranscript += event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
+          isFinal = true;
         }
       }
 
-      onResult(finalTranscript || interimTranscript, !!finalTranscript);
+      onResult(fullTranscript.trim(), isFinal);
     };
 
     if (onError) {

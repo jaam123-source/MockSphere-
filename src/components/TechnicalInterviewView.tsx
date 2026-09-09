@@ -305,8 +305,8 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       }
       try {
         const recognizer = SpeechService.createSpeechRecognizer(
-          (transcript, isFinal) => {
-            setTextResponse((prev) => (isFinal ? (prev ? prev + ' ' + transcript : transcript) : prev));
+          (transcript) => {
+            setTextResponse(transcript);
             setVoiceVolumeLevel(Math.min(100, Math.floor(transcript.length * 4) % 100));
           },
           (err) => {
