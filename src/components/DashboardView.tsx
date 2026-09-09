@@ -250,7 +250,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return {
       stage: 'STAGE 5 • PLACEMENT READINESS REPORT',
       stageNumber: 5,
-      title: 'Full Placement Diagnostic Dossier',
+      title: 'Full Placement Diagnostic Report',
       description: `All preparation rounds completed! Review your comprehensive readiness score, strengths/weaknesses breakdown, and AI coach action plan.`,
       badge: 'All Stages Complete',
       badgeBg: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
@@ -400,7 +400,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span className="font-bold text-[11px] text-slate-600">STAGE 5</span>
                 <Trophy className="w-4 h-4 text-purple-600" />
               </div>
-              <div className="font-bold text-slate-900">Dossier & Report</div>
+              <div className="font-bold text-slate-900">Final Report</div>
               <div className="text-[11px] text-slate-500 mt-0.5">AI Coach Action Plan</div>
             </div>
           </div>
