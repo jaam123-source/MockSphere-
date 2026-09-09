@@ -200,6 +200,11 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
         return;
       }
       try {
+        if (speechRecognizer) {
+          try {
+            speechRecognizer.stop();
+          } catch {}
+        }
         const recognizer = SpeechService.createSpeechRecognizer(
           (transcript) => {
             setTextResponse(transcript);
@@ -207,6 +212,9 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
           (err) => {
             console.warn('Voice error:', err);
             setIsRecording(false);
+            if (err === 'not-allowed' || err === 'service-not-allowed') {
+              alert('Microphone access was denied or is restricted in this browser iframe. Please allow microphone permissions or open the application in a new tab.');
+            }
           },
           () => setIsRecording(false)
         );
@@ -215,9 +223,10 @@ export const HRInterviewView: React.FC<HRInterviewViewProps> = ({
           setSpeechRecognizer(recognizer);
           setIsRecording(true);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to start voice recognition:', err);
         setIsRecording(false);
+        alert('Could not start microphone speech recognition. Please check your browser microphone permissions or type your response.');
       }
     }
   };

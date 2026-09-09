@@ -304,6 +304,11 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         return;
       }
       try {
+        if (speechRecognizer) {
+          try {
+            speechRecognizer.stop();
+          } catch {}
+        }
         const recognizer = SpeechService.createSpeechRecognizer(
           (transcript) => {
             setTextResponse(transcript);
@@ -313,6 +318,9 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
             console.warn('Voice error:', err);
             setIsRecording(false);
             setVoiceVolumeLevel(0);
+            if (err === 'not-allowed' || err === 'service-not-allowed') {
+              alert('Microphone access was denied or is restricted in this browser iframe. Please allow microphone permissions in your browser or open the application in a new tab.');
+            }
           },
           () => {
             setIsRecording(false);
@@ -324,9 +332,11 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
           setSpeechRecognizer(recognizer);
           setIsRecording(true);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to start voice recognition:', err);
         setIsRecording(false);
+        setVoiceVolumeLevel(0);
+        alert('Could not start microphone speech recognition. Please check your browser microphone permissions or type your response.');
       }
     }
   };
