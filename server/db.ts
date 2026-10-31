@@ -31,10 +31,101 @@ import { generateDefaultQuestionBank, TOPICS_META, CONCEPT_TIPS, normalizeQuesti
 import { generateAITechnicalQuestions, evaluateTechnicalAnswer, evaluateHREvaluation, generateFinalAIFeedback, DOMAIN_DEFAULTS } from './ai';
 import { getCuratedDomainQuestions } from './domainCuratedQuestions';
 
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  getDocs,
+  Firestore,
+  setLogLevel,
+} from 'firebase/firestore/lite';
+
+// Suppress verbose stream lifecycle warning logs
+try {
+  setLogLevel('error');
+} catch (e) {
+  // Ignore in environments where logger is restricted
+}
+
 const DB_FILE = process.env.VERCEL
   ? path.join('/tmp', 'database_store.json')
   : path.join(process.cwd(), 'database_store.json');
 const SEED_DB_FILE = path.join(process.cwd(), 'database_store.json');
+
+// Firebase Configuration & Diagnostic Error Handling (Cloud Firestore)
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: string;
+  path?: string;
+  authInfo?: {
+    userId?: string;
+    email?: string;
+    isAuthenticated: boolean;
+  };
+}
+
+export function handleFirestoreError(
+  error: unknown,
+  context: {
+    operation: string;
+    path?: string;
+    userId?: string;
+    email?: string;
+  }
+): void {
+  const err = error as { code?: string; message?: string };
+  const info: FirestoreErrorInfo = {
+    error: err?.message || String(error),
+    operationType: context.operation,
+    path: context.path,
+    authInfo: {
+      userId: context.userId,
+      email: context.email,
+      isAuthenticated: !!context.userId,
+    },
+  };
+  console.error(`[Firestore ${context.operation}] ${info.error}`, JSON.stringify(info));
+}
+
+const DEFAULT_FIREBASE_CONFIG = {
+  projectId: 'gen-lang-client-0470119433',
+  appId: '1:502487763181:web:526af4f05a90bb1bb524e4',
+  apiKey: 'AIzaSyC1XqayCbqNmjvuanPOY-kmFaSNqozPrxs',
+  authDomain: 'gen-lang-client-0470119433.firebaseapp.com',
+  firestoreDatabaseId: 'ai-studio-aipoweredmultimo-46ffba00-101d-408d-a748-1345aad4f9b6',
+  storageBucket: 'gen-lang-client-0470119433.firebasestorage.app',
+  messagingSenderId: '502487763181',
+  measurementId: '',
+  oAuthClientId: '502487763181-lbos1a0qm60vj4lmbt82ql4thb15j9sb.apps.googleusercontent.com',
+  recaptchaSiteKey: '',
+};
+
+function getFirebaseConfig(): typeof DEFAULT_FIREBASE_CONFIG {
+  let baseConfig = DEFAULT_FIREBASE_CONFIG;
+  try {
+    const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+    if (fs.existsSync(configPath)) {
+      baseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    }
+  } catch (err) {
+    // fallback
+  }
+
+  return {
+    ...baseConfig,
+    projectId: process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || baseConfig.projectId,
+    appId: process.env.FIREBASE_APP_ID || process.env.VITE_FIREBASE_APP_ID || baseConfig.appId,
+    apiKey: process.env.FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY || baseConfig.apiKey,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN || process.env.VITE_FIREBASE_AUTH_DOMAIN || baseConfig.authDomain,
+    firestoreDatabaseId: process.env.FIREBASE_DATABASE_ID || process.env.VITE_FIREBASE_DATABASE_ID || baseConfig.firestoreDatabaseId,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || baseConfig.storageBucket,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || baseConfig.messagingSenderId,
+    oAuthClientId: process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || baseConfig.oAuthClientId,
+  };
+}
 
 export interface UserProgressData {
   user_id: string;
@@ -105,9 +196,142 @@ const HR_QUESTIONS_BANK: HRQuestion[] = [
 
 class Database {
   private data: DatabaseSchema;
+  private firestore: Firestore | null = null;
+  private isFirestoreReady: boolean = false;
 
   constructor() {
     this.data = this.loadDatabase();
+    this.initFirestore().catch((err) => {
+      console.warn('[Firestore] Background init warning:', err?.message || err);
+    });
+  }
+
+  private async initFirestore(): Promise<void> {
+    try {
+      const config = getFirebaseConfig();
+      const app = getApps().length === 0 ? initializeApp(config) : getApp();
+      this.firestore = getFirestore(app, config.firestoreDatabaseId);
+      this.isFirestoreReady = true;
+      console.log(`[Firestore] Connected to Cloud Firestore database: ${config.firestoreDatabaseId}`);
+
+      // Sync existing accounts and progress to Cloud Firestore immediately
+      await this.syncAllDataToFirestore();
+      // Hydrate any cloud data
+      await this.hydrateFromFirestore();
+    } catch (err) {
+      this.isFirestoreReady = false;
+      handleFirestoreError(err, { operation: 'initFirestore' });
+    }
+  }
+
+  public isCloudFirestoreConnected(): boolean {
+    return this.isFirestoreReady;
+  }
+
+  public getFirestoreDatabaseId(): string {
+    return getFirebaseConfig().firestoreDatabaseId;
+  }
+
+  public async syncUserToFirestore(user: User): Promise<void> {
+    if (!this.firestore || !user?.user_id) return;
+    try {
+      const cleanUser = JSON.parse(JSON.stringify(user));
+      await setDoc(doc(this.firestore, 'users', user.user_id), cleanUser, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, {
+        operation: 'syncUserToFirestore',
+        path: `users/${user.user_id}`,
+        userId: user.user_id,
+        email: user.email,
+      });
+    }
+  }
+
+  public async syncProgressToFirestore(userId: string): Promise<void> {
+    if (!this.firestore || !userId) return;
+    const prog = this.data.user_progress[userId];
+    if (!prog) return;
+    try {
+      const cleanProg = JSON.parse(JSON.stringify(prog));
+      await setDoc(doc(this.firestore, 'user_progress', userId), cleanProg, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, {
+        operation: 'syncProgressToFirestore',
+        path: `user_progress/${userId}`,
+        userId,
+      });
+    }
+  }
+
+  public async syncSettingsToFirestore(): Promise<void> {
+    if (!this.firestore) return;
+    try {
+      const cleanSettings = JSON.parse(JSON.stringify(this.data.settings));
+      await setDoc(doc(this.firestore, 'settings', 'admin'), cleanSettings, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, {
+        operation: 'syncSettingsToFirestore',
+        path: 'settings/admin',
+      });
+    }
+  }
+
+  public async syncAllDataToFirestore(): Promise<void> {
+    if (!this.firestore) return;
+    try {
+      if (this.data.users && Array.isArray(this.data.users)) {
+        for (const user of this.data.users) {
+          if (user.user_id) {
+            await this.syncUserToFirestore(user);
+          }
+        }
+      }
+      if (this.data.user_progress) {
+        for (const uid of Object.keys(this.data.user_progress)) {
+          await this.syncProgressToFirestore(uid);
+        }
+      }
+      if (this.data.settings) {
+        await this.syncSettingsToFirestore();
+      }
+      console.log(`[Firestore] Cloud synchronization complete: ${this.data.users.length} users, ${Object.keys(this.data.user_progress).length} progress docs preserved.`);
+    } catch (err) {
+      handleFirestoreError(err, { operation: 'syncAllDataToFirestore' });
+    }
+  }
+
+  public async hydrateFromFirestore(): Promise<void> {
+    if (!this.firestore) return;
+    try {
+      const usersCol = collection(this.firestore, 'users');
+      const userSnap = await getDocs(usersCol);
+      userSnap.forEach((d) => {
+        const u = d.data() as User;
+        if (u && u.user_id && !this.data.users.some((x) => x.user_id === u.user_id)) {
+          this.data.users.push(u);
+        }
+      });
+
+      const progCol = collection(this.firestore, 'user_progress');
+      const progSnap = await getDocs(progCol);
+      progSnap.forEach((d) => {
+        const p = d.data() as UserProgressData;
+        if (p && p.user_id) {
+          if (!this.data.user_progress[p.user_id]) {
+            this.data.user_progress[p.user_id] = p;
+          } else {
+            const local = this.data.user_progress[p.user_id];
+            if ((p.level_attempts?.length || 0) > (local.level_attempts?.length || 0)) {
+              this.data.user_progress[p.user_id] = p;
+            }
+          }
+        }
+      });
+
+      this.saveDatabase();
+    } catch (err) {
+      handleFirestoreError(err, { operation: 'hydrateFromFirestore' });
+    }
   }
 
   private loadDatabase(): DatabaseSchema {
@@ -172,11 +396,28 @@ class Database {
     return initialData;
   }
 
-  private saveDatabase(dataToSave = this.data) {
+  private syncDebounceTimer: NodeJS.Timeout | null = null;
+
+  private scheduleBackgroundSync() {
+    if (!this.firestore) return;
+    if (this.syncDebounceTimer) {
+      clearTimeout(this.syncDebounceTimer);
+    }
+    this.syncDebounceTimer = setTimeout(() => {
+      this.syncAllDataToFirestore().catch(() => {});
+    }, 2000);
+  }
+
+  private saveDatabase(dataToSave = this.data, userIdToSync?: string) {
     try {
       fs.writeFileSync(DB_FILE, JSON.stringify(dataToSave, null, 2), 'utf-8');
     } catch (err) {
       console.error('Failed to save database:', err);
+    }
+    if (userIdToSync) {
+      this.syncProgressToFirestore(userIdToSync).catch(() => {});
+    } else {
+      this.scheduleBackgroundSync();
     }
   }
 
@@ -280,7 +521,8 @@ class Database {
       }
     });
 
-    this.saveDatabase();
+    this.saveDatabase(this.data, user.user_id);
+    this.syncUserToFirestore(user).catch(() => {});
     return { user, token: `token_${user.user_id}`, isNewUser };
   }
 
@@ -298,7 +540,8 @@ class Database {
     };
     this.data.users.push(user);
     this.data.user_progress[user.user_id] = this.createDefaultUserProgress(user.user_id);
-    this.saveDatabase();
+    this.saveDatabase(this.data, user.user_id);
+    this.syncUserToFirestore(user).catch(() => {});
     return { user, token: `token_${user.user_id}` };
   }
 
@@ -312,7 +555,7 @@ class Database {
     }
     if (!this.data.user_progress[user.user_id]) {
       this.data.user_progress[user.user_id] = this.createDefaultUserProgress(user.user_id);
-      this.saveDatabase();
+      this.saveDatabase(this.data, user.user_id);
     }
     return { user, token: `token_${user.user_id}` };
   }
@@ -347,13 +590,36 @@ class Database {
       user.email = cleanEmail;
     }
     this.saveDatabase();
+    this.syncUserToFirestore(user).catch(() => {});
     return user;
   }
 
   public getUserProgress(userId: string): UserProgressData {
     if (!this.data.user_progress[userId]) {
       this.data.user_progress[userId] = this.createDefaultUserProgress(userId);
-      this.saveDatabase();
+      this.saveDatabase(this.data, userId);
+    }
+    // Asynchronously restore from Cloud Firestore if local cache is fresh or unhydrated
+    if (
+      this.firestore &&
+      this.data.user_progress[userId] &&
+      (this.data.user_progress[userId].level_attempts?.length || 0) === 0 &&
+      (this.data.user_progress[userId].test_attempts?.length || 0) === 0
+    ) {
+      getDoc(doc(this.firestore, 'user_progress', userId))
+        .then((snap) => {
+          if (snap.exists()) {
+            const remote = snap.data() as UserProgressData;
+            if (remote && remote.user_id === userId) {
+              const local = this.data.user_progress[userId];
+              if ((remote.level_attempts?.length || 0) > (local?.level_attempts?.length || 0)) {
+                this.data.user_progress[userId] = remote;
+                this.saveDatabase();
+              }
+            }
+          }
+        })
+        .catch(() => {});
     }
     const prog = this.data.user_progress[userId];
     if (!prog.topic_levels_passed) prog.topic_levels_passed = { quantitative: [], logical: [], verbal: [], specialized: [] };
@@ -378,6 +644,7 @@ class Database {
   public updateSettings(settings: Partial<AdminSettings>): AdminSettings {
     this.data.settings = { ...this.data.settings, ...settings };
     this.saveDatabase();
+    this.syncSettingsToFirestore().catch(() => {});
     return this.data.settings;
   }
 
@@ -388,6 +655,7 @@ class Database {
     this.data.settings.adminDemoMode = !!enabled;
     delete (this.data.settings as any).globalDemoMode;
     this.saveDatabase();
+    this.syncSettingsToFirestore().catch(() => {});
     return this.data.settings;
   }
 
@@ -1020,7 +1288,7 @@ class Database {
       delete prog.active_level_attempts[attemptKey];
     }
 
-    this.saveDatabase();
+    this.saveDatabase(this.data, userId);
     return attemptResult;
   }
 
@@ -1129,7 +1397,7 @@ class Database {
     };
 
     prog.test_attempts.push(testResult);
-    this.saveDatabase();
+    this.saveDatabase(this.data, userId);
     return testResult;
   }
 
@@ -1251,7 +1519,7 @@ class Database {
 
     const prog = this.getUserProgress(userId);
     prog.final_aptitude_attempts.push(result);
-    this.saveDatabase();
+    this.saveDatabase(this.data, userId);
     return result;
   }
 
@@ -1355,7 +1623,7 @@ class Database {
     });
 
     prog.technical_sessions.push(session);
-    this.saveDatabase();
+    this.saveDatabase(this.data, userId);
     return session;
   }
 
@@ -1466,7 +1734,7 @@ class Database {
       session.passed = weightedScore >= this.getSettings().technicalCutoff;
     }
 
-    this.saveDatabase();
+    this.saveDatabase(this.data, userId);
     return { session, currentEvaluation: evaluation };
   }
 
@@ -1497,7 +1765,7 @@ class Database {
     const prog = this.getUserProgress(userId);
     if (!prog.hr_sessions) prog.hr_sessions = [];
     prog.hr_sessions.push(session);
-    this.saveDatabase();
+    this.saveDatabase(this.data, userId);
     return session;
   }
 
@@ -1559,7 +1827,7 @@ class Database {
       session.suggested_practice = 'Practice structuring situational answers using the STAR method (Situation, Task, Action, Result) with time constraints.';
     }
 
-    this.saveDatabase();
+    this.saveDatabase(this.data, userId);
     return { session, currentEvaluation: evaluation };
   }
 

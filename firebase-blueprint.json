@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "1.0.0",
+  "entities": {
+    "User": {
+      "fields": {
+        "user_id": { "type": "string", "required": true },
+        "name": { "type": "string", "required": true },
+        "email": { "type": "string", "required": true },
+        "google_id": { "type": "string", "required": false },
+        "role": { "type": "string", "required": true },
+        "avatar_url": { "type": "string", "required": false },
+        "auth_provider": { "type": "string", "required": true },
+        "created_at": { "type": "string", "required": true }
+      }
+    },
+    "UserProgress": {
+      "fields": {
+        "user_id": { "type": "string", "required": true },
+        "topic_levels_passed": { "type": "object", "required": true },
+        "topic_test1_passed": { "type": "object", "required": true },
+        "topic_test2_passed": { "type": "object", "required": true },
+        "level_attempts": { "type": "array", "required": true },
+        "test_attempts": { "type": "array", "required": true },
+        "final_aptitude_attempts": { "type": "array", "required": true },
+        "technical_sessions": { "type": "array", "required": true },
+        "hr_sessions": { "type": "array", "required": true },
+        "recent_questions_answered": { "type": "array", "required": true },
+        "question_attempts": { "type": "array", "required": true },
+        "concept_performance": { "type": "object", "required": true },
+        "active_level_attempts": { "type": "object", "required": true }
+      }
+    },
+    "Settings": {
+      "fields": {
+        "levelCutoff": { "type": "number", "required": true },
+        "testCutoff": { "type": "number", "required": true },
+        "finalTestCutoff": { "type": "number", "required": true },
+        "technicalCutoff": { "type": "number", "required": true },
+        "hrCutoff": { "type": "number", "required": true },
+        "levelTimerMinutes": { "type": "number", "required": true },
+        "testTimerMinutes": { "type": "number", "required": true },
+        "finalTestTimerMinutes": { "type": "number", "required": true },
+        "aiModel": { "type": "string", "required": true },
+        "adminDemoMode": { "type": "boolean", "required": true }
+      }
+    },
+    "Question": {
+      "fields": {
+        "question_id": { "type": "string", "required": true },
+        "topic_id": { "type": "string", "required": true },
+        "level_id": { "type": "number", "required": true },
+        "category": { "type": "string", "required": true },
+        "concept": { "type": "string", "required": true },
+        "difficulty": { "type": "string", "required": true },
+        "question": { "type": "string", "required": true },
+        "option_a": { "type": "string", "required": true },
+        "option_b": { "type": "string", "required": true },
+        "option_c": { "type": "string", "required": true },
+        "option_d": { "type": "string", "required": true },
+        "correct_answer": { "type": "string", "required": true },
+        "explanation": { "type": "string", "required": true },
+        "pool_type": { "type": "string", "required": true }
+      }
+    }
+  },
+  "collections": {
+    "users": {
+      "entity": "User",
+      "path": "/users/{userId}"
+    },
+    "user_progress": {
+      "entity": "UserProgress",
+      "path": "/user_progress/{userId}"
+    },
+    "settings": {
+      "entity": "Settings",
+      "path": "/settings/{settingId}"
+    },
+    "questions": {
+      "entity": "Question",
+      "path": "/questions/{questionId}"
+    }
+  }
+}

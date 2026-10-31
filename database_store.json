@@ -1,5 +1,25 @@
 {
-  "users": [],
+  "users": [
+    {
+      "user_id": "usr_g_1793461074067_627iw",
+      "name": "JAAM",
+      "email": "jaammaaj123@gmail.com",
+      "google_id": "102708943569407518494",
+      "role": "admin",
+      "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocKGG4fXoyeB1BjcItxCiPwHewparZrhGi5yR9iG5u9ejPZkrQ=s96-c",
+      "auth_provider": "google",
+      "created_at": "2026-10-31T15:37:54.067Z"
+    },
+    {
+      "user_id": "usr_g_1793461616305_n8bzc",
+      "name": "Rahul Sharma",
+      "email": "candidate2@university.edu",
+      "google_id": "candidate_google_sub_88319",
+      "role": "user",
+      "auth_provider": "google",
+      "created_at": "2026-10-31T15:46:56.305Z"
+    }
+  ],
   "settings": {
     "levelCutoff": 70,
     "testCutoff": 70,
@@ -10,7 +30,7 @@
     "testTimerMinutes": 20,
     "finalTestTimerMinutes": 30,
     "aiModel": "gemini-3.7-flash",
-    "globalDemoMode": false
+    "adminDemoMode": true
   },
   "questions": [
     {
@@ -24290,6 +24310,797 @@
       "recent_questions_answered": [],
       "question_attempts": [],
       "concept_performance": {},
+      "active_level_attempts": {}
+    },
+    "usr_g_1793461074067_627iw": {
+      "user_id": "usr_g_1793461074067_627iw",
+      "topic_levels_passed": {
+        "quantitative": [],
+        "logical": [],
+        "verbal": [],
+        "specialized": []
+      },
+      "topic_test1_passed": {
+        "quantitative": false,
+        "logical": false,
+        "verbal": false,
+        "specialized": false
+      },
+      "topic_test2_passed": {
+        "quantitative": false,
+        "logical": false,
+        "verbal": false,
+        "specialized": false
+      },
+      "level_attempts": [
+        {
+          "attempt_id": "att_1793461103261_ddlq4",
+          "topic_id": "specialized",
+          "level_id": 1,
+          "attempt_number": 1,
+          "score": 2,
+          "total_questions": 10,
+          "percentage": 20,
+          "status": "FAILED",
+          "cutoff": 70,
+          "next_level_unlocked": false,
+          "wrong_answers": [
+            {
+              "question": "Which data structure follows the LIFO (Last In First Out) principle?",
+              "your_answer": "B",
+              "correct_answer": "A",
+              "explanation": "A Stack processes items in Last-In-First-Out order.",
+              "category": "Data Structures"
+            },
+            {
+              "question": "What is the maximum number of children a node can have in a binary tree?",
+              "your_answer": "B",
+              "correct_answer": "A",
+              "explanation": "By definition, binary tree nodes have at most two child nodes (left and right).",
+              "category": "Data Structures"
+            },
+            {
+              "question": "Which data structure operates on a FIFO (First In First Out) basis?",
+              "your_answer": "D",
+              "correct_answer": "B",
+              "explanation": "A Queue adheres strictly to First-In-First-Out processing.",
+              "category": "Data Structures"
+            },
+            {
+              "question": "Which tree structure is optimized for storing hierarchical routing prefixes and autocomplete dictionary words?",
+              "your_answer": "B",
+              "correct_answer": "D",
+              "explanation": "Tries store shared string prefixes along common tree edges.",
+              "category": "Data Structures"
+            },
+            {
+              "question": "What is the time complexity of deleting a node from a Doubly Linked List when given a direct pointer to that node?",
+              "your_answer": "B",
+              "correct_answer": "C",
+              "explanation": "With direct reference, updating neighbor pointers takes constant O(1) time.",
+              "category": "Data Structures"
+            },
+            {
+              "question": "Which data structure is most optimal for implementing a priority queue?",
+              "your_answer": "D",
+              "correct_answer": "B",
+              "explanation": "Binary Heaps offer O(1) peek and O(log N) insertion/extraction for priorities.",
+              "category": "Data Structures"
+            },
+            {
+              "question": "In a complete binary tree of height H with N nodes, what is the relationship between height and node count?",
+              "your_answer": "B",
+              "correct_answer": "A",
+              "explanation": "The height of a complete binary tree is logarithmic with respect to total nodes.",
+              "category": "Data Structures"
+            },
+            {
+              "question": "Which tree traversal visits the left subtree, root node, and then right subtree?",
+              "your_answer": "C",
+              "correct_answer": "B",
+              "explanation": "In-order traversal visits nodes in (Left, Root, Right) order.",
+              "category": "Data Structures"
+            }
+          ],
+          "answers_review": [
+            {
+              "question_id": "q_spec_l1_1",
+              "question": "Which data structure follows the LIFO (Last In First Out) principle?",
+              "your_answer": "B",
+              "correct_answer": "A",
+              "explanation": "A Stack processes items in Last-In-First-Out order.",
+              "category": "Data Structures",
+              "topic_id": "specialized",
+              "difficulty": "Medium",
+              "is_correct": false,
+              "option_a": "Stack",
+              "option_b": "Heap",
+              "option_c": "Queue",
+              "option_d": "Linked List"
+            },
+            {
+              "question_id": "q_spec_l1_25",
+              "question": "What is the maximum number of children a node can have in a binary tree?",
+              "your_answer": "B",
+              "correct_answer": "A",
+              "explanation": "By definition, binary tree nodes have at most two child nodes (left and right).",
+              "category": "Data Structures",
+              "topic_id": "specialized",
+              "difficulty": "Medium",
+              "is_correct": false,
+              "option_a": "2",
+              "option_b": "3",
+              "option_c": "1",
+              "option_d": "Unlimited"
+            },
+            {
+              "question_id": "q_spec_l1_30",
+              "question": "What is the leaf node count in a strictly full binary tree with I internal nodes?",
+              "your_answer": "B",
+              "correct_answer": "B",
+              "explanation": "In a full binary tree where every internal node has 2 children, Leaves = Internal Nodes + 1.",
+              "category": "Data Structures",
+              "topic_id": "specialized",
+              "difficulty": "Medium",
+              "is_correct": true,
+              "option_a": "2 * I",
+              "option_b": "I + 1",
+              "option_c": "I - 1",
+              "option_d": "2^I"
+            },
+            {
+              "question_id": "q_spec_l1_2",
+              "question": "Which data structure operates on a FIFO (First In First Out) basis?",
+              "your_answer": "D",
+              "correct_answer": "B",
+              "explanation": "A Queue adheres strictly to First-In-First-Out processing.",
+              "category": "Data Structures",
+              "topic_id": "specialized",
+              "difficulty": "Medium",
+              "is_correct": false,
+              "option_a": "Stack",
+              "option_b": "Queue",
+              "option_c": "Binary Tree",
+              "option_d": "Hash Table"
+            },
+            {
+              "question_id": "q_spec_l1_12",
+              "question": "Which tree structure is optimized for storing hierarchical routing prefixes and autocomplete dictionary words?",
+              "your_answer": "B",
+              "correct_answer": "D",
+              "explanation": "Tries store shared string prefixes along common tree edges.",
+              "category": "Data Structures",
+              "topic_id": "specialized",
+              "difficulty": "Medium",
+              "is_correct": false,
+              "option_a": "AVL Tree",
+              "option_b": "Segment Tree",
+              "option_c": "Fenwick Tree",
+              "option_d": "Trie (Prefix Tree)"
+            },
+            {
+              "question_id": "q_spec_l1_27",
+              "question": "What is the time complexity of deleting a node from a Doubly Linked List when given a direct pointer to that node?",
+              "your_answer": "B",
+              "correct_answer": "C",
+              "explanation": "With direct reference, updating neighbor pointers takes constant O(1) time.",
+              "category": "Data Structures",
+              "topic_id": "specialized",
+              "difficulty": "Medium",
+              "is_correct": false,
+              "option_a": "O(log N)",
+              "option_b": "O(N)",
+              "option_c": "O(1)",
+              "option_d": "O(N^2)"
+            },
+            {
+              "question_id": "q_spec_l1_6",
+              "question": "Which data structure is most optimal for implementing a priority queue?",
+              "your_answer": "D",
+              "correct_answer": "B",
+              "explanation": "Binary Heaps offer O(1) peek and O(log N) insertion/extraction for priorities.",
+              "category": "Data Structures",
+              "topic_id": "specialized",
+              "difficulty": "Medium",
+              "is_correct": false,
+              "option_a": "Stack",
+              "option_b": "Binary Heap",
+              "option_c": "Circular Queue",
+              "option_d": "Adjacency Matrix"
+            },
+            {
+              "question_id": "q_spec_l1_9",
+              "question": "In a complete binary tree of height H with N nodes, what is the relationship between height and node count?",
+              "your_answer": "B",
+              "correct_answer": "A",
+              "explanation": "The height of a complete binary tree is logarithmic with respect to total nodes.",
+              "category": "Data Structures",
+              "topic_id": "specialized",
+              "difficulty": "Medium",
+              "is_correct": false,
+              "option_a": "H = floor(log2(N))",
+              "option_b": "H = N^2",
+              "option_c": "H = N / 2",
+              "option_d": "H = sqrt(N)"
+            },
+            {
+              "question_id": "q_spec_l1_18",
+              "question": "Which data structure is optimal for finding range sum queries with point updates in O(log N)?",
+              "your_answer": "B",
+              "correct_answer": "B",
+              "explanation": "Binary Indexed Trees and Segment Trees support O(log N) prefix sums and point updates.",
+              "category": "Data Structures",
+              "topic_id": "specialized",
+              "difficulty": "Medium",
+              "is_correct": true,
+              "option_a": "Doubly Linked List",
+              "option_b": "Fenwick Tree (Binary Indexed Tree) or Segment Tree",
+              "option_c": "Stack",
+              "option_d": "Hash Table"
+            },
+            {
+              "question_id": "q_spec_l1_10",
+              "question": "Which tree traversal visits the left subtree, root node, and then right subtree?",
+              "your_answer": "C",
+              "correct_answer": "B",
+              "explanation": "In-order traversal visits nodes in (Left, Root, Right) order.",
+              "category": "Data Structures",
+              "topic_id": "specialized",
+              "difficulty": "Medium",
+              "is_correct": false,
+              "option_a": "Pre-order Traversal",
+              "option_b": "In-order Traversal",
+              "option_c": "Post-order Traversal",
+              "option_d": "Level-order Traversal"
+            }
+          ],
+          "category_breakdown": {
+            "Data Structures": {
+              "correct": 2,
+              "total": 10,
+              "percentage": 20
+            }
+          },
+          "weak_categories": [
+            "Data Structures"
+          ],
+          "strong_categories": [],
+          "concept_improvement_tips": {
+            "Data Structures": "Understand trade-offs: Arrays offer O(1) random access; Linked Lists offer O(1) insertion/deletion at pointers."
+          }
+        }
+      ],
+      "test_attempts": [],
+      "final_aptitude_attempts": [],
+      "technical_sessions": [],
+      "hr_sessions": [],
+      "recent_questions_answered": [],
+      "question_attempts": [
+        {
+          "attempt_id": "qatt_1793461112791_trj5a",
+          "user_id": "usr_g_1793461074067_627iw",
+          "question_id": "q_spec_l1_1",
+          "topic_id": "specialized",
+          "level_id": 1,
+          "concept": "Data Structures",
+          "attempt_number": 1,
+          "selected_answer": "B",
+          "correct_answer": "A",
+          "is_correct": false,
+          "timestamp": "2026-10-31T15:38:32.791Z"
+        },
+        {
+          "attempt_id": "qatt_1793461112791_0okit",
+          "user_id": "usr_g_1793461074067_627iw",
+          "question_id": "q_spec_l1_25",
+          "topic_id": "specialized",
+          "level_id": 1,
+          "concept": "Data Structures",
+          "attempt_number": 1,
+          "selected_answer": "B",
+          "correct_answer": "A",
+          "is_correct": false,
+          "timestamp": "2026-10-31T15:38:32.791Z"
+        },
+        {
+          "attempt_id": "qatt_1793461112791_ys3q9",
+          "user_id": "usr_g_1793461074067_627iw",
+          "question_id": "q_spec_l1_30",
+          "topic_id": "specialized",
+          "level_id": 1,
+          "concept": "Data Structures",
+          "attempt_number": 1,
+          "selected_answer": "B",
+          "correct_answer": "B",
+          "is_correct": true,
+          "timestamp": "2026-10-31T15:38:32.791Z"
+        },
+        {
+          "attempt_id": "qatt_1793461112791_khlzn",
+          "user_id": "usr_g_1793461074067_627iw",
+          "question_id": "q_spec_l1_2",
+          "topic_id": "specialized",
+          "level_id": 1,
+          "concept": "Data Structures",
+          "attempt_number": 1,
+          "selected_answer": "D",
+          "correct_answer": "B",
+          "is_correct": false,
+          "timestamp": "2026-10-31T15:38:32.791Z"
+        },
+        {
+          "attempt_id": "qatt_1793461112791_mu5kp",
+          "user_id": "usr_g_1793461074067_627iw",
+          "question_id": "q_spec_l1_12",
+          "topic_id": "specialized",
+          "level_id": 1,
+          "concept": "Data Structures",
+          "attempt_number": 1,
+          "selected_answer": "B",
+          "correct_answer": "D",
+          "is_correct": false,
+          "timestamp": "2026-10-31T15:38:32.791Z"
+        },
+        {
+          "attempt_id": "qatt_1793461112791_ubn2v",
+          "user_id": "usr_g_1793461074067_627iw",
+          "question_id": "q_spec_l1_27",
+          "topic_id": "specialized",
+          "level_id": 1,
+          "concept": "Data Structures",
+          "attempt_number": 1,
+          "selected_answer": "B",
+          "correct_answer": "C",
+          "is_correct": false,
+          "timestamp": "2026-10-31T15:38:32.791Z"
+        },
+        {
+          "attempt_id": "qatt_1793461112792_q7pqm",
+          "user_id": "usr_g_1793461074067_627iw",
+          "question_id": "q_spec_l1_6",
+          "topic_id": "specialized",
+          "level_id": 1,
+          "concept": "Data Structures",
+          "attempt_number": 1,
+          "selected_answer": "D",
+          "correct_answer": "B",
+          "is_correct": false,
+          "timestamp": "2026-10-31T15:38:32.792Z"
+        },
+        {
+          "attempt_id": "qatt_1793461112792_db7cb",
+          "user_id": "usr_g_1793461074067_627iw",
+          "question_id": "q_spec_l1_9",
+          "topic_id": "specialized",
+          "level_id": 1,
+          "concept": "Data Structures",
+          "attempt_number": 1,
+          "selected_answer": "B",
+          "correct_answer": "A",
+          "is_correct": false,
+          "timestamp": "2026-10-31T15:38:32.792Z"
+        },
+        {
+          "attempt_id": "qatt_1793461112792_dsa9x",
+          "user_id": "usr_g_1793461074067_627iw",
+          "question_id": "q_spec_l1_18",
+          "topic_id": "specialized",
+          "level_id": 1,
+          "concept": "Data Structures",
+          "attempt_number": 1,
+          "selected_answer": "B",
+          "correct_answer": "B",
+          "is_correct": true,
+          "timestamp": "2026-10-31T15:38:32.792Z"
+        },
+        {
+          "attempt_id": "qatt_1793461112792_8t29v",
+          "user_id": "usr_g_1793461074067_627iw",
+          "question_id": "q_spec_l1_10",
+          "topic_id": "specialized",
+          "level_id": 1,
+          "concept": "Data Structures",
+          "attempt_number": 1,
+          "selected_answer": "C",
+          "correct_answer": "B",
+          "is_correct": false,
+          "timestamp": "2026-10-31T15:38:32.792Z"
+        }
+      ],
+      "concept_performance": {
+        "Data Structures": {
+          "concept": "Data Structures",
+          "topic_id": "specialized",
+          "total_attempts": 10,
+          "correct_attempts": 2,
+          "accuracy_pct": 20,
+          "last_attempted": "2026-10-31T15:38:32.792Z"
+        }
+      },
+      "active_level_attempts": {
+        "specialized_1": {
+          "attempt_id": "att_1793461121455_zv2fw",
+          "topic_id": "specialized",
+          "level_id": 1,
+          "attempt_number": 2,
+          "question_ids": [
+            "q_spec_l1_28",
+            "q_spec_l1_11",
+            "q_spec_l1_14",
+            "q_spec_l1_17",
+            "q_spec_l1_24",
+            "q_spec_l1_3",
+            "q_spec_l1_16",
+            "q_spec_l1_26",
+            "q_spec_l1_23",
+            "q_spec_l1_4"
+          ],
+          "created_at": "2026-10-31T15:38:41.455Z"
+        }
+      }
+    },
+    "usr_g_1793461616305_n8bzc": {
+      "user_id": "usr_g_1793461616305_n8bzc",
+      "topic_levels_passed": {
+        "quantitative": [
+          1
+        ],
+        "logical": [],
+        "verbal": [],
+        "specialized": []
+      },
+      "topic_test1_passed": {
+        "quantitative": false,
+        "logical": false,
+        "verbal": false,
+        "specialized": false
+      },
+      "topic_test2_passed": {
+        "quantitative": false,
+        "logical": false,
+        "verbal": false,
+        "specialized": false
+      },
+      "level_attempts": [
+        {
+          "attempt_id": "att_1793461650042_gg1wz",
+          "topic_id": "quantitative",
+          "level_id": 1,
+          "attempt_number": 1,
+          "score": 10,
+          "total_questions": 10,
+          "percentage": 100,
+          "status": "PASSED",
+          "cutoff": 70,
+          "next_level_unlocked": true,
+          "wrong_answers": [],
+          "answers_review": [
+            {
+              "question_id": "q_quant_l1_29",
+              "question": "Convert the fraction 23/40 to an exact percentage.",
+              "your_answer": "A",
+              "correct_answer": "A",
+              "explanation": "(23 / 40) * 100% = 57.5%.",
+              "category": "Fractions",
+              "topic_id": "quantitative",
+              "difficulty": "Medium",
+              "is_correct": true,
+              "option_a": "57.5%",
+              "option_b": "60.0%",
+              "option_c": "52.5%",
+              "option_d": "62.5%"
+            },
+            {
+              "question_id": "q_quant_l1_27",
+              "question": "Convert the fraction 9/25 to an exact percentage.",
+              "your_answer": "C",
+              "correct_answer": "C",
+              "explanation": "(9 / 25) * 100% = 36%.",
+              "category": "Fractions",
+              "topic_id": "quantitative",
+              "difficulty": "Medium",
+              "is_correct": true,
+              "option_a": "40%",
+              "option_b": "32%",
+              "option_c": "36%",
+              "option_d": "44%"
+            },
+            {
+              "question_id": "q_quant_l1_4",
+              "question": "What is 12% of 500?",
+              "your_answer": "D",
+              "correct_answer": "D",
+              "explanation": "12% of 500 = (12/100) * 500 = 60.",
+              "category": "Percentages",
+              "topic_id": "quantitative",
+              "difficulty": "Easy",
+              "is_correct": true,
+              "option_a": "50",
+              "option_b": "65",
+              "option_c": "72",
+              "option_d": "60"
+            },
+            {
+              "question_id": "q_quant_l1_26",
+              "question": "Convert the fraction 7/8 to an exact percentage.",
+              "your_answer": "B",
+              "correct_answer": "B",
+              "explanation": "(7 / 8) * 100% = 87.5%.",
+              "category": "Fractions",
+              "topic_id": "quantitative",
+              "difficulty": "Medium",
+              "is_correct": true,
+              "option_a": "82.5%",
+              "option_b": "87.5%",
+              "option_c": "90.0%",
+              "option_d": "92.5%"
+            },
+            {
+              "question_id": "q_quant_l1_3",
+              "question": "What is 40% of 150?",
+              "your_answer": "C",
+              "correct_answer": "C",
+              "explanation": "40% of 150 = (40/100) * 150 = 60.",
+              "category": "Percentages",
+              "topic_id": "quantitative",
+              "difficulty": "Easy",
+              "is_correct": true,
+              "option_a": "65",
+              "option_b": "55",
+              "option_c": "60",
+              "option_d": "70"
+            },
+            {
+              "question_id": "q_quant_l1_13",
+              "question": "What is 22% of 350?",
+              "your_answer": "A",
+              "correct_answer": "A",
+              "explanation": "22% of 350 = (22/100) * 350 = 77.",
+              "category": "Percentages",
+              "topic_id": "quantitative",
+              "difficulty": "Easy",
+              "is_correct": true,
+              "option_a": "77",
+              "option_b": "82",
+              "option_c": "72",
+              "option_d": "88"
+            },
+            {
+              "question_id": "q_quant_l1_6",
+              "question": "What is 18% of 450?",
+              "your_answer": "B",
+              "correct_answer": "B",
+              "explanation": "18% of 450 = (18/100) * 450 = 81.",
+              "category": "Percentages",
+              "topic_id": "quantitative",
+              "difficulty": "Easy",
+              "is_correct": true,
+              "option_a": "78",
+              "option_b": "81",
+              "option_c": "84",
+              "option_d": "90"
+            },
+            {
+              "question_id": "q_quant_l1_19",
+              "question": "Convert the fraction 4/25 to an exact percentage.",
+              "your_answer": "C",
+              "correct_answer": "C",
+              "explanation": "(4 / 25) * 100% = 16%.",
+              "category": "Fractions",
+              "topic_id": "quantitative",
+              "difficulty": "Medium",
+              "is_correct": true,
+              "option_a": "18%",
+              "option_b": "14%",
+              "option_c": "16%",
+              "option_d": "20%"
+            },
+            {
+              "question_id": "q_quant_l1_24",
+              "question": "Convert the fraction 17/25 to an exact percentage.",
+              "your_answer": "D",
+              "correct_answer": "D",
+              "explanation": "(17 / 25) * 100% = 68%.",
+              "category": "Fractions",
+              "topic_id": "quantitative",
+              "difficulty": "Medium",
+              "is_correct": true,
+              "option_a": "64%",
+              "option_b": "72%",
+              "option_c": "75%",
+              "option_d": "68%"
+            },
+            {
+              "question_id": "q_quant_l1_23",
+              "question": "Convert the fraction 5/8 to an exact percentage.",
+              "your_answer": "C",
+              "correct_answer": "C",
+              "explanation": "(5 / 8) * 100% = 62.5%.",
+              "category": "Fractions",
+              "topic_id": "quantitative",
+              "difficulty": "Medium",
+              "is_correct": true,
+              "option_a": "65.0%",
+              "option_b": "58.0%",
+              "option_c": "62.5%",
+              "option_d": "67.5%"
+            }
+          ],
+          "category_breakdown": {
+            "Fractions": {
+              "correct": 6,
+              "total": 6,
+              "percentage": 100
+            },
+            "Percentages": {
+              "correct": 4,
+              "total": 4,
+              "percentage": 100
+            }
+          },
+          "weak_categories": [],
+          "strong_categories": [
+            "Fractions",
+            "Percentages"
+          ],
+          "concept_improvement_tips": {}
+        }
+      ],
+      "test_attempts": [],
+      "final_aptitude_attempts": [],
+      "technical_sessions": [],
+      "hr_sessions": [],
+      "recent_questions_answered": [],
+      "question_attempts": [
+        {
+          "attempt_id": "qatt_1793461656342_5wryv",
+          "user_id": "usr_g_1793461616305_n8bzc",
+          "question_id": "q_quant_l1_29",
+          "topic_id": "quantitative",
+          "level_id": 1,
+          "concept": "Fractions",
+          "attempt_number": 1,
+          "selected_answer": "A",
+          "correct_answer": "A",
+          "is_correct": true,
+          "timestamp": "2026-10-31T15:47:36.342Z"
+        },
+        {
+          "attempt_id": "qatt_1793461656342_cjs2d",
+          "user_id": "usr_g_1793461616305_n8bzc",
+          "question_id": "q_quant_l1_27",
+          "topic_id": "quantitative",
+          "level_id": 1,
+          "concept": "Fractions",
+          "attempt_number": 1,
+          "selected_answer": "C",
+          "correct_answer": "C",
+          "is_correct": true,
+          "timestamp": "2026-10-31T15:47:36.342Z"
+        },
+        {
+          "attempt_id": "qatt_1793461656342_jdkhg",
+          "user_id": "usr_g_1793461616305_n8bzc",
+          "question_id": "q_quant_l1_4",
+          "topic_id": "quantitative",
+          "level_id": 1,
+          "concept": "Percentages",
+          "attempt_number": 1,
+          "selected_answer": "D",
+          "correct_answer": "D",
+          "is_correct": true,
+          "timestamp": "2026-10-31T15:47:36.342Z"
+        },
+        {
+          "attempt_id": "qatt_1793461656342_qw66o",
+          "user_id": "usr_g_1793461616305_n8bzc",
+          "question_id": "q_quant_l1_26",
+          "topic_id": "quantitative",
+          "level_id": 1,
+          "concept": "Fractions",
+          "attempt_number": 1,
+          "selected_answer": "B",
+          "correct_answer": "B",
+          "is_correct": true,
+          "timestamp": "2026-10-31T15:47:36.342Z"
+        },
+        {
+          "attempt_id": "qatt_1793461656342_ww9zv",
+          "user_id": "usr_g_1793461616305_n8bzc",
+          "question_id": "q_quant_l1_3",
+          "topic_id": "quantitative",
+          "level_id": 1,
+          "concept": "Percentages",
+          "attempt_number": 1,
+          "selected_answer": "C",
+          "correct_answer": "C",
+          "is_correct": true,
+          "timestamp": "2026-10-31T15:47:36.342Z"
+        },
+        {
+          "attempt_id": "qatt_1793461656342_5n5su",
+          "user_id": "usr_g_1793461616305_n8bzc",
+          "question_id": "q_quant_l1_13",
+          "topic_id": "quantitative",
+          "level_id": 1,
+          "concept": "Percentages",
+          "attempt_number": 1,
+          "selected_answer": "A",
+          "correct_answer": "A",
+          "is_correct": true,
+          "timestamp": "2026-10-31T15:47:36.342Z"
+        },
+        {
+          "attempt_id": "qatt_1793461656342_03urc",
+          "user_id": "usr_g_1793461616305_n8bzc",
+          "question_id": "q_quant_l1_6",
+          "topic_id": "quantitative",
+          "level_id": 1,
+          "concept": "Percentages",
+          "attempt_number": 1,
+          "selected_answer": "B",
+          "correct_answer": "B",
+          "is_correct": true,
+          "timestamp": "2026-10-31T15:47:36.342Z"
+        },
+        {
+          "attempt_id": "qatt_1793461656342_kgevz",
+          "user_id": "usr_g_1793461616305_n8bzc",
+          "question_id": "q_quant_l1_19",
+          "topic_id": "quantitative",
+          "level_id": 1,
+          "concept": "Fractions",
+          "attempt_number": 1,
+          "selected_answer": "C",
+          "correct_answer": "C",
+          "is_correct": true,
+          "timestamp": "2026-10-31T15:47:36.342Z"
+        },
+        {
+          "attempt_id": "qatt_1793461656342_okp3f",
+          "user_id": "usr_g_1793461616305_n8bzc",
+          "question_id": "q_quant_l1_24",
+          "topic_id": "quantitative",
+          "level_id": 1,
+          "concept": "Fractions",
+          "attempt_number": 1,
+          "selected_answer": "D",
+          "correct_answer": "D",
+          "is_correct": true,
+          "timestamp": "2026-10-31T15:47:36.342Z"
+        },
+        {
+          "attempt_id": "qatt_1793461656342_mchmg",
+          "user_id": "usr_g_1793461616305_n8bzc",
+          "question_id": "q_quant_l1_23",
+          "topic_id": "quantitative",
+          "level_id": 1,
+          "concept": "Fractions",
+          "attempt_number": 1,
+          "selected_answer": "C",
+          "correct_answer": "C",
+          "is_correct": true,
+          "timestamp": "2026-10-31T15:47:36.342Z"
+        }
+      ],
+      "concept_performance": {
+        "Fractions": {
+          "concept": "Fractions",
+          "topic_id": "quantitative",
+          "total_attempts": 6,
+          "correct_attempts": 6,
+          "accuracy_pct": 100,
+          "last_attempted": "2026-10-31T15:47:36.342Z"
+        },
+        "Percentages": {
+          "concept": "Percentages",
+          "topic_id": "quantitative",
+          "total_attempts": 4,
+          "correct_attempts": 4,
+          "accuracy_pct": 100,
+          "last_attempted": "2026-10-31T15:47:36.342Z"
+        }
+      },
       "active_level_attempts": {}
     }
   }

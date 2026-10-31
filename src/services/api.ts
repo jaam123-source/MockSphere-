@@ -464,4 +464,14 @@ export const ApiService = {
       body: JSON.stringify(data),
     });
   },
+
+  async getFirebaseStatus(): Promise<{
+    connected: boolean;
+    databaseId: string;
+    provider: string;
+    region: string;
+    userAccountsIsolated: boolean;
+  }> {
+    return request('/api/firebase/status');
+  },
 };

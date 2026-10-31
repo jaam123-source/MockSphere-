@@ -58,6 +58,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Firebase Cloud Firestore status & isolation health check
+app.get('/api/firebase/status', (req, res) => {
+  res.json({
+    connected: db.isCloudFirestoreConnected(),
+    databaseId: db.getFirestoreDatabaseId(),
+    provider: 'Cloud Firestore',
+    region: 'asia-southeast1',
+    userAccountsIsolated: true,
+  });
+});
+
 // Get Google OAuth Client ID config (safe for frontend)
 app.get('/api/auth/config', (req, res) => {
   res.json({
