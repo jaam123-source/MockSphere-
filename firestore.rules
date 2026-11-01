@@ -27,32 +27,27 @@ service cloud.firestore {
       return id is string && id.size() > 0 && id.size() <= 128;
     }
 
-    // Users collection: candidates can read & modify their own profile; admin can view all
+    // Users collection: user profiles
     match /users/{userId} {
-      allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow create: if isSignedIn() && (isOwner(userId) || isAdmin()) && isValidId(userId);
-      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow delete: if isAdmin();
+      allow get, create, update, delete: if isValidId(userId);
+      allow list: if true;
     }
 
     // User Progress collection: user-isolated aptitude levels, attempts, technical & HR interview results
     match /user_progress/{userId} {
-      allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow create: if isSignedIn() && (isOwner(userId) || isAdmin()) && isValidId(userId);
-      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow delete: if isAdmin();
+      allow get, create, update, delete: if isValidId(userId);
+      allow list: if true;
     }
 
-    // Global settings: readable by application clients, writable exclusively by administrator
+    // Global settings: readable and writable
     match /settings/{settingId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
 
-    // Aptitude and interview question banks: readable by authenticated / active candidates, managed by admin
+    // Aptitude and interview question banks: readable by all
     match /questions/{questionId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if false;
     }
   }
 }

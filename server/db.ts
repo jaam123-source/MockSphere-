@@ -198,12 +198,23 @@ class Database {
   private data: DatabaseSchema;
   private firestore: Firestore | null = null;
   private isFirestoreReady: boolean = false;
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
     this.data = this.loadDatabase();
-    this.initFirestore().catch((err) => {
+    this.ensureFirestoreReady().catch((err) => {
       console.warn('[Firestore] Background init warning:', err?.message || err);
     });
+  }
+
+  public async ensureFirestoreReady(): Promise<void> {
+    if (this.isFirestoreReady && this.firestore) return;
+    if (this.initPromise) {
+      await this.initPromise;
+      return;
+    }
+    this.initPromise = this.initFirestore();
+    await this.initPromise;
   }
 
   private async initFirestore(): Promise<void> {
@@ -214,10 +225,10 @@ class Database {
       this.isFirestoreReady = true;
       console.log(`[Firestore] Connected to Cloud Firestore database: ${config.firestoreDatabaseId}`);
 
-      // Sync existing accounts and progress to Cloud Firestore immediately
-      await this.syncAllDataToFirestore();
-      // Hydrate any cloud data
+      // 1. Hydrate existing records from Cloud Firestore FIRST (authoritative single source of truth)
       await this.hydrateFromFirestore();
+      // 2. Sync any missing local records to Cloud Firestore without overwriting existing data
+      await this.syncAllDataToFirestore();
     } catch (err) {
       this.isFirestoreReady = false;
       handleFirestoreError(err, { operation: 'initFirestore' });
@@ -253,7 +264,7 @@ class Database {
     if (!prog) return;
     try {
       const cleanProg = JSON.parse(JSON.stringify(prog));
-      await setDoc(doc(this.firestore, 'user_progress', userId), cleanProg, { merge: true });
+      await setDoc(doc(this.firestore, 'user_progress', userId), cleanProg);
     } catch (err) {
       handleFirestoreError(err, {
         operation: 'syncProgressToFirestore',
@@ -288,16 +299,71 @@ class Database {
       }
       if (this.data.user_progress) {
         for (const uid of Object.keys(this.data.user_progress)) {
-          await this.syncProgressToFirestore(uid);
+          const p = this.data.user_progress[uid];
+          const hasPassed = Object.values(p.topic_levels_passed || {}).some((arr) => arr && arr.length > 0);
+          const hasAttempts = (p.level_attempts?.length || 0) > 0 || (p.test_attempts?.length || 0) > 0;
+          if (hasPassed || hasAttempts) {
+            await this.syncProgressToFirestore(uid);
+          }
         }
       }
       if (this.data.settings) {
         await this.syncSettingsToFirestore();
       }
-      console.log(`[Firestore] Cloud synchronization complete: ${this.data.users.length} users, ${Object.keys(this.data.user_progress).length} progress docs preserved.`);
     } catch (err) {
       handleFirestoreError(err, { operation: 'syncAllDataToFirestore' });
     }
+  }
+
+  private mergeAttempts(a: LevelAttemptResult[], b: LevelAttemptResult[]): LevelAttemptResult[] {
+    const map = new Map<string, LevelAttemptResult>();
+    [...a, ...b].forEach((att) => {
+      if (att && att.attempt_id) {
+        map.set(att.attempt_id, att);
+      }
+    });
+    return Array.from(map.values()).sort((x, y) => ((x as any).timestamp || '').localeCompare((y as any).timestamp || ''));
+  }
+
+  private mergeTestAttempts(a: TopicTestResult[], b: TopicTestResult[]): TopicTestResult[] {
+    const map = new Map<string, TopicTestResult>();
+    [...a, ...b].forEach((att) => {
+      const id = att?.test_id || (att as any)?.attempt_id;
+      if (id) {
+        map.set(id, att);
+      }
+    });
+    return Array.from(map.values()).sort((x, y) => ((x as any).timestamp || '').localeCompare((y as any).timestamp || ''));
+  }
+
+  private mergeFinalAttempts(a: FinalAptitudeResult[], b: FinalAptitudeResult[]): FinalAptitudeResult[] {
+    const map = new Map<string, FinalAptitudeResult>();
+    [...a, ...b].forEach((att) => {
+      if (att && att.attempt_id) {
+        map.set(att.attempt_id, att);
+      }
+    });
+    return Array.from(map.values()).sort((x, y) => ((x as any).timestamp || '').localeCompare((y as any).timestamp || ''));
+  }
+
+  private mergeQuestionAttempts(a: QuestionAttemptLog[], b: QuestionAttemptLog[]): QuestionAttemptLog[] {
+    const map = new Map<string, QuestionAttemptLog>();
+    [...a, ...b].forEach((qa) => {
+      if (qa && qa.attempt_id) {
+        map.set(qa.attempt_id, qa);
+      }
+    });
+    return Array.from(map.values()).sort((x, y) => ((x as any).timestamp || '').localeCompare((y as any).timestamp || ''));
+  }
+
+  private mergeSessions<T extends { session_id: string; started_at?: string }>(a: T[], b: T[]): T[] {
+    const map = new Map<string, T>();
+    [...a, ...b].forEach((s) => {
+      if (s && s.session_id) {
+        map.set(s.session_id, s);
+      }
+    });
+    return Array.from(map.values()).sort((x, y) => (x.started_at || '').localeCompare(y.started_at || ''));
   }
 
   public async hydrateFromFirestore(): Promise<void> {
@@ -307,8 +373,13 @@ class Database {
       const userSnap = await getDocs(usersCol);
       userSnap.forEach((d) => {
         const u = d.data() as User;
-        if (u && u.user_id && !this.data.users.some((x) => x.user_id === u.user_id)) {
-          this.data.users.push(u);
+        if (u && u.user_id) {
+          const idx = this.data.users.findIndex((x) => x.user_id === u.user_id);
+          if (idx >= 0) {
+            this.data.users[idx] = { ...this.data.users[idx], ...u };
+          } else {
+            this.data.users.push(u);
+          }
         }
       });
 
@@ -317,18 +388,35 @@ class Database {
       progSnap.forEach((d) => {
         const p = d.data() as UserProgressData;
         if (p && p.user_id) {
-          if (!this.data.user_progress[p.user_id]) {
+          const local = this.data.user_progress[p.user_id];
+          if (!local) {
             this.data.user_progress[p.user_id] = p;
           } else {
-            const local = this.data.user_progress[p.user_id];
-            if ((p.level_attempts?.length || 0) > (local.level_attempts?.length || 0)) {
-              this.data.user_progress[p.user_id] = p;
-            }
+            // Merging: ALWAYS preserve every passed level from both remote and local
+            const topics: AptitudeTopicId[] = ['quantitative', 'logical', 'verbal', 'specialized'];
+            topics.forEach((tid) => {
+              const remotePassed = (p.topic_levels_passed?.[tid] || []).map(Number);
+              const localPassed = (local.topic_levels_passed?.[tid] || []).map(Number);
+              local.topic_levels_passed[tid] = Array.from(new Set([...remotePassed, ...localPassed])).sort((a, b) => a - b);
+              local.topic_test1_passed[tid] = Boolean(p.topic_test1_passed?.[tid] || local.topic_test1_passed?.[tid]);
+              local.topic_test2_passed[tid] = Boolean(p.topic_test2_passed?.[tid] || local.topic_test2_passed?.[tid]);
+            });
+            local.level_attempts = this.mergeAttempts(p.level_attempts || [], local.level_attempts || []);
+            local.test_attempts = this.mergeTestAttempts(p.test_attempts || [], local.test_attempts || []);
+            local.final_aptitude_attempts = this.mergeFinalAttempts(p.final_aptitude_attempts || [], local.final_aptitude_attempts || []);
+            local.technical_sessions = this.mergeSessions(p.technical_sessions || [], local.technical_sessions || []);
+            local.hr_sessions = this.mergeSessions(p.hr_sessions || [], local.hr_sessions || []);
+            local.question_attempts = this.mergeQuestionAttempts(p.question_attempts || [], local.question_attempts || []);
+            local.concept_performance = {
+              ...(local.concept_performance || {}),
+              ...(p.concept_performance || {}),
+            };
           }
         }
       });
 
       this.saveDatabase();
+      console.log(`[Firestore] Hydrated ${userSnap.size} users and ${progSnap.size} progress docs from Cloud Firestore.`);
     } catch (err) {
       handleFirestoreError(err, { operation: 'hydrateFromFirestore' });
     }
@@ -459,16 +547,17 @@ class Database {
   }
 
   // User Authentication
-  public loginOrRegisterGoogleUser(
+  public async loginOrRegisterGoogleUser(
     email: string,
     name?: string,
     avatarUrl?: string,
     googleId?: string
-  ): { user: User; token: string; isNewUser: boolean } {
+  ): Promise<{ user: User; token: string; isNewUser: boolean }> {
+    await this.ensureFirestoreReady();
     const cleanEmail = email.trim().toLowerCase();
     const isAdmin = cleanEmail === ADMIN_EMAIL.toLowerCase();
 
-    // Prefer matching by Google unique sub (googleId) first, then email
+    // 1. Look in local cache
     let user: User | undefined = undefined;
     if (googleId) {
       user = this.data.users.find((u) => u.google_id === googleId);
@@ -477,12 +566,38 @@ class Database {
       user = this.data.users.find((u) => u.email.toLowerCase() === cleanEmail);
     }
 
+    // 2. If not in memory, query Cloud Firestore (Authoritative)
+    if (!user && this.firestore) {
+      try {
+        const usersCol = collection(this.firestore, 'users');
+        const snap = await getDocs(usersCol);
+        snap.forEach((d) => {
+          const u = d.data() as User;
+          if (u) {
+            if ((googleId && u.google_id === googleId) || (u.email && u.email.toLowerCase() === cleanEmail)) {
+              user = u;
+            }
+            if (!this.data.users.some((x) => x.user_id === u.user_id)) {
+              this.data.users.push(u);
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('[Firestore] Error searching users in Firestore:', err);
+      }
+    }
+
     let isNewUser = false;
 
     if (!user) {
+      // Create user with a permanent, deterministic UID
       const derivedName = name && name.trim() ? name.trim() : cleanEmail.split('@')[0];
+      const deterministicUid = googleId
+        ? `usr_g_${googleId}`
+        : `usr_e_${crypto.createHash('sha256').update(cleanEmail).digest('hex').substring(0, 16)}`;
+
       user = {
-        user_id: `usr_g_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        user_id: deterministicUid,
         name: derivedName,
         email: cleanEmail,
         google_id: googleId,
@@ -492,10 +607,9 @@ class Database {
         created_at: new Date().toISOString(),
       };
       this.data.users.push(user);
-      this.data.user_progress[user.user_id] = this.createDefaultUserProgress(user.user_id);
       isNewUser = true;
     } else {
-      // User already exists - reuse account and don't create duplicate
+      // User exists - maintain consistent UID, update profile metadata
       if (googleId && !user.google_id) {
         user.google_id = googleId;
       }
@@ -507,9 +621,6 @@ class Database {
       }
       user.role = isAdmin ? 'admin' : 'user';
       user.auth_provider = 'google';
-      if (!this.data.user_progress[user.user_id]) {
-        this.data.user_progress[user.user_id] = this.createDefaultUserProgress(user.user_id);
-      }
     }
 
     // Strictly enforce role integrity across all registered users
@@ -521,8 +632,12 @@ class Database {
       }
     });
 
+    // Ensure user record is written to Cloud Firestore
+    await this.syncUserToFirestore(user);
+    // Ensure authoritative progress is retrieved or initialized in Cloud Firestore
+    await this.getUserProgress(user.user_id);
     this.saveDatabase(this.data, user.user_id);
-    this.syncUserToFirestore(user).catch(() => {});
+
     return { user, token: `token_${user.user_id}`, isNewUser };
   }
 
@@ -531,15 +646,16 @@ class Database {
     if (existing) {
       throw new Error('User with this email already exists');
     }
+    const cleanEmail = email.toLowerCase().trim();
+    const deterministicUid = `usr_e_${crypto.createHash('sha256').update(cleanEmail).digest('hex').substring(0, 16)}`;
     const user: User = {
-      user_id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      user_id: deterministicUid,
       name,
-      email: email.toLowerCase(),
+      email: cleanEmail,
       password_hash: this.hashPassword(password),
       created_at: new Date().toISOString(),
     };
     this.data.users.push(user);
-    this.data.user_progress[user.user_id] = this.createDefaultUserProgress(user.user_id);
     this.saveDatabase(this.data, user.user_id);
     this.syncUserToFirestore(user).catch(() => {});
     return { user, token: `token_${user.user_id}` };
@@ -552,10 +668,6 @@ class Database {
     );
     if (!user) {
       throw new Error('Invalid email or password');
-    }
-    if (!this.data.user_progress[user.user_id]) {
-      this.data.user_progress[user.user_id] = this.createDefaultUserProgress(user.user_id);
-      this.saveDatabase(this.data, user.user_id);
     }
     return { user, token: `token_${user.user_id}` };
   }
@@ -572,6 +684,59 @@ class Database {
     return found || null;
   }
 
+  public async getUserByIdAsync(userId?: string): Promise<User | null> {
+    const local = this.getUserById(userId);
+    if (local) return local;
+    if (!userId || !this.firestore) return null;
+    try {
+      const snap = await getDoc(doc(this.firestore, 'users', userId));
+      if (snap.exists()) {
+        const u = snap.data() as User;
+        if (!this.data.users.some((x) => x.user_id === u.user_id)) {
+          this.data.users.push(u);
+        }
+        return u;
+      }
+    } catch (e) {
+      console.warn('[Firestore] getUserByIdAsync lookup error:', e);
+    }
+    return null;
+  }
+
+  public async getUserByEmailAsync(email: string): Promise<User | null> {
+    await this.ensureFirestoreReady();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const local = this.data.users.find((u) => u.email?.toLowerCase() === cleanEmail);
+    if (local) return local;
+    if (this.firestore) {
+      try {
+        const users = await this.getAllUsersAsync();
+        return users.find((u) => u.email?.toLowerCase() === cleanEmail) || null;
+      } catch (e) {
+        console.warn('[Firestore] getUserByEmailAsync error:', e);
+      }
+    }
+    return null;
+  }
+
+  public async getAllUsersAsync(): Promise<User[]> {
+    await this.ensureFirestoreReady();
+    if (this.firestore) {
+      try {
+        const snap = await getDocs(collection(this.firestore, 'users'));
+        snap.forEach((d) => {
+          const u = d.data() as User;
+          if (u && u.user_id && !this.data.users.some((x) => x.user_id === u.user_id)) {
+            this.data.users.push(u);
+          }
+        });
+      } catch (err) {
+        console.warn('[Firestore] getAllUsersAsync error:', err);
+      }
+    }
+    return this.data.users || [];
+  }
+
   public updateUserProfile(userId: string, name?: string, email?: string): User {
     const user = this.getUserById(userId);
     if (!user) {
@@ -582,7 +747,6 @@ class Database {
     }
     if (email && email.trim()) {
       const cleanEmail = email.trim().toLowerCase();
-      // Check if email taken by another user
       const existing = this.data.users.find((u) => u.user_id !== userId && u.email.toLowerCase() === cleanEmail);
       if (existing) {
         throw new Error('This email is already in use by another account');
@@ -594,32 +758,106 @@ class Database {
     return user;
   }
 
-  public getUserProgress(userId: string): UserProgressData {
+  // Authoritative User Progress Retrieval (Cloud Firestore Primary)
+  public async getUserProgress(userId: string): Promise<UserProgressData> {
+    if (!userId) {
+      throw new Error('User ID is required to fetch progress');
+    }
+    await this.ensureFirestoreReady();
+
+    // 1. Fetch from Cloud Firestore
+    let remoteProg: UserProgressData | null = null;
+    if (this.firestore) {
+      try {
+        const snap = await getDoc(doc(this.firestore, 'user_progress', userId));
+        if (snap.exists()) {
+          remoteProg = snap.data() as UserProgressData;
+        }
+      } catch (err) {
+        console.warn(`[Firestore] getUserProgress read notice for ${userId}:`, err);
+      }
+    }
+
+    // 2. Fetch local progress
+    const localProg = this.data.user_progress[userId];
+
+    let merged: UserProgressData;
+    if (remoteProg && localProg) {
+      // Merge: Always preserve every passed level and attempt from BOTH sources
+      const topics: AptitudeTopicId[] = ['quantitative', 'logical', 'verbal', 'specialized'];
+      const mergedPassed: Record<AptitudeTopicId, number[]> = {} as any;
+      const mergedT1: Record<AptitudeTopicId, boolean> = {} as any;
+      const mergedT2: Record<AptitudeTopicId, boolean> = {} as any;
+
+      topics.forEach((tid) => {
+        const rArr = (remoteProg?.topic_levels_passed?.[tid] || []).map(Number);
+        const lArr = (localProg?.topic_levels_passed?.[tid] || []).map(Number);
+        mergedPassed[tid] = Array.from(new Set([...rArr, ...lArr])).sort((a, b) => a - b);
+        mergedT1[tid] = Boolean(remoteProg?.topic_test1_passed?.[tid] || localProg?.topic_test1_passed?.[tid]);
+        mergedT2[tid] = Boolean(remoteProg?.topic_test2_passed?.[tid] || localProg?.topic_test2_passed?.[tid]);
+      });
+
+      merged = {
+        user_id: userId,
+        topic_levels_passed: mergedPassed,
+        topic_test1_passed: mergedT1,
+        topic_test2_passed: mergedT2,
+        level_attempts: this.mergeAttempts(remoteProg.level_attempts || [], localProg.level_attempts || []),
+        test_attempts: this.mergeTestAttempts(remoteProg.test_attempts || [], localProg.test_attempts || []),
+        final_aptitude_attempts: this.mergeFinalAttempts(remoteProg.final_aptitude_attempts || [], localProg.final_aptitude_attempts || []),
+        technical_sessions: this.mergeSessions(remoteProg.technical_sessions || [], localProg.technical_sessions || []),
+        hr_sessions: this.mergeSessions(remoteProg.hr_sessions || [], localProg.hr_sessions || []),
+        recent_questions_answered: Array.from(new Set([
+          ...(remoteProg.recent_questions_answered || []),
+          ...(localProg.recent_questions_answered || [])
+        ])).slice(-50),
+        question_attempts: this.mergeQuestionAttempts(remoteProg.question_attempts || [], localProg.question_attempts || []),
+        concept_performance: {
+          ...(localProg.concept_performance || {}),
+          ...(remoteProg.concept_performance || {}),
+        },
+        active_level_attempts: {
+          ...(localProg.active_level_attempts || {}),
+          ...(remoteProg.active_level_attempts || {}),
+        },
+      };
+    } else if (remoteProg) {
+      merged = remoteProg;
+    } else if (localProg) {
+      merged = localProg;
+      // Push local data up to Firestore
+      if (this.firestore) {
+        setDoc(doc(this.firestore, 'user_progress', userId), JSON.parse(JSON.stringify(merged))).catch(() => {});
+      }
+    } else {
+      // New candidate
+      merged = this.createDefaultUserProgress(userId);
+      if (this.firestore) {
+        await setDoc(doc(this.firestore, 'user_progress', userId), JSON.parse(JSON.stringify(merged))).catch(() => {});
+      }
+    }
+
+    // Defensive initialization of all progress arrays
+    if (!merged.topic_levels_passed) merged.topic_levels_passed = { quantitative: [], logical: [], verbal: [], specialized: [] };
+    if (!merged.topic_test1_passed) merged.topic_test1_passed = { quantitative: false, logical: false, verbal: false, specialized: false };
+    if (!merged.topic_test2_passed) merged.topic_test2_passed = { quantitative: false, logical: false, verbal: false, specialized: false };
+    if (!merged.level_attempts) merged.level_attempts = [];
+    if (!merged.test_attempts) merged.test_attempts = [];
+    if (!merged.final_aptitude_attempts) merged.final_aptitude_attempts = [];
+    if (!merged.technical_sessions) merged.technical_sessions = [];
+    if (!merged.hr_sessions) merged.hr_sessions = [];
+    if (!merged.question_attempts) merged.question_attempts = [];
+    if (!merged.recent_questions_answered) merged.recent_questions_answered = [];
+    if (!merged.concept_performance) merged.concept_performance = {};
+    if (!merged.active_level_attempts) merged.active_level_attempts = {};
+
+    this.data.user_progress[userId] = merged;
+    return merged;
+  }
+
+  public getUserProgressSync(userId: string): UserProgressData {
     if (!this.data.user_progress[userId]) {
       this.data.user_progress[userId] = this.createDefaultUserProgress(userId);
-      this.saveDatabase(this.data, userId);
-    }
-    // Asynchronously restore from Cloud Firestore if local cache is fresh or unhydrated
-    if (
-      this.firestore &&
-      this.data.user_progress[userId] &&
-      (this.data.user_progress[userId].level_attempts?.length || 0) === 0 &&
-      (this.data.user_progress[userId].test_attempts?.length || 0) === 0
-    ) {
-      getDoc(doc(this.firestore, 'user_progress', userId))
-        .then((snap) => {
-          if (snap.exists()) {
-            const remote = snap.data() as UserProgressData;
-            if (remote && remote.user_id === userId) {
-              const local = this.data.user_progress[userId];
-              if ((remote.level_attempts?.length || 0) > (local?.level_attempts?.length || 0)) {
-                this.data.user_progress[userId] = remote;
-                this.saveDatabase();
-              }
-            }
-          }
-        })
-        .catch(() => {});
     }
     const prog = this.data.user_progress[userId];
     if (!prog.topic_levels_passed) prog.topic_levels_passed = { quantitative: [], logical: [], verbal: [], specialized: [] };
@@ -635,6 +873,24 @@ class Database {
     if (!prog.concept_performance) prog.concept_performance = {};
     if (!prog.active_level_attempts) prog.active_level_attempts = {};
     return prog;
+  }
+
+  // Authoritative Save: Writes directly to Cloud Firestore and awaits confirmation
+  public async saveUserProgress(userId: string, prog: UserProgressData): Promise<void> {
+    if (!userId || !prog) return;
+    (prog as any).updated_at = new Date().toISOString();
+    (prog as any).version = ((prog as any).version || 0) + 1;
+    this.data.user_progress[userId] = prog;
+    this.saveDatabase(this.data);
+
+    if (this.firestore) {
+      try {
+        const cleanProg = JSON.parse(JSON.stringify(prog));
+        await setDoc(doc(this.firestore, 'user_progress', userId), cleanProg);
+      } catch (err) {
+        console.error(`[Firestore] Failed to save authoritative progress for user ${userId}:`, err);
+      }
+    }
   }
 
   public getSettings(): AdminSettings {
@@ -682,12 +938,16 @@ class Database {
   }
 
   // Dashboard Aggregator & Progression Verification
-  public getDashboardState(userId: string): UserDashboardState {
-    const user = this.getUserById(userId);
+  public async getDashboardState(userId: string): Promise<UserDashboardState> {
+    await this.ensureFirestoreReady();
+    let user = this.getUserById(userId);
+    if (!user) {
+      user = await this.getUserByIdAsync(userId);
+    }
     if (!user) {
       throw new Error('User session not found. Please log in.');
     }
-    const prog = this.getUserProgress(user.user_id);
+    const prog = await this.getUserProgress(user.user_id);
     const settings = this.getSettings();
     const isDemo = this.isDemoUser(user.user_id);
 
@@ -699,7 +959,7 @@ class Database {
     let pendingTestsCount = 0;
 
     topicIds.forEach((tid) => {
-      let passedLvls = prog.topic_levels_passed[tid] || [];
+      let passedLvls = (prog.topic_levels_passed[tid] || []).map(Number);
       let test1 = prog.topic_test1_passed[tid] || false;
       let test2 = prog.topic_test2_passed[tid] || false;
 
@@ -710,10 +970,6 @@ class Database {
       }
 
       // Current level determination:
-      // If hasn't passed L1 -> 1
-      // If passed L1..L5 and NOT passed Test 1 -> at Test 1 (currentLevel stays 5)
-      // If passed Test 1 and passed L6..L7 -> L8
-      // If passed L1..L10 and passed Test 2 -> Completed (10)
       let currentLvl = 1;
       for (let i = 1; i <= 10; i++) {
         if (passedLvls.includes(i)) {
@@ -767,14 +1023,14 @@ class Database {
     });
 
     const allTopicsCompleted = isDemo || topicIds.every((tid) => topics[tid].isCompleted);
-    const latestFinalTest = prog.final_aptitude_attempts[prog.final_aptitude_attempts.length - 1];
+    const latestFinalTest = (prog.final_aptitude_attempts || [])[prog.final_aptitude_attempts.length - 1];
     const finalAptitudePassed = isDemo || latestFinalTest?.status === 'QUALIFIED';
 
-    const latestTech = prog.technical_sessions.filter((s) => s.status === 'COMPLETED');
+    const latestTech = (prog.technical_sessions || []).filter((s) => s.status === 'COMPLETED');
     const latestTechSession = latestTech[latestTech.length - 1];
     const techPassed = (latestTechSession?.overall_score || 0) >= settings.technicalCutoff;
 
-    const latestHR = prog.hr_sessions.filter((s) => s.status === 'COMPLETED');
+    const latestHR = (prog.hr_sessions || []).filter((s) => s.status === 'COMPLETED');
     const latestHRSession = latestHR[latestHR.length - 1];
     const hrPassed = (latestHRSession?.overall_score || 0) >= settings.hrCutoff;
 
@@ -826,7 +1082,7 @@ class Database {
     if (this.isDemoUser(userId)) {
       return { allowed: true };
     }
-    const prog = this.getUserProgress(userId);
+    const prog = this.getUserProgressSync(userId);
     const passed = (prog.topic_levels_passed[topicId] || []).map(Number);
     const test1 = prog.topic_test1_passed[topicId] || false;
     const numLevel = Number(levelId);
@@ -863,7 +1119,7 @@ class Database {
     if (this.isDemoUser(userId)) {
       return { allowed: true };
     }
-    const prog = this.getUserProgress(userId);
+    const prog = this.getUserProgressSync(userId);
     const passed = (prog.topic_levels_passed[topicId] || []).map(Number);
 
     if (testNumber === 1) {
@@ -884,19 +1140,19 @@ class Database {
   }
 
   // Question Serving with Guaranteed Uniqueness, Persistence & Zero-Repeat Retries
-  public getQuestionsForLevel(
+  public async getQuestionsForLevel(
     userId: string,
     topicId: AptitudeTopicId,
     levelId: number,
     isRetry: boolean = false
-  ): AptitudeQuestion[] {
+  ): Promise<AptitudeQuestion[]> {
     const numLevel = Number(levelId) || 1;
+    const prog = await this.getUserProgress(userId);
     const check = this.canAccessLevel(userId, topicId, numLevel);
     if (!check.allowed) {
       throw new Error(check.reason);
     }
 
-    const prog = this.getUserProgress(userId);
     if (!prog.active_level_attempts) prog.active_level_attempts = {};
     if (!prog.question_attempts) prog.question_attempts = [];
     if (!prog.concept_performance) prog.concept_performance = {};
@@ -1016,19 +1272,19 @@ class Database {
       question_ids: selected.map((q) => q.question_id),
       created_at: new Date().toISOString(),
     };
-    this.saveDatabase();
+    await this.saveUserProgress(userId, prog);
 
     // STEP 8: Return the selected 10 questions
     return selected;
   }
 
-  public getQuestionsForTopicTest(userId: string, topicId: AptitudeTopicId, testNumber: 1 | 2): AptitudeQuestion[] {
+  public async getQuestionsForTopicTest(userId: string, topicId: AptitudeTopicId, testNumber: 1 | 2): Promise<AptitudeQuestion[]> {
+    const prog = await this.getUserProgress(userId);
     const check = this.canAccessTopicTest(userId, topicId, testNumber);
     if (!check.allowed) {
       throw new Error(check.reason);
     }
 
-    const prog = this.getUserProgress(userId);
     const minLevel = testNumber === 1 ? 1 : 6;
     const maxLevel = testNumber === 1 ? 5 : 10;
     const poolType = testNumber === 1 ? 'test1' : 'test2';
@@ -1043,7 +1299,7 @@ class Database {
     }
 
     // Avoid questions from user's latest test attempt
-    const prevTests = prog.test_attempts.filter((t) => t.topic_id === topicId && t.test_number === testNumber);
+    const prevTests = (prog.test_attempts || []).filter((t) => t.topic_id === topicId && t.test_number === testNumber);
     const lastTest = prevTests[prevTests.length - 1];
     const recentIds = new Set<string>();
     if (lastTest && lastTest.answers_review) {
@@ -1079,14 +1335,14 @@ class Database {
     return selected.slice(0, 20);
   }
 
-  public getQuestionsForFinalTest(userId: string): AptitudeQuestion[] {
-    const dashboard = this.getDashboardState(userId);
+  public async getQuestionsForFinalTest(userId: string): Promise<AptitudeQuestion[]> {
+    const dashboard = await this.getDashboardState(userId);
     if (!dashboard.progression.final_aptitude_unlocked) {
       throw new Error('All four aptitude topics must be 100% completed before unlocking the Final Aptitude Test.');
     }
 
-    const prog = this.getUserProgress(userId);
-    const lastFinal = prog.final_aptitude_attempts[prog.final_aptitude_attempts.length - 1];
+    const prog = await this.getUserProgress(userId);
+    const lastFinal = (prog.final_aptitude_attempts || [])[prog.final_aptitude_attempts.length - 1];
     const recentIds = new Set<string>();
     if (lastFinal && lastFinal.answers_review) {
       lastFinal.answers_review.forEach((ar) => recentIds.add(ar.question_id));
@@ -1114,19 +1370,19 @@ class Database {
   }
 
   // Level Submission, Detailed Evaluation & Attempt Logging
-  public submitLevel(
+  public async submitLevel(
     userId: string,
     topicId: AptitudeTopicId,
     levelId: number,
     answers: Array<{ question_id: string; selected_answer: string }>
-  ): LevelAttemptResult {
+  ): Promise<LevelAttemptResult> {
+    const prog = await this.getUserProgress(userId);
     const check = this.canAccessLevel(userId, topicId, levelId);
     if (!check.allowed) {
       throw new Error(check.reason);
     }
 
     const settings = this.getSettings();
-    const prog = this.getUserProgress(userId);
     if (!prog.active_level_attempts) prog.active_level_attempts = {};
     if (!prog.question_attempts) prog.question_attempts = [];
     if (!prog.concept_performance) prog.concept_performance = {};
@@ -1137,7 +1393,7 @@ class Database {
     const attemptId = activeAttempt?.attempt_id || `att_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const attemptNumber =
       activeAttempt?.attempt_number ||
-      prog.level_attempts.filter((a) => a.topic_id === topicId && a.level_id === levelId).length + 1;
+      (prog.level_attempts || []).filter((a) => a.topic_id === topicId && a.level_id === levelId).length + 1;
 
     let score = 0;
     const totalQuestions = answers.length || 10;
@@ -1288,24 +1544,25 @@ class Database {
       delete prog.active_level_attempts[attemptKey];
     }
 
-    this.saveDatabase(this.data, userId);
+    // Save to Cloud Firestore and await completion to ensure zero progress loss
+    await this.saveUserProgress(userId, prog);
     return attemptResult;
   }
 
   // Topic Test Submission & Evaluation
-  public submitTopicTest(
+  public async submitTopicTest(
     userId: string,
     topicId: AptitudeTopicId,
     testNumber: 1 | 2,
     answers: Array<{ question_id: string; selected_answer: string }>
-  ): TopicTestResult {
+  ): Promise<TopicTestResult> {
+    const prog = await this.getUserProgress(userId);
     const check = this.canAccessTopicTest(userId, topicId, testNumber);
     if (!check.allowed) {
       throw new Error(check.reason);
     }
 
     const settings = this.getSettings();
-    const prog = this.getUserProgress(userId);
     if (!prog.question_attempts) prog.question_attempts = [];
     if (!prog.concept_performance) prog.concept_performance = {};
 
@@ -1397,20 +1654,21 @@ class Database {
     };
 
     prog.test_attempts.push(testResult);
-    this.saveDatabase(this.data, userId);
+    await this.saveUserProgress(userId, prog);
     return testResult;
   }
 
   // Final Aptitude Test Submission
-  public submitFinalTest(
+  public async submitFinalTest(
     userId: string,
     answers: Array<{ question_id: string; selected_answer: string }>
-  ): FinalAptitudeResult {
-    const dashboard = this.getDashboardState(userId);
+  ): Promise<FinalAptitudeResult> {
+    const dashboard = await this.getDashboardState(userId);
     if (!dashboard.progression.final_aptitude_unlocked) {
       throw new Error('All 4 topics must be completed before submitting the Final Aptitude Test.');
     }
 
+    const prog = await this.getUserProgress(userId);
     const settings = this.getSettings();
     let score = 0;
     const totalQuestions = answers.length || 25;
@@ -1517,39 +1775,38 @@ class Database {
       answers_review: answersReview,
     };
 
-    const prog = this.getUserProgress(userId);
     prog.final_aptitude_attempts.push(result);
-    this.saveDatabase(this.data, userId);
+    await this.saveUserProgress(userId, prog);
     return result;
   }
 
   // Technical Round Execution & Multimodal 3-Level Evaluation
-  public getActiveTechnicalInterview(userId: string): TechnicalInterviewSession | null {
-    const prog = this.getUserProgress(userId);
+  public async getActiveTechnicalInterview(userId: string): Promise<TechnicalInterviewSession | null> {
+    const prog = await this.getUserProgress(userId);
     const active = (prog.technical_sessions || []).find((s) => s.status === 'IN_PROGRESS');
     if (active) {
       if (!active.questions || !Array.isArray(active.questions) || active.questions.length === 0) {
         active.questions = getCuratedDomainQuestions(active.domain || 'fullstack');
         active.total_questions = active.questions.length;
         active.responses = active.responses || [];
-        this.saveDatabase();
+        await this.saveUserProgress(userId, prog);
       }
       if (typeof active.current_question_index !== 'number') {
         active.current_question_index = 0;
       }
       if (active.current_question_index >= active.questions.length) {
         active.status = 'COMPLETED';
-        this.saveDatabase();
+        await this.saveUserProgress(userId, prog);
         return null;
       }
     }
     return active || null;
   }
 
-  public resetTechnicalInterview(userId: string): boolean {
-    const prog = this.getUserProgress(userId);
+  public async resetTechnicalInterview(userId: string): Promise<boolean> {
+    const prog = await this.getUserProgress(userId);
     prog.technical_sessions = (prog.technical_sessions || []).filter((s) => s.status === 'COMPLETED');
-    this.saveDatabase();
+    await this.saveUserProgress(userId, prog);
     return true;
   }
 
@@ -1559,12 +1816,12 @@ class Database {
     isRetake = false
   ): Promise<TechnicalInterviewSession> {
     const isDemo = this.isDemoUser(userId);
-    const dashboard = this.getDashboardState(userId);
+    const dashboard = await this.getDashboardState(userId);
     if (!isDemo && !dashboard.progression.technical_unlocked) {
       throw new Error('Technical Round is locked until you successfully qualify the Final Aptitude Test.');
     }
 
-    const prog = this.getUserProgress(userId);
+    const prog = await this.getUserProgress(userId);
     if (!prog.technical_sessions) prog.technical_sessions = [];
 
     // If not a retake and there is already an active session in progress with matching domain, reuse it
@@ -1623,7 +1880,7 @@ class Database {
     });
 
     prog.technical_sessions.push(session);
-    this.saveDatabase(this.data, userId);
+    await this.saveUserProgress(userId, prog);
     return session;
   }
 
@@ -1638,7 +1895,7 @@ class Database {
     timeTakenSeconds?: number,
     attemptNumber: number = 1
   ): Promise<{ session: TechnicalInterviewSession; currentEvaluation: any }> {
-    const prog = this.getUserProgress(userId);
+    const prog = await this.getUserProgress(userId);
     const session = prog.technical_sessions.find((s) => s.session_id === sessionId);
     if (!session) {
       throw new Error('Interview session not found');
@@ -1734,14 +1991,14 @@ class Database {
       session.passed = weightedScore >= this.getSettings().technicalCutoff;
     }
 
-    this.saveDatabase(this.data, userId);
+    await this.saveUserProgress(userId, prog);
     return { session, currentEvaluation: evaluation };
   }
 
   // HR Round Execution & Voice Evaluation
-  public startHRInterview(userId: string, mode: HRInterviewMode = 'standard'): HRInterviewSession {
+  public async startHRInterview(userId: string, mode: HRInterviewMode = 'standard'): Promise<HRInterviewSession> {
     const isDemo = this.isDemoUser(userId);
-    const dashboard = this.getDashboardState(userId);
+    const dashboard = await this.getDashboardState(userId);
     if (!isDemo && !dashboard.progression.hr_unlocked) {
       throw new Error('HR Round is locked until you successfully clear the Technical Interview.');
     }
@@ -1762,10 +2019,10 @@ class Database {
       created_at: new Date().toISOString(),
     };
 
-    const prog = this.getUserProgress(userId);
+    const prog = await this.getUserProgress(userId);
     if (!prog.hr_sessions) prog.hr_sessions = [];
     prog.hr_sessions.push(session);
-    this.saveDatabase(this.data, userId);
+    await this.saveUserProgress(userId, prog);
     return session;
   }
 
@@ -1776,7 +2033,7 @@ class Database {
     responseType: 'text' | 'voice',
     responseText: string
   ): Promise<{ session: HRInterviewSession; currentEvaluation: any }> {
-    const prog = this.getUserProgress(userId);
+    const prog = await this.getUserProgress(userId);
     const session = prog.hr_sessions.find((s) => s.session_id === sessionId);
     if (!session) {
       throw new Error('HR session not found');
@@ -1827,7 +2084,7 @@ class Database {
       session.suggested_practice = 'Practice structuring situational answers using the STAR method (Situation, Task, Action, Result) with time constraints.';
     }
 
-    this.saveDatabase(this.data, userId);
+    await this.saveUserProgress(userId, prog);
     return { session, currentEvaluation: evaluation };
   }
 
@@ -1842,7 +2099,7 @@ class Database {
         password_hash: '',
         created_at: new Date().toISOString(),
       };
-    const prog = this.getUserProgress(user.user_id);
+    const prog = await this.getUserProgress(user.user_id);
     const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const levelAttempts = prog.level_attempts || [];
@@ -2185,8 +2442,8 @@ class Database {
   }
 
   // Performance History Aggregator
-  public getPerformanceHistory(userId: string) {
-    const prog = this.getUserProgress(userId);
+  public async getPerformanceHistory(userId: string) {
+    const prog = await this.getUserProgress(userId);
     return {
       level_attempts: prog.level_attempts,
       test_attempts: prog.test_attempts,
@@ -2197,8 +2454,8 @@ class Database {
   }
 
   // Quick seed / Unlock for testing (Admin feature)
-  public quickUnlockMilestone(userId: string, milestone: 'level5' | 'all_topics' | 'technical' | 'hr' | 'complete') {
-    const prog = this.getUserProgress(userId);
+  public async quickUnlockMilestone(userId: string, milestone: 'level5' | 'all_topics' | 'technical' | 'hr' | 'complete') {
+    const prog = await this.getUserProgress(userId);
     const topicIds: AptitudeTopicId[] = ['quantitative', 'logical', 'verbal', 'specialized'];
 
     if (milestone === 'level5') {
@@ -2332,14 +2589,14 @@ class Database {
       }
     }
 
-    this.saveDatabase();
-    return this.getDashboardState(userId);
+    await this.saveUserProgress(userId, prog);
+    return await this.getDashboardState(userId);
   }
 
-  public resetUserProgress(userId: string) {
-    this.data.user_progress[userId] = this.createDefaultUserProgress(userId);
-    this.saveDatabase();
-    return this.getDashboardState(userId);
+  public async resetUserProgress(userId: string) {
+    const defaultProg = this.createDefaultUserProgress(userId);
+    await this.saveUserProgress(userId, defaultProg);
+    return await this.getDashboardState(userId);
   }
 
   // --- ADMIN DEMO MODE (College Project Presentation) ---
@@ -2488,9 +2745,9 @@ class Database {
     return demoProgress;
   }
 
-  public resetDemoProgress(): UserDashboardState {
+  public async resetDemoProgress(): Promise<UserDashboardState> {
     this.initDemoProgress(Database.DEMO_USER_ID);
-    return this.getDashboardState(Database.DEMO_USER_ID);
+    return await this.getDashboardState(Database.DEMO_USER_ID);
   }
 }
 

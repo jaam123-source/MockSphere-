@@ -28,13 +28,16 @@ export function getAuthUserId(req: express.Request): string | null {
 }
 
 // Strict backend middleware to verify Administrator privileges (jaammaaj123@gmail.com only)
-export function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+export async function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
   try {
     const userId = getAuthUserId(req);
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required. Please sign in with your Google administrator account.' });
     }
-    const user = db.getUserById(userId);
+    let user = db.getUserById(userId);
+    if (!user) {
+      user = await db.getUserByIdAsync(userId);
+    }
     if (!user) {
       return res.status(401).json({ error: 'User session not found. Please sign in again.' });
     }
@@ -140,7 +143,7 @@ app.get('/api/auth/callback/google', async (req, res) => {
       return res.status(400).send('Google account did not provide an email address.');
     }
 
-    const result = db.loginOrRegisterGoogleUser(email, name, picture, googleId);
+    const result = await db.loginOrRegisterGoogleUser(email, name, picture, googleId);
 
     if (result.isNewUser) {
       try {
@@ -219,7 +222,7 @@ app.post('/api/auth/google', async (req, res) => {
       return res.status(400).json({ error: 'A valid Google email address is required to sign in.' });
     }
 
-    const result = db.loginOrRegisterGoogleUser(
+    const result = await db.loginOrRegisterGoogleUser(
       resolvedEmail,
       resolvedName,
       resolvedAvatar,
@@ -315,12 +318,15 @@ app.post('/api/logout', (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });
 
-app.get('/api/me', (req, res) => {
+app.get('/api/me', async (req, res) => {
   const userId = getAuthUserId(req);
   if (!userId) {
     return res.status(401).json({ error: 'Authentication required. Please sign in with Google.' });
   }
-  const user = db.getUserById(userId);
+  let user = db.getUserById(userId);
+  if (!user) {
+    user = await db.getUserByIdAsync(userId);
+  }
   if (!user) {
     return res.status(401).json({ error: 'User session expired or not found. Please sign in.' });
   }
@@ -342,13 +348,13 @@ app.post('/api/update-profile', (req, res) => {
 });
 
 // Dashboard State
-app.get('/api/dashboard', (req, res) => {
+app.get('/api/dashboard', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required. Please sign in with Google.' });
     }
-    const state = db.getDashboardState(userId);
+    const state = await db.getDashboardState(userId);
     res.json(state);
   } catch (err: any) {
     const isAuthErr = err.message?.includes('not found') || err.message?.includes('log in');
@@ -357,10 +363,10 @@ app.get('/api/dashboard', (req, res) => {
 });
 
 // Aptitude Topics & Levels
-app.get('/api/aptitude/topics', (req, res) => {
+app.get('/api/aptitude/topics', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    const state = db.getDashboardState(userId);
+    const state = await db.getDashboardState(userId);
     res.json({ topics: state.topics });
   } catch (err: any) {
     const isAuthErr = err.message?.includes('not found') || err.message?.includes('log in') || err.message?.includes('required');
@@ -368,16 +374,16 @@ app.get('/api/aptitude/topics', (req, res) => {
   }
 });
 
-app.get('/api/aptitude/topic/:topic_id', (req, res) => {
+app.get('/api/aptitude/topic/:topic_id', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
     const { topic_id } = req.params;
-    const state = db.getDashboardState(userId);
+    const state = await db.getDashboardState(userId);
     const topic = state.topics[topic_id as AptitudeTopicId];
     if (!topic) {
       return res.status(404).json({ error: 'Topic not found' });
     }
-    const prog = db.getUserProgress(userId);
+    const prog = await db.getUserProgress(userId);
     res.json({
       topic,
       passed_levels: prog.topic_levels_passed[topic_id as AptitudeTopicId] || [],
@@ -391,12 +397,12 @@ app.get('/api/aptitude/topic/:topic_id', (req, res) => {
 });
 
 // Level Questions & Submissions
-app.get('/api/aptitude/level/:topic_id/:level_id', (req, res) => {
+app.get('/api/aptitude/level/:topic_id/:level_id', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
     const { topic_id, level_id } = req.params;
     const isRetry = req.query.retry === 'true' || req.query.new_attempt === 'true';
-    const questions = db.getQuestionsForLevel(userId, topic_id as AptitudeTopicId, parseInt(level_id, 10), isRetry);
+    const questions = await db.getQuestionsForLevel(userId, topic_id as AptitudeTopicId, parseInt(level_id, 10), isRetry);
     res.json({
       topic_id,
       level_id: parseInt(level_id, 10),
@@ -419,7 +425,7 @@ app.get('/api/aptitude/level/:topic_id/:level_id', (req, res) => {
   }
 });
 
-app.post('/api/aptitude/level/:topic_id/:level_id/submit', (req, res) => {
+app.post('/api/aptitude/level/:topic_id/:level_id/submit', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
     const { topic_id, level_id } = req.params;
@@ -427,7 +433,7 @@ app.post('/api/aptitude/level/:topic_id/:level_id/submit', (req, res) => {
     if (!Array.isArray(answers)) {
       return res.status(400).json({ error: 'Answers array is required' });
     }
-    const result = db.submitLevel(userId, topic_id as AptitudeTopicId, parseInt(level_id, 10), answers);
+    const result = await db.submitLevel(userId, topic_id as AptitudeTopicId, parseInt(level_id, 10), answers);
     res.json(result);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -435,12 +441,12 @@ app.post('/api/aptitude/level/:topic_id/:level_id/submit', (req, res) => {
 });
 
 // 5-Level Topic Tests (Test 1 & Test 2)
-app.get('/api/aptitude/test/:topic_id/:test_number', (req, res) => {
+app.get('/api/aptitude/test/:topic_id/:test_number', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
     const { topic_id, test_number } = req.params;
     const testNum = parseInt(test_number, 10) as 1 | 2;
-    const questions = db.getQuestionsForTopicTest(userId, topic_id as AptitudeTopicId, testNum);
+    const questions = await db.getQuestionsForTopicTest(userId, topic_id as AptitudeTopicId, testNum);
     res.json({
       topic_id,
       test_number: testNum,
@@ -463,7 +469,7 @@ app.get('/api/aptitude/test/:topic_id/:test_number', (req, res) => {
   }
 });
 
-app.post('/api/aptitude/test/:topic_id/:test_number/submit', (req, res) => {
+app.post('/api/aptitude/test/:topic_id/:test_number/submit', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
     const { topic_id, test_number } = req.params;
@@ -471,7 +477,7 @@ app.post('/api/aptitude/test/:topic_id/:test_number/submit', (req, res) => {
     if (!Array.isArray(answers)) {
       return res.status(400).json({ error: 'Answers array is required' });
     }
-    const result = db.submitTopicTest(userId, topic_id as AptitudeTopicId, parseInt(test_number, 10) as 1 | 2, answers);
+    const result = await db.submitTopicTest(userId, topic_id as AptitudeTopicId, parseInt(test_number, 10) as 1 | 2, answers);
     res.json(result);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -479,10 +485,10 @@ app.post('/api/aptitude/test/:topic_id/:test_number/submit', (req, res) => {
 });
 
 // Final Aptitude Test (25 Mixed Questions)
-app.get('/api/aptitude/final', (req, res) => {
+app.get('/api/aptitude/final', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    const questions = db.getQuestionsForFinalTest(userId);
+    const questions = await db.getQuestionsForFinalTest(userId);
     res.json({
       total_questions: questions.length,
       time_limit_minutes: db.getSettings().finalTestTimerMinutes,
@@ -505,10 +511,10 @@ app.get('/api/aptitude/final', (req, res) => {
 });
 
 // Concept Mastery & Attempt History Endpoint
-app.get('/api/aptitude/concept-mastery', (req, res) => {
+app.get('/api/aptitude/concept-mastery', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    const prog = db.getUserProgress(userId);
+    const prog = await db.getUserProgress(userId);
     res.json({
       concept_performance: prog.concept_performance || {},
       total_attempt_logs: (prog.question_attempts || []).length,
@@ -518,14 +524,14 @@ app.get('/api/aptitude/concept-mastery', (req, res) => {
   }
 });
 
-app.post('/api/aptitude/final/submit', (req, res) => {
+app.post('/api/aptitude/final/submit', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
     const { answers } = req.body;
     if (!Array.isArray(answers)) {
       return res.status(400).json({ error: 'Answers array is required' });
     }
-    const result = db.submitFinalTest(userId, answers);
+    const result = await db.submitFinalTest(userId, answers);
     res.json(result);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -537,20 +543,20 @@ app.get('/api/technical/domains', (req, res) => {
   res.json({ domains: TECHNICAL_DOMAINS_LIST });
 });
 
-app.get('/api/technical/active', (req, res) => {
+app.get('/api/technical/active', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    const session = db.getActiveTechnicalInterview(userId);
+    const session = await db.getActiveTechnicalInterview(userId);
     res.json({ session });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/api/technical/reset', (req, res) => {
+app.post('/api/technical/reset', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    db.resetTechnicalInterview(userId);
+    await db.resetTechnicalInterview(userId);
     res.json({ success: true, message: 'Technical interview reset successfully.' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -600,7 +606,7 @@ app.post('/api/hr/start', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
     const { mode } = req.body;
-    const session = db.startHRInterview(userId, mode || 'standard');
+    const session = await db.startHRInterview(userId, mode || 'standard');
     res.json(session);
   } catch (err: any) {
     res.status(403).json({ error: err.message });
@@ -638,10 +644,10 @@ app.get('/api/report', async (req, res) => {
   }
 });
 
-app.get('/api/history', (req, res) => {
+app.get('/api/history', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    const history = db.getPerformanceHistory(userId);
+    const history = await db.getPerformanceHistory(userId);
     res.json(history);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -662,21 +668,21 @@ app.post('/api/admin/settings', requireAdmin, (req, res) => {
   }
 });
 
-app.post('/api/admin/quick-unlock', requireAdmin, (req, res) => {
+app.post('/api/admin/quick-unlock', requireAdmin, async (req, res) => {
   try {
     const userId = getAuthUserId(req);
     const { milestone } = req.body;
-    const updatedState = db.quickUnlockMilestone(userId, milestone || 'all_topics');
+    const updatedState = await db.quickUnlockMilestone(userId, milestone || 'all_topics');
     res.json(updatedState);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
 });
 
-app.post('/api/admin/reset-progress', requireAdmin, (req, res) => {
+app.post('/api/admin/reset-progress', requireAdmin, async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    const reset = db.resetUserProgress(userId);
+    const reset = await db.resetUserProgress(userId);
     res.json(reset);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -717,9 +723,9 @@ app.post('/api/admin/demo-mode/enable', requireAdmin, (req, res) => {
   }
 });
 
-app.post('/api/admin/demo-mode/reset', requireAdmin, (req, res) => {
+app.post('/api/admin/demo-mode/reset', requireAdmin, async (req, res) => {
   try {
-    const resetDashboard = db.resetDemoProgress();
+    const resetDashboard = await db.resetDemoProgress();
     res.json({
       success: true,
       message: 'Demo dataset reset to initial qualified aptitude state (ready for live technical & HR presentation).',
@@ -730,10 +736,13 @@ app.post('/api/admin/demo-mode/reset', requireAdmin, (req, res) => {
   }
 });
 
-app.get('/api/admin/demo-mode/status', (req, res) => {
+app.get('/api/admin/demo-mode/status', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    const user = db.getUserById(userId);
+    let user = db.getUserById(userId);
+    if (!user && userId) {
+      user = await db.getUserByIdAsync(userId);
+    }
     const isDemo = user ? db.isDemoUser(user.user_id) : false;
     res.json({
       isDemoMode: isDemo,
