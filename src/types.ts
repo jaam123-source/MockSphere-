@@ -472,6 +472,11 @@ export interface UserDashboardState {
     overall_progress: number;
     pending_tests_count: number;
   };
+  rounds_enabled?: {
+    aptitude: boolean;
+    technical: boolean;
+    hr: boolean;
+  };
 }
 
 export interface AdminSettings {
@@ -486,6 +491,9 @@ export interface AdminSettings {
   aiModel: string;
   adminDemoMode?: boolean;
   globalDemoMode?: boolean;
+  roundAptitudeEnabled?: boolean;
+  roundTechnicalEnabled?: boolean;
+  roundHREnabled?: boolean;
 }
 
 export interface EmailNotificationLog {
