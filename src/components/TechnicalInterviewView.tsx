@@ -232,36 +232,43 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     };
   }, []);
 
+  // Active question ref to avoid resetting attempt count when re-attempt modal toggles
+  const activeQuestionIdRef = useRef<string | null>(null);
+
   // Sync starter code and speak new question when session or index updates
   useEffect(() => {
     if (session && session.status === 'IN_PROGRESS' && !showStepFeedbackModal) {
       const q = session.questions[session.current_question_index];
       if (q) {
-        setTextResponse('');
-        setCodeSnippet(q.code_template || '');
-        setDiagramDescription('');
-        setShowHint(false);
-        setQuestionStartTime(Date.now());
-        setCurrentAttemptCount(1);
-        setShowRetryModal(false);
-        setRetryInfo(null);
+        const currentQId = `${session.session_id}_${q.question_id}_${session.current_question_index}`;
+        if (activeQuestionIdRef.current !== currentQId) {
+          activeQuestionIdRef.current = currentQId;
+          setTextResponse('');
+          setCodeSnippet(q.code_template || '');
+          setDiagramDescription('');
+          setShowHint(false);
+          setQuestionStartTime(Date.now());
+          setCurrentAttemptCount(1);
+          setShowRetryModal(false);
+          setRetryInfo(null);
 
-        // Default mode based on question type:
-        // Coding questions default to 'code' (Code Editor workspace)
-        // Theory / Conceptual / System Design / Scenario questions default to 'voice' and remove the code editor
-        if (q.type === 'coding') {
-          setResponseMode('code');
-        } else {
-          setResponseMode('voice');
-        }
+          // Default mode based on question type:
+          // Coding questions default to 'code' (Code Editor workspace)
+          // Theory / Conceptual / System Design / Scenario questions default to 'voice' and remove the code editor
+          if (q.type === 'coding') {
+            setResponseMode('code');
+          } else {
+            setResponseMode('voice');
+          }
 
-        // Auto-speak interviewer question if audio is enabled
-        if (isAudioFeedbackEnabled) {
-          speakInterviewerQuestion(q.question);
+          // Auto-speak interviewer question if audio is enabled
+          if (isAudioFeedbackEnabled) {
+            speakInterviewerQuestion(q.question);
+          }
         }
       }
     }
-  }, [session?.current_question_index, session?.session_id, showStepFeedbackModal]);
+  }, [session?.current_question_index, session?.session_id, showStepFeedbackModal, isAudioFeedbackEnabled]);
 
   // Question timer interval
   useEffect(() => {
@@ -347,6 +354,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     setStartError(null);
     SpeechService.stopSpeaking();
     setIsSpeakingInterviewer(false);
+    activeQuestionIdRef.current = null;
     try {
       const newSession = await ApiService.startTechnicalInterview(selectedDomain, isRetake);
       if (!newSession || !newSession.session_id) {
@@ -368,6 +376,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   const handleResetInterview = async () => {
     if (!window.confirm('Are you sure you want to reset this interview? Your progress will be cleared.')) return;
     setIsResetting(true);
+    activeQuestionIdRef.current = null;
     try {
       await ApiService.resetTechnicalInterview();
       setSession(null);
@@ -388,6 +397,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     // Stop speaking and voice recognition immediately
     SpeechService.stopSpeaking();
     setIsSpeakingInterviewer(false);
+    activeQuestionIdRef.current = null;
     if (isRecording && speechRecognizer) {
       try {
         speechRecognizer.stop();
@@ -530,12 +540,13 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
   // Re-attempt current question handler
   const handleReAttemptQuestion = () => {
+    if (currentAttemptCount >= 2) return;
     SpeechService.stopSpeaking();
     setIsSpeakingInterviewer(false);
     setShowStepFeedbackModal(false);
     setLatestEval(null);
     setPendingNextSession(null);
-    setCurrentAttemptCount((prev) => prev + 1);
+    setCurrentAttemptCount(2);
   };
 
   // Unique categories for filtering
@@ -1673,15 +1684,35 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
               </div>
             </div>
 
-            {/* Improved Senior Model Answer (Shown if accepted OR after completing 2 attempts) */}
-            {latestEval.improved_answer && ((latestEval.score >= 50 || latestEval.verbal_status !== 'INCORRECT') || currentAttemptCount >= 2) && (
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-900 text-cyan-300 font-sans text-xs space-y-1">
+            {/* Correct Answer & Explanation Card */}
+            {(latestEval.score >= 50 || latestEval.verbal_status !== 'INCORRECT') ? (
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-900 text-cyan-300 font-sans text-xs space-y-1 border border-cyan-800/40">
                 <div className="text-[10px] sm:text-[11px] uppercase font-bold text-slate-400 tracking-wider">
-                  {(latestEval.score >= 50 || latestEval.verbal_status !== 'INCORRECT') ? 'Senior Engineer Model Answer:' : 'Correct Answer & Explanation (2 Attempts Completed):'}
+                  Senior Engineer Model Answer:
                 </div>
-                <p className="text-slate-200 leading-relaxed">{latestEval.improved_answer}</p>
+                <p className="text-slate-200 leading-relaxed">{latestEval.improved_answer || currentQ?.improved_answer}</p>
               </div>
-            )}
+            ) : currentAttemptCount >= 2 ? (
+              <div className="p-4 rounded-2xl bg-amber-950/90 border-2 border-amber-500/80 text-amber-200 font-sans text-xs space-y-2.5 shadow-xl animate-in fade-in">
+                <div className="flex items-center gap-2 text-amber-300 font-extrabold uppercase text-[11px] tracking-wider">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Correct Answer & Detailed Explanation (2 Attempts Completed)</span>
+                </div>
+                <p className="text-slate-100 font-medium text-xs sm:text-sm leading-relaxed bg-slate-900/90 p-3.5 rounded-xl border border-amber-500/30">
+                  {latestEval.improved_answer || currentQ?.improved_answer || 'A complete response accurately explains the concept, mechanism, and practical application.'}
+                </p>
+                {currentQ?.expected_key_points && currentQ.expected_key_points.length > 0 && (
+                  <div className="pt-1 border-t border-amber-500/20">
+                    <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">Key Takeaways to Remember:</span>
+                    <ul className="list-disc list-inside mt-1 text-slate-200 space-y-0.5">
+                      {currentQ.expected_key_points.map((pt, i) => (
+                        <li key={i}>{pt}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             {/* Action Bar */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
