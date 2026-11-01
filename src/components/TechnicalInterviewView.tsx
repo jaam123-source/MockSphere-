@@ -456,33 +456,6 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       }
     }
 
-    // Keyword detection check on candidate's answer
-    const combinedAnswer = [payloadText, isCodingQ ? payloadCode : '', payloadDiag].filter(Boolean).join(' ');
-    const kwDetection = detectKeywordsInAnswer(combinedAnswer, currentQ);
-
-    // If candidate does not answer with at least 2 keywords on attempt 1, prompt to attempt once again!
-    if (kwDetection.detectedCount < 2 && currentAttemptCount === 1) {
-      setRetryInfo({
-        detectedKeywords: kwDetection.detectedKeywords,
-        requiredKeywords: kwDetection.requiredKeywords,
-        detectedCount: kwDetection.detectedCount,
-        topic: currentQ.topic || 'Core Concept',
-        missingCount: kwDetection.missingCount,
-      });
-      setShowRetryModal(true);
-
-      if (isAudioFeedbackEnabled) {
-        SpeechService.stopSpeaking();
-        setIsSpeakingInterviewer(true);
-        SpeechService.speak(
-          "Your answer is missing the core technical keywords for this topic. Please attempt once again by incorporating key technical concepts.",
-          () => setIsSpeakingInterviewer(false),
-          () => setIsSpeakingInterviewer(true)
-        );
-      }
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       const result = await ApiService.evaluateTechnicalAnswer({
@@ -497,16 +470,27 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         attempt_number: currentAttemptCount,
       });
 
-      // Show evaluation to student and stage next session without prematurely jumping to next question
-      setLatestEval(result.currentEvaluation);
-      setPendingNextSession(result.session);
+      const evalData = result.currentEvaluation;
+      const isAccepted = evalData.score >= 50 || evalData.verbal_status === 'CORRECT' || evalData.verbal_status === 'PARTIALLY CORRECT';
+      const isInsufficient = !isAccepted && currentAttemptCount < 2;
+
+      setLatestEval(evalData);
+      if (isInsufficient) {
+        // Do not advance session; keep candidate on the same question for attempt 2
+        setPendingNextSession(null);
+      } else {
+        // Passed or completed max 2 attempts
+        setPendingNextSession(result.session);
+      }
       setShowStepFeedbackModal(true);
 
-      // Speak evaluation feedback/reaction for this answer (not the next question!)
-      if (isAudioFeedbackEnabled && result.currentEvaluation?.spoken_response) {
+      // Speak feedback
+      if (isAudioFeedbackEnabled && evalData?.spoken_response) {
         setIsSpeakingInterviewer(true);
         SpeechService.speak(
-          result.currentEvaluation.spoken_response,
+          isInsufficient
+            ? "Your answer is too short or does not correctly explain the concept. Please explain the concept in a meaningful sentence and try again."
+            : evalData.spoken_response,
           () => setIsSpeakingInterviewer(false),
           () => setIsSpeakingInterviewer(true)
         );
@@ -542,6 +526,16 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         onRefreshDashboard();
       }
     }
+  };
+
+  // Re-attempt current question handler
+  const handleReAttemptQuestion = () => {
+    SpeechService.stopSpeaking();
+    setIsSpeakingInterviewer(false);
+    setShowStepFeedbackModal(false);
+    setLatestEval(null);
+    setPendingNextSession(null);
+    setCurrentAttemptCount((prev) => prev + 1);
   };
 
   // Unique categories for filtering
@@ -1679,11 +1673,11 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
               </div>
             </div>
 
-            {/* Improved Senior Model Answer */}
-            {latestEval.improved_answer && (
+            {/* Improved Senior Model Answer (Shown if accepted OR after completing 2 attempts) */}
+            {latestEval.improved_answer && ((latestEval.score >= 50 || latestEval.verbal_status !== 'INCORRECT') || currentAttemptCount >= 2) && (
               <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-900 text-cyan-300 font-sans text-xs space-y-1">
                 <div className="text-[10px] sm:text-[11px] uppercase font-bold text-slate-400 tracking-wider">
-                  Senior Engineer Model Answer:
+                  {(latestEval.score >= 50 || latestEval.verbal_status !== 'INCORRECT') ? 'Senior Engineer Model Answer:' : 'Correct Answer & Explanation (2 Attempts Completed):'}
                 </div>
                 <p className="text-slate-200 leading-relaxed">{latestEval.improved_answer}</p>
               </div>
@@ -1692,22 +1686,39 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
             {/* Action Bar */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
               <span className="text-xs text-slate-500 dark:text-slate-400">
-                {pendingNextSession?.status === 'COMPLETED'
-                  ? 'All questions evaluated. Proceed to view your final scorecard.'
-                  : `Review your evaluation. When ready, proceed to Question ${currentIdx + 2}.`}
+                {latestEval.score < 50 && latestEval.verbal_status === 'INCORRECT' && currentAttemptCount < 2
+                  ? 'Your answer needs improvement. You have 1 re-attempt remaining for this question.'
+                  : latestEval.score < 50 && latestEval.verbal_status === 'INCORRECT' && currentAttemptCount >= 2
+                  ? 'Maximum attempts reached (2/2). Review the correct answer above and proceed to the next question.'
+                  : pendingNextSession?.status === 'COMPLETED'
+                  ? 'All questions evaluated. Click Proceed to Next Question to view your final scorecard.'
+                  : 'Answer accepted! Click Proceed to Next Question when ready.'}
               </span>
-              <button
-                id="btn-proceed-feedback-next"
-                onClick={handleProceedNext}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-md transition flex items-center justify-center space-x-2 shrink-0"
-              >
-                <span>
-                  {pendingNextSession?.status === 'COMPLETED' || currentIdx >= 29
-                    ? 'View Final Interview Evaluation'
-                    : `Proceed to Question ${currentIdx + 2}`}
-                </span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                {latestEval.score < 50 && latestEval.verbal_status === 'INCORRECT' && currentAttemptCount < 2 ? (
+                  <button
+                    id="btn-modal-reattempt"
+                    onClick={handleReAttemptQuestion}
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md transition flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Re-attempt Question</span>
+                  </button>
+                ) : (
+                  <button
+                    id="btn-proceed-feedback-next"
+                    onClick={handleProceedNext}
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md transition flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
+                  >
+                    <span>
+                      {pendingNextSession?.status === 'COMPLETED' || currentIdx >= 29
+                        ? 'Proceed to Next Question'
+                        : `Proceed to Next Question`}
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

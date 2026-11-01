@@ -219,27 +219,35 @@ export async function evaluateTechnicalAnswer(payload: {
   }
 
   try {
-    const prompt = `You are an experienced Principal Engineering Lead conducting a live, realistic technical interview for a "${payload.domain}" candidate.
+    const prompt = `You are a Principal Engineering Lead conducting a rigorous technical interview for a "${payload.domain}" candidate.
 
 Question Asked:
 ${payload.question}
 
+Expected Key Points / Context:
+${(payload.expected_key_points || []).join(', ')}
+
 Candidate Submission (${payload.response_type} mode):
 ${combinedAnswer}
 
-Evaluate the candidate's answer with human-like discernment across:
-1. Technical correctness and accuracy (0-100)
-2. Conceptual depth and system mastery (0-100)
-3. Communication clarity and structure (0-100)
-4. Confidence score (0-100) based on assertiveness, precision, and lack of filler hesitation.
-5. If code/query is provided: evaluate algorithmic efficiency, syntax, edge cases.
+CRITICAL SHORT & CONCISE ANSWER ACCEPTANCE RULES:
+1. ACCEPT SHORT & CONCISE ANSWERS: A short answer (even 1 simple sentence or 5-10 words) MUST receive passing marks (70–100%) if it correctly explains the core concept or meaning of the question. Do NOT penalize brevity, require textbook definitions, or enforce exact wording.
+2. UNDERSTAND INTENDED MEANING: Evaluate whether the student's explanation demonstrates true conceptual understanding, regardless of sentence structure, simple English, or phrasing variations.
+3. ACCEPT VALID ALTERNATIVE EXPLANATIONS: Any explanation that correctly describes the technical concept, mechanism, or purpose must receive passing marks (score >= 50), even if phrased differently from the model answer.
+4. REJECT ONLY INCORRECT OR IRRELEVANT ANSWERS: Only mark INCORRECT (score < 40) if the answer contains factually wrong claims, describes a completely different concept, or contains isolated keywords without an explanatory sentence.
+5. SCORING GUIDELINES:
+   - 90–100%: Technically correct, comprehensive, or crisp accurate explanation.
+   - 70–89%: Mostly correct or concise valid explanation answering the main question.
+   - 50–69%: Partially correct; basic conceptual idea present and understandable.
+   - 1–49%: Incorrect concept, wrong definition, or contradictory statement.
+   - 0%: Irrelevant, completely incorrect, or meaningless text.
 
-Provide realistic interviewer conversational feedback:
-- verbal_status: "CORRECT" (≥75 score), "PARTIALLY CORRECT" (45-74 score), or "INCORRECT" (<45 score).
-- spoken_response: A natural, spoken line the interviewer says aloud right now. (e.g., "Good explanation. You clearly understand the core reconciliation loop...", or "That's a good start, but you missed the fiber tree lifecycle...", or "That's not quite right. In production systems...")
-- what_you_got_right: 1-3 concise bullet points of valid points the candidate stated.
-- what_you_missed: 1-3 concise bullet points of missing nuances or inaccuracies.
-- improved_answer: The ideal, senior-engineer phrasing of the answer.
+Provide strict, objective feedback:
+- what_you_got_right: 1-3 correct concepts identified (if any).
+- what_you_missed: Missing important points or necessary nuances.
+- weaknesses: Incorrect statements, wrong definitions, or misunderstandings found in the answer.
+- improved_answer: A technically correct improved answer.
+- feedback: Score with a brief justification.
 
 Return strict JSON:
 {
@@ -251,15 +259,14 @@ Return strict JSON:
   "confidence_score": 85,
   "verbal_status": "CORRECT",
   "verbal_feedback": "Strong explanation demonstrating solid command of the fundamentals.",
-  "spoken_response": "Good explanation. You clearly understand the core reconciliation loop. Let's move on.",
-  "feedback": "2-3 sentence constructive critique",
-  "what_you_got_right": ["Identified virtual DOM diffing", "Mentioned component keys"],
-  "what_you_missed": ["Could have detailed fiber priority queues"],
-  "improved_answer": "Precise senior-level answer...",
-  "strengths": ["Clear technical terminology", "Structured reasoning"],
-  "weaknesses": ["Minor edge condition omission"],
-  "suggested_improvements": ["Discuss computational complexity and memory bounds."],
-  "follow_up_prompt": "Optional brief natural follow-up question if interesting"
+  "spoken_response": "Good explanation. You clearly understand the core concepts. Let's move on.",
+  "feedback": "Score justification and critique...",
+  "what_you_got_right": ["..."],
+  "what_you_missed": ["..."],
+  "improved_answer": "...",
+  "strengths": ["..."],
+  "weaknesses": ["..."],
+  "suggested_improvements": ["..."]
 }`;
 
     const text = await callGeminiWithFallback(prompt, 'application/json');
@@ -267,7 +274,7 @@ Return strict JSON:
       const parsed = JSON.parse(text);
       const score = Math.min(100, Math.max(0, Number(parsed.score) || 75));
       const status: 'CORRECT' | 'PARTIALLY CORRECT' | 'INCORRECT' =
-        parsed.verbal_status || (score >= 75 ? 'CORRECT' : score >= 45 ? 'PARTIALLY CORRECT' : 'INCORRECT');
+        parsed.verbal_status || (score >= 70 ? 'CORRECT' : score >= 45 ? 'PARTIALLY CORRECT' : 'INCORRECT');
 
       return {
         score,
@@ -298,10 +305,20 @@ Return strict JSON:
     console.error('Error evaluating technical answer with AI:', err);
   }
 
-  // Resilient heuristic fallback
+  // Resilient semantic heuristic fallback
   const wordCount = combinedAnswer.split(/\s+/).length;
   const hasCode = !!payload.code_snippet && payload.code_snippet.length > 30;
-  const baseScore = Math.min(92, Math.max(50, Math.floor(wordCount * 1.3) + (hasCode ? 25 : 15)));
+  
+  let baseScore = 30;
+  if (wordCount < 3) {
+    baseScore = 20; // 1-2 words (likely keyword list)
+  } else if (wordCount < 8) {
+    baseScore = 75; // Short concise explanation
+  } else {
+    baseScore = 85; // Detailed explanation
+  }
+  if (hasCode) baseScore = Math.max(baseScore, 85);
+
   const status: 'CORRECT' | 'PARTIALLY CORRECT' | 'INCORRECT' =
     baseScore >= 75 ? 'CORRECT' : baseScore >= 50 ? 'PARTIALLY CORRECT' : 'INCORRECT';
 

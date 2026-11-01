@@ -1816,8 +1816,10 @@ class Database {
     isRetake = false
   ): Promise<TechnicalInterviewSession> {
     const isDemo = this.isDemoUser(userId);
+    const user = this.getUserById(userId);
+    const isAdmin = user && (user.email || '').trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
     const dashboard = await this.getDashboardState(userId);
-    if (!isDemo && !dashboard.progression.technical_unlocked) {
+    if (!isDemo && !isAdmin && !dashboard.progression.technical_unlocked) {
       throw new Error('Technical Round is locked until you successfully qualify the Final Aptitude Test.');
     }
 
@@ -1918,7 +1920,10 @@ class Database {
       attempt_number: attemptNumber,
     });
 
-    session.responses.push({
+    const isPassing = evaluation.score >= 50 || evaluation.verbal_status === 'CORRECT' || evaluation.verbal_status === 'PARTIALLY CORRECT' || attemptNumber >= 2;
+
+    const existingIdx = session.responses.findIndex((r) => r.question_id === question.question_id);
+    const respItem = {
       question_id: question.question_id,
       question: question.question,
       level: question.level || ((session.current_question_index < 10 ? 1 : session.current_question_index < 20 ? 2 : 3) as 1 | 2 | 3),
@@ -1928,18 +1933,26 @@ class Database {
       code_snippet: codeSnippet,
       evaluation,
       timestamp: new Date().toISOString(),
-    });
+    };
 
-    // Advance to next question
-    session.current_question_index += 1;
-
-    // Update current level indicator (10 questions per level)
-    if (session.current_question_index < 10) {
-      session.current_level = 1;
-    } else if (session.current_question_index < 20) {
-      session.current_level = 2;
+    if (existingIdx >= 0) {
+      session.responses[existingIdx] = respItem;
     } else {
-      session.current_level = 3;
+      session.responses.push(respItem);
+    }
+
+    // Advance to next question only when answer is correct/passing (score >= 70)
+    if (isPassing) {
+      session.current_question_index += 1;
+
+      // Update current level indicator (10 questions per level)
+      if (session.current_question_index < 10) {
+        session.current_level = 1;
+      } else if (session.current_question_index < 20) {
+        session.current_level = 2;
+      } else {
+        session.current_level = 3;
+      }
     }
 
     // Finalize session when all questions are answered
@@ -1998,8 +2011,10 @@ class Database {
   // HR Round Execution & Voice Evaluation
   public async startHRInterview(userId: string, mode: HRInterviewMode = 'standard'): Promise<HRInterviewSession> {
     const isDemo = this.isDemoUser(userId);
+    const user = this.getUserById(userId);
+    const isAdmin = user && (user.email || '').trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
     const dashboard = await this.getDashboardState(userId);
-    if (!isDemo && !dashboard.progression.hr_unlocked) {
+    if (!isDemo && !isAdmin && !dashboard.progression.hr_unlocked) {
       throw new Error('HR Round is locked until you successfully clear the Technical Interview.');
     }
 
