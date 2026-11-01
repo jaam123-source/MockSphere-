@@ -616,7 +616,7 @@ app.post('/api/hr/start', async (req, res) => {
 app.post('/api/hr/evaluate', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    const { session_id, question_id, response_type, response_text } = req.body;
+    const { session_id, question_id, response_type, response_text, camera_metrics } = req.body;
     if (!session_id || !question_id) {
       return res.status(400).json({ error: 'session_id and question_id are required' });
     }
@@ -625,7 +625,8 @@ app.post('/api/hr/evaluate', async (req, res) => {
       session_id,
       question_id,
       response_type || 'text',
-      response_text || ''
+      response_text || '',
+      camera_metrics
     );
     res.json(result);
   } catch (err: any) {

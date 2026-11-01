@@ -355,11 +355,26 @@ Return strict JSON:
 export async function evaluateHREvaluation(payload: {
   question: string;
   response_text: string;
+  camera_metrics?: {
+    face_detected: boolean;
+    eye_contact_score: number;
+    head_stability_score: number;
+    lighting_quality_score: number;
+    posture_score: number;
+    speaking_pace_wpm: number;
+    camera_active: boolean;
+    warnings?: string[];
+  };
 }): Promise<{
   score: number;
   relevance: number;
   clarity: number;
   communication_quality: number;
+  confidence_presentation?: number;
+  eye_contact_engagement?: number;
+  speaking_fluency?: number;
+  posture_presentation?: number;
+  camera_analysis_summary?: string;
   feedback: string;
   strengths: string[];
   weaknesses: string[];
@@ -370,14 +385,26 @@ export async function evaluateHREvaluation(payload: {
       relevance: 0,
       clarity: 0,
       communication_quality: 0,
+      confidence_presentation: 0,
+      eye_contact_engagement: 0,
+      speaking_fluency: 0,
+      posture_presentation: 0,
+      camera_analysis_summary: 'No camera or response telemetry was recorded.',
       feedback: 'No response was provided.',
       strengths: [],
       weaknesses: ['Empty answer submitted'],
     };
   }
 
+  const cm = payload.camera_metrics;
+  const cameraSummary = cm?.camera_active
+    ? cm.face_detected
+      ? `Real-time camera metrics: Eye Contact=${cm.eye_contact_score}%, Posture=${cm.posture_score}%, Lighting=${cm.lighting_quality_score}%, Pace=${cm.speaking_pace_wpm} WPM.`
+      : 'Camera active but face was not clearly visible in the frame.'
+    : 'Camera disabled during response.';
+
   try {
-    const prompt = `You are a Senior Talent & HR Director assessing a candidate's behavioral and leadership response.
+    const prompt = `You are a Senior Talent & HR Director assessing a candidate's behavioral and leadership response along with video presentation telemetry.
 
 Question:
 ${payload.question}
@@ -385,10 +412,15 @@ ${payload.question}
 Candidate Answer:
 ${payload.response_text}
 
+Real-Time Video Camera & Speech Telemetry:
+${cameraSummary}
+
 Evaluate on:
-1. Relevance to the question intent
-2. Clarity and coherence
-3. Professionalism, emotional intelligence, and communication effectiveness (STAR method)
+1. Relevance to the question intent & STAR structure
+2. Communication clarity and emotional intelligence
+3. Camera presentation, eye contact engagement, speaking pace fluency, and professional posture based strictly on observable data.
+
+CRITICAL DISCIPLINE: Provide evidence-based feedback based on observable interview metrics. Do NOT assume personality or use judgmental labels.
 
 Return strict JSON:
 {
@@ -396,6 +428,11 @@ Return strict JSON:
   "relevance": 85,
   "clarity": 85,
   "communication_quality": 85,
+  "confidence_presentation": 88,
+  "eye_contact_engagement": 85,
+  "speaking_fluency": 82,
+  "posture_presentation": 90,
+  "camera_analysis_summary": "1-2 sentence evidence-based summary of video presentation, eye contact, and speaking pace",
   "feedback": "2-3 sentence executive review",
   "strengths": ["strength 1", "strength 2"],
   "weaknesses": ["weakness 1"]
@@ -409,6 +446,11 @@ Return strict JSON:
         relevance: Math.min(100, Math.max(0, Number(parsed.relevance) || 80)),
         clarity: Math.min(100, Math.max(0, Number(parsed.clarity) || 80)),
         communication_quality: Math.min(100, Math.max(0, Number(parsed.communication_quality) || 80)),
+        confidence_presentation: Math.min(100, Math.max(0, Number(parsed.confidence_presentation) || cm?.eye_contact_score || 82)),
+        eye_contact_engagement: Math.min(100, Math.max(0, Number(parsed.eye_contact_engagement) || cm?.eye_contact_score || 85)),
+        speaking_fluency: Math.min(100, Math.max(0, Number(parsed.speaking_fluency) || 82)),
+        posture_presentation: Math.min(100, Math.max(0, Number(parsed.posture_presentation) || cm?.posture_score || 85)),
+        camera_analysis_summary: parsed.camera_analysis_summary || cameraSummary,
         feedback: parsed.feedback || 'Effective communication demonstrating situational awareness.',
         strengths: Array.isArray(parsed.strengths) ? parsed.strengths : ['Good self-reflection'],
         weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : ['Add specific quantitative outcomes'],
@@ -424,6 +466,11 @@ Return strict JSON:
     relevance: 85,
     clarity: 80,
     communication_quality: 85,
+    confidence_presentation: cm?.eye_contact_score || 82,
+    eye_contact_engagement: cm?.eye_contact_score || 85,
+    speaking_fluency: 84,
+    posture_presentation: cm?.posture_score || 85,
+    camera_analysis_summary: cameraSummary,
     feedback: 'Authentic response utilizing the STAR (Situation, Task, Action, Result) behavioral framework.',
     strengths: ['Clear narrative structure', 'Demonstrated team collaboration and self-awareness'],
     weaknesses: ['Could quantify measurable outcomes more explicitly'],

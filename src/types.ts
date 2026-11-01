@@ -193,6 +193,7 @@ export interface TechnicalQuestion {
   hints?: string[];
   expected_key_points?: string[];
   improved_answer?: string;
+  explanation?: string;
   keywords?: string[];
 }
 
@@ -299,6 +300,35 @@ export interface HRMetricsBreakdown {
   interview_readiness: number; // 0 - 10
 }
 
+export interface HRCameraMetrics {
+  face_detected: boolean;
+  hand_detected?: boolean;
+  eye_contact_score: number; // 0 - 100
+  head_stability_score: number; // 0 - 100
+  lighting_quality_score: number; // 0 - 100
+  posture_score: number; // 0 - 100
+  speaking_pace_wpm: number;
+  camera_active: boolean;
+  warnings?: string[];
+}
+
+export interface HREvaluationResult {
+  score: number;
+  relevance: number;
+  clarity: number;
+  communication_quality: number;
+  confidence_presentation?: number;
+  eye_contact_engagement?: number;
+  speaking_fluency?: number;
+  posture_presentation?: number;
+  camera_analysis_summary?: string;
+  spoken_response?: string;
+  verbal_status?: string;
+  feedback: string;
+  strengths: string[];
+  weaknesses: string[];
+}
+
 export interface HRInterviewSession {
   session_id: string;
   user_id: string;
@@ -313,18 +343,19 @@ export interface HRInterviewSession {
     category: string;
     response_type: 'text' | 'voice';
     response: string;
-    evaluation: {
-      score: number;
-      relevance: number;
-      clarity: number;
-      communication_quality: number;
-      feedback: string;
-      strengths: string[];
-      weaknesses: string[];
-    };
+    camera_metrics?: HRCameraMetrics;
+    evaluation: HREvaluationResult;
   }>;
   overall_score?: number;
   metrics_breakdown?: HRMetricsBreakdown;
+  video_analysis?: {
+    eye_contact_avg: number;
+    posture_avg: number;
+    lighting_avg: number;
+    speaking_pace_avg: number;
+    face_visibility_pct: number;
+    summary_feedback: string;
+  };
   strengths?: string[];
   areas_to_improve?: string[];
   ai_feedback?: string;

@@ -6,6 +6,8 @@ import {
   FinalReportData,
   HRInterviewSession,
   HRInterviewMode,
+  HRCameraMetrics,
+  HREvaluationResult,
   LevelAttemptResult,
   ResponseMode,
   TechnicalDomainId,
@@ -309,7 +311,8 @@ export const ApiService = {
     question_id: string;
     response_type: 'text' | 'voice';
     response_text: string;
-  }): Promise<{ session: HRInterviewSession; currentEvaluation: any }> {
+    camera_metrics?: HRCameraMetrics;
+  }): Promise<{ session: HRInterviewSession; currentEvaluation: HREvaluationResult }> {
     return request('/api/hr/evaluate', {
       method: 'POST',
       body: JSON.stringify(payload),

@@ -1733,7 +1733,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
                     className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md transition flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    <span>Re-attempt Question</span>
+                    <span>Re-attempt</span>
                   </button>
                 ) : (
                   <button

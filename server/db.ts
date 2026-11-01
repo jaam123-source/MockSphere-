@@ -67,6 +67,8 @@ export interface FirestoreErrorInfo {
   };
 }
 
+export let isFirestoreQuotaExceeded = false;
+
 export function handleFirestoreError(
   error: unknown,
   context: {
@@ -77,8 +79,16 @@ export function handleFirestoreError(
   }
 ): void {
   const err = error as { code?: string; message?: string };
+  const errMsg = err?.message || String(error);
+
+  if (errMsg.includes('Quota exceeded') || errMsg.includes('Quota limit exceeded')) {
+    isFirestoreQuotaExceeded = true;
+    console.warn(`[Firestore ${context.operation}] Quota limit exceeded for Cloud Firestore. Local JSON database store will handle state persistence. Path: ${context.path || 'N/A'}`);
+    return;
+  }
+
   const info: FirestoreErrorInfo = {
-    error: err?.message || String(error),
+    error: errMsg,
     operationType: context.operation,
     path: context.path,
     authInfo: {
@@ -244,7 +254,7 @@ class Database {
   }
 
   public async syncUserToFirestore(user: User): Promise<void> {
-    if (!this.firestore || !user?.user_id) return;
+    if (!this.firestore || !user?.user_id || isFirestoreQuotaExceeded) return;
     try {
       const cleanUser = JSON.parse(JSON.stringify(user));
       await setDoc(doc(this.firestore, 'users', user.user_id), cleanUser, { merge: true });
@@ -259,7 +269,7 @@ class Database {
   }
 
   public async syncProgressToFirestore(userId: string): Promise<void> {
-    if (!this.firestore || !userId) return;
+    if (!this.firestore || !userId || isFirestoreQuotaExceeded) return;
     const prog = this.data.user_progress[userId];
     if (!prog) return;
     try {
@@ -275,7 +285,7 @@ class Database {
   }
 
   public async syncSettingsToFirestore(): Promise<void> {
-    if (!this.firestore) return;
+    if (!this.firestore || isFirestoreQuotaExceeded) return;
     try {
       const cleanSettings = JSON.parse(JSON.stringify(this.data.settings));
       await setDoc(doc(this.firestore, 'settings', 'admin'), cleanSettings, { merge: true });
@@ -288,17 +298,18 @@ class Database {
   }
 
   public async syncAllDataToFirestore(): Promise<void> {
-    if (!this.firestore) return;
+    if (!this.firestore || isFirestoreQuotaExceeded) return;
     try {
       if (this.data.users && Array.isArray(this.data.users)) {
         for (const user of this.data.users) {
-          if (user.user_id) {
+          if (user.user_id && !isFirestoreQuotaExceeded) {
             await this.syncUserToFirestore(user);
           }
         }
       }
       if (this.data.user_progress) {
         for (const uid of Object.keys(this.data.user_progress)) {
+          if (isFirestoreQuotaExceeded) break;
           const p = this.data.user_progress[uid];
           const hasPassed = Object.values(p.topic_levels_passed || {}).some((arr) => arr && arr.length > 0);
           const hasAttempts = (p.level_attempts?.length || 0) > 0 || (p.test_attempts?.length || 0) > 0;
@@ -307,7 +318,7 @@ class Database {
           }
         }
       }
-      if (this.data.settings) {
+      if (this.data.settings && !isFirestoreQuotaExceeded) {
         await this.syncSettingsToFirestore();
       }
     } catch (err) {
@@ -826,14 +837,14 @@ class Database {
     } else if (localProg) {
       merged = localProg;
       // Push local data up to Firestore
-      if (this.firestore) {
-        setDoc(doc(this.firestore, 'user_progress', userId), JSON.parse(JSON.stringify(merged))).catch(() => {});
+      if (this.firestore && !isFirestoreQuotaExceeded) {
+        this.syncProgressToFirestore(userId).catch(() => {});
       }
     } else {
       // New candidate
       merged = this.createDefaultUserProgress(userId);
-      if (this.firestore) {
-        await setDoc(doc(this.firestore, 'user_progress', userId), JSON.parse(JSON.stringify(merged))).catch(() => {});
+      if (this.firestore && !isFirestoreQuotaExceeded) {
+        this.syncProgressToFirestore(userId).catch(() => {});
       }
     }
 
@@ -883,12 +894,16 @@ class Database {
     this.data.user_progress[userId] = prog;
     this.saveDatabase(this.data);
 
-    if (this.firestore) {
+    if (this.firestore && !isFirestoreQuotaExceeded) {
       try {
         const cleanProg = JSON.parse(JSON.stringify(prog));
         await setDoc(doc(this.firestore, 'user_progress', userId), cleanProg);
       } catch (err) {
-        console.error(`[Firestore] Failed to save authoritative progress for user ${userId}:`, err);
+        handleFirestoreError(err, {
+          operation: 'saveUserProgress',
+          path: `user_progress/${userId}`,
+          userId,
+        });
       }
     }
   }
@@ -2046,7 +2061,8 @@ class Database {
     sessionId: string,
     questionId: string,
     responseType: 'text' | 'voice',
-    responseText: string
+    responseText: string,
+    cameraMetrics?: any
   ): Promise<{ session: HRInterviewSession; currentEvaluation: any }> {
     const prog = await this.getUserProgress(userId);
     const session = prog.hr_sessions.find((s) => s.session_id === sessionId);
@@ -2058,6 +2074,7 @@ class Database {
     const evaluation = await evaluateHREvaluation({
       question: question.question,
       response_text: responseText,
+      camera_metrics: cameraMetrics,
     });
 
     session.responses.push({
@@ -2066,6 +2083,7 @@ class Database {
       category: question.category,
       response_type: responseType,
       response: responseText,
+      camera_metrics: cameraMetrics,
       evaluation,
     });
 
@@ -2082,7 +2100,7 @@ class Database {
       const baseComm = Math.min(10, Math.max(5, Math.round(avgScore / 10)));
       session.metrics_breakdown = {
         communication: baseComm,
-        confidence: Math.min(10, Math.max(5, baseComm + (Math.random() > 0.5 ? 1 : 0))),
+        confidence: Math.min(10, Math.max(5, baseComm + 1)),
         clarity: Math.min(10, Math.max(5, baseComm)),
         relevance: Math.min(10, Math.max(6, Math.round((avgScore + 5) / 10))),
         professionalism: Math.min(10, Math.max(7, 8)),
@@ -2093,10 +2111,54 @@ class Database {
         interview_readiness: Math.min(10, Math.max(5, Math.round(avgScore / 10))),
       };
 
-      session.strengths = ['Clear articulation of professional intent', 'Structured STAR response narrative', 'Positive professional attitude'];
-      session.areas_to_improve = ['Incorporate more quantifiable business metrics in project outcomes', 'Reduce verbal filler hesitations'];
-      session.ai_feedback = `Your overall HR performance score is ${avgScore}%. You demonstrate strong behavioral awareness and communication posture. To improve further, ensure every project response highlights specific quantitative metrics.`;
-      session.suggested_practice = 'Practice structuring situational answers using the STAR method (Situation, Task, Action, Result) with time constraints.';
+      // Aggregated real-time video presentation analysis across responses
+      const responsesWithCam = session.responses.filter((r) => r.camera_metrics?.camera_active);
+      if (responsesWithCam.length > 0) {
+        const eyeContactAvg = Math.round(
+          responsesWithCam.reduce((acc, r) => acc + (r.camera_metrics?.eye_contact_score || 80), 0) / responsesWithCam.length
+        );
+        const postureAvg = Math.round(
+          responsesWithCam.reduce((acc, r) => acc + (r.camera_metrics?.posture_score || 85), 0) / responsesWithCam.length
+        );
+        const lightingAvg = Math.round(
+          responsesWithCam.reduce((acc, r) => acc + (r.camera_metrics?.lighting_quality_score || 80), 0) / responsesWithCam.length
+        );
+        const paceAvg = Math.round(
+          responsesWithCam.reduce((acc, r) => acc + (r.camera_metrics?.speaking_pace_wpm || 135), 0) / responsesWithCam.length
+        );
+        const faceVisibleCount = responsesWithCam.filter((r) => r.camera_metrics?.face_detected).length;
+        const faceVisPct = Math.round((faceVisibleCount / responsesWithCam.length) * 100);
+
+        session.video_analysis = {
+          eye_contact_avg: eyeContactAvg,
+          posture_avg: postureAvg,
+          lighting_avg: lightingAvg,
+          speaking_pace_avg: paceAvg,
+          face_visibility_pct: faceVisPct,
+          summary_feedback: `Candidate maintained ${eyeContactAvg}% camera engagement alignment, ${postureAvg}% steady posture, and a natural speaking pace averaging ${paceAvg} WPM across ${responsesWithCam.length} proctored video responses.`,
+        };
+      } else {
+        session.video_analysis = {
+          eye_contact_avg: 80,
+          posture_avg: 85,
+          lighting_avg: 80,
+          speaking_pace_avg: 135,
+          face_visibility_pct: 100,
+          summary_feedback: 'Written responses submitted without active video stream.',
+        };
+      }
+
+      session.strengths = [
+        'Clear articulation of professional intent',
+        'Structured STAR response narrative',
+        'Positive professional attitude & steady camera gaze',
+      ];
+      session.areas_to_improve = [
+        'Incorporate more quantifiable business metrics in project outcomes',
+        'Maintain eye contact consistently during complex explanations',
+      ];
+      session.ai_feedback = `Your overall HR performance score is ${avgScore}%. You demonstrate strong behavioral awareness and communication posture. ${session.video_analysis.summary_feedback}`;
+      session.suggested_practice = 'Practice structuring situational answers using the STAR method (Situation, Task, Action, Result) while maintaining direct camera eye contact.';
     }
 
     await this.saveUserProgress(userId, prog);
