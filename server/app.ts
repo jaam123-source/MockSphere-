@@ -543,10 +543,72 @@ app.get('/api/technical/domains', (req, res) => {
   res.json({ domains: TECHNICAL_DOMAINS_LIST });
 });
 
+app.get('/api/technical/all-domain-progress', async (req, res) => {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const domains = await db.getAllTechnicalDomainProgresses(userId);
+    res.json({ domains });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/technical/progress/:domain', async (req, res) => {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const { domain } = req.params;
+    const progress = await db.getTechnicalDomainProgress(userId, domain as TechnicalDomainId);
+    res.json({ progress });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/technical/save-progress', async (req, res) => {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const { domain, ...updates } = req.body;
+    if (!domain) {
+      return res.status(400).json({ error: 'Domain is required' });
+    }
+    const saved = await db.saveTechnicalDomainProgress(userId, domain as TechnicalDomainId, updates);
+    res.json({ success: true, progress: saved });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/technical/reset-domain', async (req, res) => {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const { domain } = req.body;
+    if (!domain) {
+      return res.status(400).json({ error: 'Domain is required' });
+    }
+    await db.resetTechnicalDomainProgress(userId, domain as TechnicalDomainId);
+    res.json({ success: true, message: `Domain ${domain} reset successfully.` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/technical/active', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    const session = await db.getActiveTechnicalInterview(userId);
+    const domain = req.query.domain as TechnicalDomainId | undefined;
+    const session = await db.getActiveTechnicalInterview(userId, domain);
     res.json({ session });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -556,7 +618,8 @@ app.get('/api/technical/active', async (req, res) => {
 app.post('/api/technical/reset', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    await db.resetTechnicalInterview(userId);
+    const domain = req.body?.domain as TechnicalDomainId | undefined;
+    await db.resetTechnicalInterview(userId, domain);
     res.json({ success: true, message: 'Technical interview reset successfully.' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -566,11 +629,11 @@ app.post('/api/technical/reset', async (req, res) => {
 app.post('/api/technical/start', async (req, res) => {
   try {
     const userId = getAuthUserId(req);
-    const { domain, is_retake } = req.body;
+    const { domain, is_retake, force_new } = req.body;
     if (!domain) {
       return res.status(400).json({ error: 'Selected domain is required' });
     }
-    const session = await db.startTechnicalInterview(userId, domain as TechnicalDomainId, !!is_retake);
+    const session = await db.startTechnicalInterview(userId, domain as TechnicalDomainId, !!is_retake, !!force_new);
     res.json(session);
   } catch (err: any) {
     res.status(403).json({ error: err.message });

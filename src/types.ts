@@ -257,6 +257,8 @@ export interface TechnicalInterviewSession {
     evaluation: AIQuestionEvaluation;
     timestamp: string;
   }>;
+  attempt_counts?: Record<string, number>;
+  latest_eval?: AIQuestionEvaluation | null;
   overall_score?: number;
   level_scores?: {
     level1: number;
@@ -276,6 +278,45 @@ export interface TechnicalInterviewSession {
   previous_weak_topics?: string[];
   completed_at?: string;
   created_at?: string;
+  updated_at?: string;
+}
+
+export interface TechnicalDomainProgress {
+  user_id: string;
+  domain: TechnicalDomainId;
+  session_id: string;
+  current_question_index: number;
+  current_level: 1 | 2 | 3;
+  total_questions: number;
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+  attempt_counts: Record<string, number>;
+  latest_eval?: AIQuestionEvaluation | null;
+  responses: Array<{
+    question_id: string;
+    question: string;
+    level: 1 | 2 | 3;
+    topic: string;
+    response_type: ResponseMode;
+    response: string;
+    code_snippet?: string;
+    evaluation: AIQuestionEvaluation;
+    timestamp: string;
+  }>;
+  overall_score?: number;
+  level_scores?: {
+    level1: number;
+    level2: number;
+    level3: number;
+  };
+  metrics_breakdown?: {
+    technical_knowledge: number;
+    concept_understanding: number;
+    problem_solving: number;
+    communication: number;
+    confidence_level: number;
+  };
+  passed?: boolean;
+  updated_at: string;
 }
 
 export type HRInterviewMode = 'quick' | 'standard' | 'full';

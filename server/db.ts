@@ -19,6 +19,7 @@ import {
   QuestionAttemptLog,
   ReviewQuestionItem,
   TechnicalDomainId,
+  TechnicalDomainProgress,
   TechnicalInterviewSession,
   TechnicalQuestion,
   TopicPerformanceItem,
@@ -158,6 +159,7 @@ interface DatabaseSchema {
   settings: AdminSettings;
   questions: AptitudeQuestion[];
   user_progress: Record<string, UserProgressData>;
+  technical_domain_progress?: Record<string, TechnicalDomainProgress>;
 }
 
 export const ADMIN_EMAIL = 'jaammaaj123@gmail.com';
@@ -284,6 +286,21 @@ class Database {
     }
   }
 
+  public async syncTechnicalDomainProgressToFirestore(dp: TechnicalDomainProgress): Promise<void> {
+    if (!this.firestore || !dp.user_id || !dp.domain || isFirestoreQuotaExceeded) return;
+    try {
+      const docId = `${dp.user_id}___${dp.domain}`;
+      const clean = JSON.parse(JSON.stringify(dp));
+      await setDoc(doc(this.firestore, 'technical_domain_progress', docId), clean, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, {
+        operation: 'syncTechnicalDomainProgressToFirestore',
+        path: `technical_domain_progress/${dp.user_id}___${dp.domain}`,
+        userId: dp.user_id,
+      });
+    }
+  }
+
   public async syncSettingsToFirestore(): Promise<void> {
     if (!this.firestore || isFirestoreQuotaExceeded) return;
     try {
@@ -315,6 +332,15 @@ class Database {
           const hasAttempts = (p.level_attempts?.length || 0) > 0 || (p.test_attempts?.length || 0) > 0;
           if (hasPassed || hasAttempts) {
             await this.syncProgressToFirestore(uid);
+          }
+        }
+      }
+      if (this.data.technical_domain_progress && !isFirestoreQuotaExceeded) {
+        for (const key of Object.keys(this.data.technical_domain_progress)) {
+          if (isFirestoreQuotaExceeded) break;
+          const dp = this.data.technical_domain_progress[key];
+          if (dp && dp.user_id && dp.domain) {
+            await this.syncTechnicalDomainProgressToFirestore(dp);
           }
         }
       }
@@ -426,8 +452,25 @@ class Database {
         }
       });
 
+      // Hydrate technical_domain_progress collection
+      const domainProgCol = collection(this.firestore, 'technical_domain_progress');
+      const domainProgSnap = await getDocs(domainProgCol);
+      if (!this.data.technical_domain_progress) {
+        this.data.technical_domain_progress = {};
+      }
+      domainProgSnap.forEach((d) => {
+        const dp = d.data() as TechnicalDomainProgress;
+        if (dp && dp.user_id && dp.domain) {
+          const key = `${dp.user_id}___${dp.domain}`;
+          const existing = this.data.technical_domain_progress![key];
+          if (!existing || !existing.updated_at || (dp.updated_at && dp.updated_at >= existing.updated_at)) {
+            this.data.technical_domain_progress![key] = dp;
+          }
+        }
+      });
+
       this.saveDatabase();
-      console.log(`[Firestore] Hydrated ${userSnap.size} users and ${progSnap.size} progress docs from Cloud Firestore.`);
+      console.log(`[Firestore] Hydrated ${userSnap.size} users, ${progSnap.size} progress docs, and ${domainProgSnap.size} domain progress docs from Cloud Firestore.`);
     } catch (err) {
       handleFirestoreError(err, { operation: 'hydrateFromFirestore' });
     }
@@ -459,6 +502,9 @@ class Database {
         if (!parsed.user_progress) {
           parsed.user_progress = {};
         }
+        if (!parsed.technical_domain_progress) {
+          parsed.technical_domain_progress = {};
+        }
 
         // Clean up orphaned demo user progress
         delete parsed.user_progress['user_demo'];
@@ -489,6 +535,7 @@ class Database {
       settings: { ...DEFAULT_SETTINGS },
       questions: generateDefaultQuestionBank(),
       user_progress: {},
+      technical_domain_progress: {},
     };
 
     this.saveDatabase(initialData);
@@ -1795,10 +1842,195 @@ class Database {
     return result;
   }
 
-  // Technical Round Execution & Multimodal 3-Level Evaluation
-  public async getActiveTechnicalInterview(userId: string): Promise<TechnicalInterviewSession | null> {
+  // =========================================================================
+  // Technical Round Execution, Permanent Domain Tracking & Multimodal Eval
+  // =========================================================================
+
+  public async getTechnicalDomainProgress(
+    userId: string,
+    domain: TechnicalDomainId
+  ): Promise<TechnicalDomainProgress | null> {
+    if (!userId || !domain) return null;
+    const key = `${userId}___${domain}`;
+    if (!this.data.technical_domain_progress) {
+      this.data.technical_domain_progress = {};
+    }
+
+    // Attempt direct fetch from Cloud Firestore to guarantee cross-device persistence
+    if (this.firestore && !isFirestoreQuotaExceeded) {
+      try {
+        const snap = await getDoc(doc(this.firestore, 'technical_domain_progress', key));
+        if (snap.exists()) {
+          const remoteData = snap.data() as TechnicalDomainProgress;
+          const local = this.data.technical_domain_progress[key];
+          if (!local || !local.updated_at || (remoteData.updated_at && remoteData.updated_at >= local.updated_at)) {
+            this.data.technical_domain_progress[key] = remoteData;
+            this.saveDatabase();
+          }
+        }
+      } catch (err) {
+        // Fallback to local store silently on quota or network issues
+      }
+    }
+
+    return this.data.technical_domain_progress[key] || null;
+  }
+
+  public async getAllTechnicalDomainProgresses(
+    userId: string
+  ): Promise<Record<TechnicalDomainId, TechnicalDomainProgress | null>> {
+    const domains: TechnicalDomainId[] = ['fullstack', 'genai', 'cloud', 'datascience', 'cybersecurity'];
+    const result: Record<TechnicalDomainId, TechnicalDomainProgress | null> = {
+      fullstack: null,
+      genai: null,
+      cloud: null,
+      datascience: null,
+      cybersecurity: null,
+    };
+
+    for (const d of domains) {
+      result[d] = await this.getTechnicalDomainProgress(userId, d);
+    }
+    return result;
+  }
+
+  public async saveTechnicalDomainProgress(
+    userId: string,
+    domain: TechnicalDomainId,
+    updates: Partial<TechnicalDomainProgress>
+  ): Promise<TechnicalDomainProgress> {
+    if (!userId || !domain) throw new Error('userId and domain are required');
+    const key = `${userId}___${domain}`;
+    if (!this.data.technical_domain_progress) {
+      this.data.technical_domain_progress = {};
+    }
+
+    const current = this.data.technical_domain_progress[key] || {
+      user_id: userId,
+      domain,
+      session_id: updates.session_id || `tech_sess_${domain}_${Date.now()}`,
+      current_question_index: 0,
+      current_level: 1,
+      total_questions: 30,
+      status: 'IN_PROGRESS',
+      attempt_counts: {},
+      responses: [],
+      updated_at: new Date().toISOString(),
+    };
+
+    const updated: TechnicalDomainProgress = {
+      ...current,
+      ...updates,
+      user_id: userId,
+      domain,
+      updated_at: new Date().toISOString(),
+    };
+
+    this.data.technical_domain_progress[key] = updated;
+    this.saveDatabase();
+
+    // Persist to Cloud Firestore immediately
+    this.syncTechnicalDomainProgressToFirestore(updated).catch(() => {});
+
+    // Also sync to matching in-memory session in prog.technical_sessions
+    try {
+      const prog = await this.getUserProgress(userId);
+      if (prog && prog.technical_sessions) {
+        let sess = prog.technical_sessions.find((s) => s.domain === domain);
+        if (sess) {
+          sess.current_question_index = updated.current_question_index;
+          sess.current_level = updated.current_level;
+          sess.status = updated.status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS';
+          sess.attempt_counts = updated.attempt_counts;
+          sess.responses = updated.responses;
+          sess.latest_eval = updated.latest_eval;
+          sess.updated_at = updated.updated_at;
+          if (updated.passed !== undefined) sess.passed = updated.passed;
+          if (updated.overall_score !== undefined) sess.overall_score = updated.overall_score;
+          if (updated.level_scores) sess.level_scores = updated.level_scores;
+          if (updated.metrics_breakdown) sess.metrics_breakdown = updated.metrics_breakdown;
+          await this.saveUserProgress(userId, prog);
+        }
+      }
+    } catch (e) {
+      // Non-fatal
+    }
+
+    return updated;
+  }
+
+  public async resetTechnicalDomainProgress(
+    userId: string,
+    domain: TechnicalDomainId
+  ): Promise<boolean> {
+    const key = `${userId}___${domain}`;
+    if (this.data.technical_domain_progress) {
+      delete this.data.technical_domain_progress[key];
+      this.saveDatabase();
+    }
     const prog = await this.getUserProgress(userId);
-    const active = (prog.technical_sessions || []).find((s) => s.status === 'IN_PROGRESS');
+    if (prog.technical_sessions) {
+      prog.technical_sessions = prog.technical_sessions.filter((s) => s.domain !== domain);
+      await this.saveUserProgress(userId, prog);
+    }
+    if (this.firestore && !isFirestoreQuotaExceeded) {
+      try {
+        await setDoc(doc(this.firestore, 'technical_domain_progress', key), {
+          user_id: userId,
+          domain,
+          status: 'NOT_STARTED',
+          current_question_index: 0,
+          current_level: 1,
+          total_questions: 30,
+          attempt_counts: {},
+          responses: [],
+          updated_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        // Non-fatal
+      }
+    }
+    return true;
+  }
+
+  public async getActiveTechnicalInterview(
+    userId: string,
+    domain?: TechnicalDomainId
+  ): Promise<TechnicalInterviewSession | null> {
+    const prog = await this.getUserProgress(userId);
+    let active: TechnicalInterviewSession | undefined;
+
+    if (domain) {
+      // Look up specific domain session
+      active = (prog.technical_sessions || []).find((s) => s.domain === domain && s.status === 'IN_PROGRESS');
+      if (!active) {
+        // Check technical_domain_progress
+        const domProg = await this.getTechnicalDomainProgress(userId, domain);
+        if (domProg && domProg.status === 'IN_PROGRESS') {
+          const questions = getCuratedDomainQuestions(domain);
+          active = {
+            session_id: domProg.session_id,
+            user_id: userId,
+            domain,
+            status: 'IN_PROGRESS',
+            current_question_index: domProg.current_question_index,
+            total_questions: questions.length,
+            current_level: domProg.current_level,
+            attempt_number: 1,
+            questions,
+            responses: domProg.responses || [],
+            attempt_counts: domProg.attempt_counts || {},
+            latest_eval: domProg.latest_eval || null,
+            updated_at: domProg.updated_at,
+          };
+          prog.technical_sessions.push(active);
+          await this.saveUserProgress(userId, prog);
+        }
+      }
+    } else {
+      active = (prog.technical_sessions || []).find((s) => s.status === 'IN_PROGRESS');
+    }
+
     if (active) {
       if (!active.questions || !Array.isArray(active.questions) || active.questions.length === 0) {
         active.questions = getCuratedDomainQuestions(active.domain || 'fullstack');
@@ -1818,7 +2050,10 @@ class Database {
     return active || null;
   }
 
-  public async resetTechnicalInterview(userId: string): Promise<boolean> {
+  public async resetTechnicalInterview(userId: string, domain?: TechnicalDomainId): Promise<boolean> {
+    if (domain) {
+      return this.resetTechnicalDomainProgress(userId, domain);
+    }
     const prog = await this.getUserProgress(userId);
     prog.technical_sessions = (prog.technical_sessions || []).filter((s) => s.status === 'COMPLETED');
     await this.saveUserProgress(userId, prog);
@@ -1828,7 +2063,8 @@ class Database {
   public async startTechnicalInterview(
     userId: string,
     domain: TechnicalDomainId,
-    isRetake = false
+    isRetake = false,
+    forceNew = false
   ): Promise<TechnicalInterviewSession> {
     const isDemo = this.isDemoUser(userId);
     const user = this.getUserById(userId);
@@ -1841,12 +2077,43 @@ class Database {
     const prog = await this.getUserProgress(userId);
     if (!prog.technical_sessions) prog.technical_sessions = [];
 
-    // If not a retake and there is already an active session in progress with matching domain, reuse it
-    if (!isRetake) {
-      const existingActive = prog.technical_sessions.find((s) => s.status === 'IN_PROGRESS' && s.domain === domain);
-      if (existingActive && existingActive.questions && existingActive.questions.length >= 30) {
-        return existingActive;
+    // Check existing domain progress in Cloud Firestore and local DB
+    const existingProgress = await this.getTechnicalDomainProgress(userId, domain);
+
+    // If NOT a retake and NOT forced new, and we have existing progress for THIS domain:
+    if (!isRetake && !forceNew && existingProgress) {
+      const questions = getCuratedDomainQuestions(domain);
+      const isCompleted = existingProgress.status === 'COMPLETED' || existingProgress.current_question_index >= questions.length;
+
+      const restoredSession: TechnicalInterviewSession = {
+        session_id: existingProgress.session_id,
+        user_id: userId,
+        domain,
+        status: isCompleted ? 'COMPLETED' : 'IN_PROGRESS',
+        current_question_index: Math.min(existingProgress.current_question_index, questions.length),
+        total_questions: questions.length,
+        current_level: existingProgress.current_level || (existingProgress.current_question_index < 10 ? 1 : existingProgress.current_question_index < 20 ? 2 : 3),
+        attempt_number: 1,
+        questions,
+        responses: existingProgress.responses || [],
+        attempt_counts: existingProgress.attempt_counts || {},
+        latest_eval: existingProgress.latest_eval || null,
+        overall_score: existingProgress.overall_score,
+        level_scores: existingProgress.level_scores,
+        metrics_breakdown: existingProgress.metrics_breakdown,
+        passed: existingProgress.passed,
+        updated_at: existingProgress.updated_at,
+      };
+
+      // Keep in prog.technical_sessions without affecting OTHER domains
+      const existingIdx = prog.technical_sessions.findIndex((s) => s.domain === domain);
+      if (existingIdx >= 0) {
+        prog.technical_sessions[existingIdx] = restoredSession;
+      } else {
+        prog.technical_sessions.push(restoredSession);
       }
+      await this.saveUserProgress(userId, prog);
+      return restoredSession;
     }
 
     // Determine previous weak topics if retake
@@ -1861,7 +2128,6 @@ class Database {
       });
     });
 
-    // Rapid curated question loading with fallback
     let questions = getCuratedDomainQuestions(domain);
     if (isRetake && weakTopics.length > 0) {
       try {
@@ -1872,13 +2138,13 @@ class Database {
           questions = generated;
         }
       } catch {
-        // Fall back to curated domain questions seamlessly
         questions = getCuratedDomainQuestions(domain);
       }
     }
 
+    const newSessionId = `tech_sess_${domain}_${Date.now()}`;
     const session: TechnicalInterviewSession = {
-      session_id: `tech_sess_${domain}_${Date.now()}`,
+      session_id: newSessionId,
       user_id: userId,
       domain,
       status: 'IN_PROGRESS',
@@ -1889,15 +2155,35 @@ class Database {
       is_retake: isRetake,
       questions,
       responses: [],
+      attempt_counts: {},
+      latest_eval: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
-    // Close any previous stale active session
-    prog.technical_sessions.forEach((s) => {
-      if (s.status === 'IN_PROGRESS') s.status = 'COMPLETED';
+    // Update in prog.technical_sessions for THIS domain only (never modify other domains)
+    const existingIndex = prog.technical_sessions.findIndex((s) => s.domain === domain);
+    if (existingIndex >= 0) {
+      prog.technical_sessions[existingIndex] = session;
+    } else {
+      prog.technical_sessions.push(session);
+    }
+    await this.saveUserProgress(userId, prog);
+
+    // Save initial domain progress to Firestore & DB
+    await this.saveTechnicalDomainProgress(userId, domain, {
+      user_id: userId,
+      domain,
+      session_id: newSessionId,
+      current_question_index: 0,
+      current_level: 1,
+      total_questions: questions.length,
+      status: 'IN_PROGRESS',
+      attempt_counts: {},
+      responses: [],
+      latest_eval: null,
     });
 
-    prog.technical_sessions.push(session);
-    await this.saveUserProgress(userId, prog);
     return session;
   }
 
@@ -1913,14 +2199,18 @@ class Database {
     attemptNumber: number = 1
   ): Promise<{ session: TechnicalInterviewSession; currentEvaluation: any }> {
     const prog = await this.getUserProgress(userId);
-    const session = prog.technical_sessions.find((s) => s.session_id === sessionId);
+    let session = prog.technical_sessions.find((s) => s.session_id === sessionId);
     if (!session) {
-      throw new Error('Interview session not found');
+      // Check if session can be found by active domain
+      session = prog.technical_sessions.find((s) => s.status === 'IN_PROGRESS');
+      if (!session) {
+        throw new Error('Interview session not found');
+      }
     }
 
     const currentIdx = session.current_question_index;
     const question = session.questions.find((q) => q.question_id === questionId) || session.questions[currentIdx];
-    
+
     const evaluation = await evaluateTechnicalAnswer({
       domain: session.domain,
       question: question.question,
@@ -1956,7 +2246,13 @@ class Database {
       session.responses.push(respItem);
     }
 
-    // Advance to next question only when answer is correct/passing (score >= 70)
+    // Maintain attempt counts & latest evaluation
+    if (!session.attempt_counts) session.attempt_counts = {};
+    session.attempt_counts[question.question_id] = attemptNumber;
+    session.latest_eval = evaluation;
+    session.updated_at = new Date().toISOString();
+
+    // Advance to next question only when answer is correct/passing (score >= 50 && verbal_status !== 'INCORRECT') or after Attempt 2
     if (isPassing) {
       session.current_question_index += 1;
 
@@ -2002,10 +2298,10 @@ class Database {
 
       // Compute multi-metric breakdown
       const allEvaluations = session.responses.map((r) => r.evaluation).filter(Boolean);
-      const avgCorrectness = Math.round(allEvaluations.reduce((acc, e) => acc + (e.correctness || e.score || 0), 0) / allEvaluations.length);
-      const avgDepth = Math.round(allEvaluations.reduce((acc, e) => acc + (e.technical_depth || e.score || 0), 0) / allEvaluations.length);
-      const avgClarity = Math.round(allEvaluations.reduce((acc, e) => acc + (e.clarity || 80), 0) / allEvaluations.length);
-      const avgConfidence = Math.round(allEvaluations.reduce((acc, e) => acc + (e.confidence_score || 80), 0) / allEvaluations.length);
+      const avgCorrectness = Math.round(allEvaluations.reduce((acc, e) => acc + (e.correctness || e.score || 0), 0) / (allEvaluations.length || 1));
+      const avgDepth = Math.round(allEvaluations.reduce((acc, e) => acc + (e.technical_depth || e.score || 0), 0) / (allEvaluations.length || 1));
+      const avgClarity = Math.round(allEvaluations.reduce((acc, e) => acc + (e.clarity || 80), 0) / (allEvaluations.length || 1));
+      const avgConfidence = Math.round(allEvaluations.reduce((acc, e) => acc + (e.confidence_score || 80), 0) / (allEvaluations.length || 1));
       const problemSolving = Math.round((l2Avg * 0.4) + (l3Avg * 0.6));
 
       session.metrics_breakdown = {
@@ -2020,6 +2316,25 @@ class Database {
     }
 
     await this.saveUserProgress(userId, prog);
+
+    // Save permanently to Cloud Firestore & domain storage
+    await this.saveTechnicalDomainProgress(userId, session.domain, {
+      user_id: userId,
+      domain: session.domain,
+      session_id: session.session_id,
+      current_question_index: session.current_question_index,
+      current_level: session.current_level,
+      total_questions: session.total_questions,
+      status: session.status,
+      attempt_counts: session.attempt_counts,
+      latest_eval: session.latest_eval,
+      responses: session.responses,
+      overall_score: session.overall_score,
+      level_scores: session.level_scores,
+      metrics_breakdown: session.metrics_breakdown,
+      passed: session.passed,
+    });
+
     return { session, currentEvaluation: evaluation };
   }
 

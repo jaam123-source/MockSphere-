@@ -52,11 +52,12 @@ import {
   ResponseMode,
   TechnicalDomainId,
   TechnicalDomainInfo,
+  TechnicalDomainProgress,
   TechnicalInterviewSession,
   TechnicalQuestion,
   UserDashboardState,
 } from '../types';
-import { ApiService } from '../services/api';
+import { ApiService, getStoredToken } from '../services/api';
 import { SpeechService } from '../utils/speech';
 import { detectKeywordsInAnswer } from '../utils/technicalKeywords';
 
@@ -206,6 +207,25 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     missingCount: number;
   } | null>(null);
 
+  // Permanent Domain-Wise Progress Mapping
+  const [domainProgressMap, setDomainProgressMap] = useState<Record<TechnicalDomainId, TechnicalDomainProgress | null>>({
+    fullstack: null,
+    genai: null,
+    cloud: null,
+    datascience: null,
+    cybersecurity: null,
+  });
+
+  const loadDomainProgresses = useCallback(() => {
+    ApiService.getAllTechnicalDomainProgresses()
+      .then((res) => {
+        if (res && res.domains) {
+          setDomainProgressMap((prev) => ({ ...prev, ...res.domains }));
+        }
+      })
+      .catch((err) => console.warn('Could not load domain progresses:', err));
+  }, []);
+
   // Load domains on mount & check active session
   useEffect(() => {
     let isMounted = true;
@@ -217,11 +237,19 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       })
       .catch((err) => console.error('Failed to load domains:', err));
 
+    loadDomainProgresses();
+
     ApiService.getActiveTechnicalInterview()
       .then((res) => {
         if (isMounted && res.session) {
           setSession(res.session);
           setSelectedDomain(res.session.domain);
+          if (res.session.attempt_counts) {
+            setAttemptCounts(res.session.attempt_counts);
+          }
+          if (res.session.latest_eval) {
+            setLatestEval(res.session.latest_eval);
+          }
         }
       })
       .catch((err) => console.error('Failed to check active technical session:', err));
@@ -230,7 +258,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       isMounted = false;
       SpeechService.stopSpeaking();
     };
-  }, []);
+  }, [loadDomainProgresses]);
 
   // Active question ref to avoid resetting attempt count when re-attempt modal toggles
   const activeQuestionIdRef = useRef<string | null>(null);
@@ -248,8 +276,9 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
           setDiagramDescription('');
           setShowHint(false);
           setQuestionStartTime(Date.now());
-          setAttemptCounts((prev) => ({ ...prev, [qKey]: 1 }));
-          console.log(`[DEBUG] useEffect Triggered: Reset attempt count for Q:${qKey}`);
+          const restoredAttempt = session.attempt_counts?.[qKey] || attemptCounts[qKey] || 1;
+          setAttemptCounts((prev) => ({ ...prev, [qKey]: restoredAttempt }));
+          console.log(`[DEBUG] Loaded Q:${qKey}, restored attempt count:${restoredAttempt}`);
           setShowRetryModal(false);
           setRetryInfo(null);
 
@@ -270,6 +299,40 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       }
     }
   }, [session?.current_question_index, session?.session_id, showStepFeedbackModal, isAudioFeedbackEnabled]);
+
+  // Auto-save progress to Cloud Firestore & backend on page unload / refresh
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (session && session.status === 'IN_PROGRESS') {
+        const payload = JSON.stringify({
+          domain: session.domain,
+          session_id: session.session_id,
+          current_question_index: session.current_question_index,
+          current_level: session.current_level,
+          total_questions: session.total_questions,
+          status: 'IN_PROGRESS',
+          attempt_counts: attemptCounts,
+          responses: session.responses,
+        });
+        const token = getStoredToken();
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        try {
+          fetch('/api/technical/save-progress', {
+            method: 'POST',
+            headers,
+            body: payload,
+            keepalive: true,
+          });
+        } catch {}
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [session, attemptCounts]);
 
   // Question timer interval
   useEffect(() => {
@@ -350,21 +413,25 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   };
 
   // Start interview handler
-  const handleStartInterview = async (isRetake = false) => {
+  const handleStartInterview = async (isRetake = false, forceNew = false) => {
     setIsStarting(true);
     setStartError(null);
     SpeechService.stopSpeaking();
     setIsSpeakingInterviewer(false);
     activeQuestionIdRef.current = null;
     try {
-      const newSession = await ApiService.startTechnicalInterview(selectedDomain, isRetake);
+      const newSession = await ApiService.startTechnicalInterview(selectedDomain, isRetake, forceNew);
       if (!newSession || !newSession.session_id) {
         throw new Error('Failed to initialize interview session. Please try again.');
       }
       setPendingNextSession(null);
       setSession(newSession);
-      setLatestEval(null);
+      if (newSession.attempt_counts) {
+        setAttemptCounts(newSession.attempt_counts);
+      }
+      setLatestEval(newSession.latest_eval || null);
       setShowStepFeedbackModal(false);
+      loadDomainProgresses();
     } catch (err: any) {
       console.error('Failed to start interview:', err);
       setStartError(err.message || 'Failed to start interview. Please try again.');
@@ -375,17 +442,20 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
   // Reset interview
   const handleResetInterview = async () => {
-    if (!window.confirm('Are you sure you want to reset this interview? Your progress will be cleared.')) return;
+    const domainName = selectedDomainMeta?.name || 'this domain';
+    if (!window.confirm(`Are you sure you want to restart your ${domainName} interview from Question 1? Previous progress for this domain will be reset.`)) return;
     setIsResetting(true);
     activeQuestionIdRef.current = null;
     try {
-      await ApiService.resetTechnicalInterview();
+      const targetDomain = session?.domain || selectedDomain;
+      await ApiService.resetTechnicalDomain(targetDomain);
       setSession(null);
       setPendingNextSession(null);
       setLatestEval(null);
       setShowStepFeedbackModal(false);
       SpeechService.stopSpeaking();
       setIsSpeakingInterviewer(false);
+      loadDomainProgresses();
     } catch (err: any) {
       alert(err.message || 'Failed to reset interview.');
     } finally {
@@ -407,6 +477,22 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       setVoiceVolumeLevel(0);
     }
 
+    // Persist current session progress to Cloud Firestore & backend before returning to domain selector
+    if (session && session.status === 'IN_PROGRESS') {
+      ApiService.saveTechnicalDomainProgress({
+        domain: session.domain,
+        session_id: session.session_id,
+        current_question_index: session.current_question_index,
+        current_level: session.current_level,
+        total_questions: session.total_questions,
+        status: 'IN_PROGRESS',
+        attempt_counts: attemptCounts,
+        responses: session.responses,
+      }).catch((err) => {
+        console.warn('Could not save progress on returning to dashboard:', err);
+      });
+    }
+
     // Reset modals and state synchronously
     setShowStepFeedbackModal(false);
     setShowRetryModal(false);
@@ -420,10 +506,8 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     // Immediately return to domain selector (Technical Dashboard)
     setSession(null);
 
-    // Reset backend session asynchronously in the background
-    ApiService.resetTechnicalInterview().catch((err) => {
-      console.warn('Could not reset technical interview session on backend:', err);
-    });
+    // Refresh domain progress indicators
+    loadDomainProgresses();
   };
 
   // Retry handler for Attempt Once Again
@@ -535,8 +619,9 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
       // Prepare state immediately for the upcoming question
       const nextQ = next.questions[next.current_question_index];
+      const updatedAttempts = nextQ ? { ...attemptCounts, [nextQ.question_id]: 1 } : attemptCounts;
       if (nextQ) {
-        setAttemptCounts((prev) => ({ ...prev, [nextQ.question_id]: 1 }));
+        setAttemptCounts(updatedAttempts);
         setTextResponse('');
         setCodeSnippet(nextQ.code_template || '');
         setDiagramDescription('');
@@ -552,6 +637,25 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
           speakInterviewerQuestion(nextQ.question);
         }
       }
+
+      // Persist advancement immediately to Cloud Firestore & backend
+      ApiService.saveTechnicalDomainProgress({
+        domain: next.domain,
+        session_id: next.session_id,
+        current_question_index: next.current_question_index,
+        current_level: next.current_level,
+        total_questions: next.total_questions,
+        status: next.status,
+        attempt_counts: updatedAttempts,
+        latest_eval: null,
+        responses: next.responses,
+        overall_score: next.overall_score,
+        level_scores: next.level_scores,
+        metrics_breakdown: next.metrics_breakdown,
+        passed: next.passed,
+      }).catch((err) => console.warn('Could not save progress after proceed:', err));
+
+      loadDomainProgresses();
 
       // If completed and passed, celebrate with confetti
       if (next.status === 'COMPLETED') {
@@ -572,8 +676,22 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     setShowStepFeedbackModal(false);
     setLatestEval(null);
     setPendingNextSession(null);
-    setAttemptCounts((prev) => ({ ...prev, [currentQ.question_id]: 2 }));
+    const updatedAttempts = { ...attemptCounts, [currentQ.question_id]: 2 };
+    setAttemptCounts(updatedAttempts);
     console.log(`[DEBUG] Re-attempt triggered for Q:${currentQ.question_id}, Attempt:2`);
+
+    if (session) {
+      ApiService.saveTechnicalDomainProgress({
+        domain: session.domain,
+        session_id: session.session_id,
+        current_question_index: session.current_question_index,
+        current_level: session.current_level,
+        total_questions: session.total_questions,
+        status: 'IN_PROGRESS',
+        attempt_counts: updatedAttempts,
+        responses: session.responses,
+      }).catch((err) => console.warn('Could not save re-attempt progress:', err));
+    }
   };
 
   // Unique categories for filtering
@@ -786,6 +904,11 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
             const theme = palettes[domIdx % palettes.length];
 
+            const domProgress = domainProgressMap[dom.id as TechnicalDomainId];
+            const isDomCompleted = domProgress?.status === 'COMPLETED';
+            const hasActiveProgress = domProgress && domProgress.status === 'IN_PROGRESS';
+            const currentQNum = (domProgress?.current_question_index ?? 0) + 1;
+
             return (
               <div
                 key={dom.id}
@@ -807,13 +930,25 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
                     <div className="w-12 h-12 rounded-xl p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm shrink-0 flex items-center justify-center">
                       <TechnicalDomainIcon domainId={dom.id as TechnicalDomainId} className="w-full h-full rounded-lg object-contain" />
                     </div>
-                    <span
-                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
-                        isSelected ? theme.badgeSelected : theme.badgeDefault
-                      }`}
-                    >
-                      {dom.category}
-                    </span>
+                    <div>
+                      {isDomCompleted ? (
+                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Completed ({domProgress?.overall_score || 80}%)
+                        </span>
+                      ) : hasActiveProgress ? (
+                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-400" /> Resume Q{currentQNum}/30
+                        </span>
+                      ) : (
+                        <span
+                          className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                            isSelected ? theme.badgeSelected : theme.badgeDefault
+                          }`}
+                        >
+                          {dom.category}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <h3
@@ -847,14 +982,26 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
                   <div className="flex items-center justify-between pt-3 border-t border-slate-800/90 text-xs">
                     <span className="text-slate-400 font-medium flex items-center gap-1">
-                      <Sparkles className={`w-3 h-3 ${theme.sparkleColor}`} /> 30 Live Questions
+                      {isDomCompleted ? (
+                        <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> 30/30 Evaluated
+                        </span>
+                      ) : hasActiveProgress ? (
+                        <span className="text-amber-300 font-semibold flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-amber-400" /> Resume Q{currentQNum}
+                        </span>
+                      ) : (
+                        <>
+                          <Sparkles className={`w-3 h-3 ${theme.sparkleColor}`} /> 30 Live Questions
+                        </>
+                      )}
                     </span>
                     <span
                       className={`font-semibold text-xs flex items-center gap-1 transition-all ${
                         isSelected ? `${theme.arrowSelected} font-bold` : 'text-slate-400 group-hover:text-white'
                       }`}
                     >
-                      {isSelected ? 'Selected' : 'Select'} <ArrowRight className={`w-3.5 h-3.5 transition-transform ${isSelected ? `translate-x-0.5 ${theme.arrowSelected}` : 'group-hover:translate-x-0.5'}`} />
+                      {isDomCompleted ? 'View / Retake' : hasActiveProgress ? `Resume Q${currentQNum}` : isSelected ? 'Selected' : 'Select'} <ArrowRight className={`w-3.5 h-3.5 transition-transform ${isSelected ? `translate-x-0.5 ${theme.arrowSelected}` : 'group-hover:translate-x-0.5'}`} />
                     </span>
                   </div>
                 </div>
@@ -880,38 +1027,103 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
             </div>
           )}
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-cyan-500/30 shadow-2xl shadow-cyan-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center space-x-3.5">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20 flex items-center justify-center shrink-0">
-                <Sparkles className="w-5 h-5 text-cyan-200" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-medium">Ready for Live AI Technical Round</p>
-                <h3 className="text-base sm:text-lg font-bold text-white">{selectedDomainMeta?.name || 'Selected Domain'}</h3>
-              </div>
-            </div>
+          {(() => {
+            const selectedProgress = domainProgressMap[selectedDomain];
+            const isSelectedCompleted = selectedProgress?.status === 'COMPLETED';
+            const hasSelectedActive = selectedProgress && selectedProgress.status === 'IN_PROGRESS';
+            const resumeQuestionNum = (selectedProgress?.current_question_index ?? 0) + 1;
 
-            <div className="flex items-center space-x-3">
-              <button
-                id="btn-start-technical-interview"
-                onClick={() => handleStartInterview(false)}
-                disabled={isStarting}
-                className="w-full sm:w-auto px-7 py-3 rounded-xl font-extrabold text-sm bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
-              >
-                {isStarting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Connecting to Live AI Interviewer...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Begin Live Technical Interview</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+            return (
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-cyan-500/30 shadow-2xl shadow-cyan-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center space-x-3.5">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-5 h-5 text-cyan-200" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400 font-medium">
+                      {isSelectedCompleted
+                        ? 'Technical Round Completed & Evaluated'
+                        : hasSelectedActive
+                        ? `Saved Progress: Resuming at Question ${resumeQuestionNum} of 30 • Level ${selectedProgress?.current_level || 1}`
+                        : 'Ready for Live AI Technical Round'}
+                    </p>
+                    <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                      <span>{selectedDomainMeta?.name || 'Selected Domain'}</span>
+                      {isSelectedCompleted && (
+                        <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold">
+                          Score: {selectedProgress?.overall_score || 80}%
+                        </span>
+                      )}
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+                  {isSelectedCompleted ? (
+                    <>
+                      <button
+                        id="btn-view-completed-technical"
+                        onClick={() => handleStartInterview(false)}
+                        disabled={isStarting}
+                        className="px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition flex items-center space-x-2 cursor-pointer"
+                      >
+                        <BookOpen className="w-4 h-4 text-cyan-400" />
+                        <span>View Completed Scorecard</span>
+                      </button>
+                      <button
+                        id="btn-retake-selected-domain"
+                        onClick={() => handleStartInterview(true, true)}
+                        disabled={isStarting}
+                        className="px-5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg transition flex items-center space-x-2 cursor-pointer"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        <span>Retake Domain</span>
+                      </button>
+                    </>
+                  ) : hasSelectedActive ? (
+                    <button
+                      id="btn-resume-technical-interview"
+                      onClick={() => handleStartInterview(false)}
+                      disabled={isStarting}
+                      className="w-full sm:w-auto px-7 py-3 rounded-xl font-extrabold text-sm bg-gradient-to-r from-amber-500 via-orange-600 to-amber-600 hover:from-amber-400 hover:via-orange-500 hover:to-amber-500 text-white shadow-lg shadow-amber-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isStarting ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Resuming Question {resumeQuestionNum}...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-4 h-4" />
+                          <span>Resume Question {resumeQuestionNum} of 30</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      id="btn-start-technical-interview"
+                      onClick={() => handleStartInterview(false)}
+                      disabled={isStarting}
+                      className="w-full sm:w-auto px-7 py-3 rounded-xl font-extrabold text-sm bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isStarting ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Connecting to Live AI Interviewer...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Begin Live Technical Interview</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     );

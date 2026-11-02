@@ -12,6 +12,7 @@ import {
   ResponseMode,
   TechnicalDomainId,
   TechnicalDomainInfo,
+  TechnicalDomainProgress,
   TechnicalInterviewSession,
   TopicTestResult,
   User,
@@ -264,20 +265,54 @@ export const ApiService = {
     return request<{ domains: TechnicalDomainInfo[] }>('/api/technical/domains');
   },
 
-  async getActiveTechnicalInterview(): Promise<{ session: TechnicalInterviewSession | null }> {
-    return request<{ session: TechnicalInterviewSession | null }>('/api/technical/active');
+  async getAllTechnicalDomainProgresses(): Promise<{ domains: Record<TechnicalDomainId, TechnicalDomainProgress | null> }> {
+    return request<{ domains: Record<TechnicalDomainId, TechnicalDomainProgress | null> }>('/api/technical/all-domain-progress');
   },
 
-  async resetTechnicalInterview(): Promise<{ success: boolean; message: string }> {
-    return request<{ success: boolean; message: string }>('/api/technical/reset', {
+  async getTechnicalDomainProgress(domain: TechnicalDomainId): Promise<{ progress: TechnicalDomainProgress | null }> {
+    return request<{ progress: TechnicalDomainProgress | null }>(`/api/technical/progress/${domain}`);
+  },
+
+  async saveTechnicalDomainProgress(payload: {
+    domain: TechnicalDomainId;
+    current_question_index?: number;
+    current_level?: 1 | 2 | 3;
+    total_questions?: number;
+    status?: 'IN_PROGRESS' | 'COMPLETED';
+    attempt_counts?: Record<string, number>;
+    latest_eval?: any;
+    responses?: any[];
+    [key: string]: any;
+  }): Promise<{ success: boolean; progress: TechnicalDomainProgress }> {
+    return request<{ success: boolean; progress: TechnicalDomainProgress }>('/api/technical/save-progress', {
       method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 
-  async startTechnicalInterview(domain: TechnicalDomainId, isRetake = false): Promise<TechnicalInterviewSession> {
+  async resetTechnicalDomain(domain: TechnicalDomainId): Promise<{ success: boolean; message: string }> {
+    return request<{ success: boolean; message: string }>('/api/technical/reset-domain', {
+      method: 'POST',
+      body: JSON.stringify({ domain }),
+    });
+  },
+
+  async getActiveTechnicalInterview(domain?: TechnicalDomainId): Promise<{ session: TechnicalInterviewSession | null }> {
+    const url = domain ? `/api/technical/active?domain=${domain}` : '/api/technical/active';
+    return request<{ session: TechnicalInterviewSession | null }>(url);
+  },
+
+  async resetTechnicalInterview(domain?: TechnicalDomainId): Promise<{ success: boolean; message: string }> {
+    return request<{ success: boolean; message: string }>('/api/technical/reset', {
+      method: 'POST',
+      body: JSON.stringify({ domain }),
+    });
+  },
+
+  async startTechnicalInterview(domain: TechnicalDomainId, isRetake = false, forceNew = false): Promise<TechnicalInterviewSession> {
     return request<TechnicalInterviewSession>('/api/technical/start', {
       method: 'POST',
-      body: JSON.stringify({ domain, is_retake: isRetake }),
+      body: JSON.stringify({ domain, is_retake: isRetake, force_new: forceNew }),
     });
   },
 

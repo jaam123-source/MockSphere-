@@ -61,6 +61,20 @@
         "explanation": { "type": "string", "required": true },
         "pool_type": { "type": "string", "required": true }
       }
+    },
+    "TechnicalDomainProgress": {
+      "fields": {
+        "user_id": { "type": "string", "required": true },
+        "domain": { "type": "string", "required": true },
+        "session_id": { "type": "string", "required": true },
+        "current_question_index": { "type": "number", "required": true },
+        "current_level": { "type": "number", "required": true },
+        "total_questions": { "type": "number", "required": true },
+        "status": { "type": "string", "required": true },
+        "attempt_counts": { "type": "object", "required": true },
+        "responses": { "type": "array", "required": true },
+        "updated_at": { "type": "string", "required": true }
+      }
     }
   },
   "collections": {
@@ -71,6 +85,10 @@
     "user_progress": {
       "entity": "UserProgress",
       "path": "/user_progress/{userId}"
+    },
+    "technical_domain_progress": {
+      "entity": "TechnicalDomainProgress",
+      "path": "/technical_domain_progress/{docId}"
     },
     "settings": {
       "entity": "Settings",
