@@ -235,7 +235,9 @@ CRITICAL SHORT & CONCISE ANSWER ACCEPTANCE RULES:
 2. UNDERSTAND INTENDED MEANING: Evaluate whether the student's explanation demonstrates true conceptual understanding, regardless of sentence structure, simple English, or phrasing variations.
 3. ACCEPT VALID ALTERNATIVE EXPLANATIONS: Any explanation that correctly describes the technical concept, mechanism, or purpose must receive passing marks (score >= 50), even if phrased differently from the model answer.
 4. REJECT ONLY INCORRECT OR IRRELEVANT ANSWERS: Only mark INCORRECT (score < 40) if the answer contains factually wrong claims, describes a completely different concept, or contains isolated keywords without an explanatory sentence.
-5. SCORING GUIDELINES:
+5. SECOND ATTEMPT REVEAL: If this is the second attempt (attempt_number == 2) and the answer is still incorrect, you MUST explicitly provide the correct answer, explain the core concepts, and provide a clear, comprehensive breakdown in the 'feedback' and 'spoken_response' fields.
+
+6. SCORING GUIDELINES:
    - 90–100%: Technically correct, comprehensive, or crisp accurate explanation.
    - 70–89%: Mostly correct or concise valid explanation answering the main question.
    - 50–69%: Partially correct; basic conceptual idea present and understandable.
@@ -247,7 +249,7 @@ Provide strict, objective feedback:
 - what_you_missed: Missing important points or necessary nuances.
 - weaknesses: Incorrect statements, wrong definitions, or misunderstandings found in the answer.
 - improved_answer: A technically correct improved answer.
-- feedback: Score with a brief justification.
+- feedback: Score with a brief justification. If attempt_number is 2 and the answer is incorrect, you MUST explicitly provide the correct answer, explain the core concepts, and provide a clear, comprehensive breakdown in this field and in the 'improved_answer' field.
 
 Return strict JSON:
 {
@@ -309,18 +311,27 @@ Return strict JSON:
   const wordCount = combinedAnswer.split(/\s+/).length;
   const hasCode = !!payload.code_snippet && payload.code_snippet.length > 30;
   
-  let baseScore = 30;
-  if (wordCount < 3) {
-    baseScore = 20; // 1-2 words (likely keyword list)
-  } else if (wordCount < 8) {
-    baseScore = 75; // Short concise explanation
+  let baseScore = 20;
+  
+  if (wordCount < 5) {
+    baseScore = 20; // Too brief, insufficient
+  } else if (kwCheck.detectedCount === 0) {
+    baseScore = 25; // Irrelevant or missing all core technical concepts
+  } else if (kwCheck.detectedCount === 1 && wordCount < 12) {
+    baseScore = 35; // Single keyword dropped without sufficient conceptual explanation
+  } else if (kwCheck.detectedCount >= 2 && wordCount >= 8) {
+    // Multiple core technical concepts articulated with explanatory sentence
+    baseScore = 80;
+  } else if (hasCode && wordCount >= 6) {
+    baseScore = 85;
+  } else if (kwCheck.detectedCount >= 1 && wordCount >= 15) {
+    baseScore = 65; // Descriptive explanation touching on technical concepts
   } else {
-    baseScore = 85; // Detailed explanation
+    baseScore = 35; // Incomplete or insufficient explanation
   }
-  if (hasCode) baseScore = Math.max(baseScore, 85);
 
   const status: 'CORRECT' | 'PARTIALLY CORRECT' | 'INCORRECT' =
-    baseScore >= 75 ? 'CORRECT' : baseScore >= 50 ? 'PARTIALLY CORRECT' : 'INCORRECT';
+    baseScore >= 70 ? 'CORRECT' : baseScore >= 50 ? 'PARTIALLY CORRECT' : 'INCORRECT';
 
   return {
     score: baseScore,

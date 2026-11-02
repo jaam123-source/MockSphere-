@@ -1935,7 +1935,7 @@ class Database {
       attempt_number: attemptNumber,
     });
 
-    const isPassing = evaluation.score >= 50 || evaluation.verbal_status === 'CORRECT' || evaluation.verbal_status === 'PARTIALLY CORRECT' || attemptNumber >= 2;
+    const isPassing = (evaluation.score >= 50 && evaluation.verbal_status !== 'INCORRECT') || attemptNumber >= 2;
 
     const existingIdx = session.responses.findIndex((r) => r.question_id === question.question_id);
     const respItem = {

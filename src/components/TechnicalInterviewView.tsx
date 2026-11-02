@@ -196,7 +196,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   const [showHint, setShowHint] = useState<boolean>(false);
 
   // Technical Keyword Detection & Retry States
-  const [currentAttemptCount, setCurrentAttemptCount] = useState<number>(1);
+  const [attemptCounts, setAttemptCounts] = useState<Record<string, number>>({});
   const [showRetryModal, setShowRetryModal] = useState<boolean>(false);
   const [retryInfo, setRetryInfo] = useState<{
     detectedKeywords: string[];
@@ -240,15 +240,16 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     if (session && session.status === 'IN_PROGRESS' && !showStepFeedbackModal) {
       const q = session.questions[session.current_question_index];
       if (q) {
-        const currentQId = `${session.session_id}_${q.question_id}_${session.current_question_index}`;
-        if (activeQuestionIdRef.current !== currentQId) {
-          activeQuestionIdRef.current = currentQId;
+        const qKey = q.question_id;
+        if (activeQuestionIdRef.current !== qKey) {
+          activeQuestionIdRef.current = qKey;
           setTextResponse('');
           setCodeSnippet(q.code_template || '');
           setDiagramDescription('');
           setShowHint(false);
           setQuestionStartTime(Date.now());
-          setCurrentAttemptCount(1);
+          setAttemptCounts((prev) => ({ ...prev, [qKey]: 1 }));
+          console.log(`[DEBUG] useEffect Triggered: Reset attempt count for Q:${qKey}`);
           setShowRetryModal(false);
           setRetryInfo(null);
 
@@ -430,8 +431,10 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     SpeechService.stopSpeaking();
     setIsSpeakingInterviewer(false);
     setShowRetryModal(false);
-    setCurrentAttemptCount(2);
     const currQ = session?.questions?.[session?.current_question_index ?? 0];
+    if (currQ) {
+      setAttemptCounts((prev) => ({ ...prev, [currQ.question_id]: 2 }));
+    }
     const isCoding = currQ?.type === 'coding';
     if (!isCoding && responseMode === 'voice' && textResponse) {
       setResponseMode('text');
@@ -439,7 +442,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
   };
 
   // Submit response handler
-  const handleSubmitAnswer = async () => {
+  const handleSubmitAnswer = async (attemptOverride?: number) => {
     if (!session) return;
     const currentQ = session.questions[session.current_question_index];
     if (!currentQ) return;
@@ -468,6 +471,9 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
     setIsSubmitting(true);
     try {
+      const currentAttempt = attemptCounts[currentQ.question_id] || 1;
+      const attemptToSubmit = typeof attemptOverride === 'number' ? attemptOverride : currentAttempt;
+      console.log(`[DEBUG] handleSubmitAnswer. Q:${currentQ.question_id}, Attempt being submitted: ${attemptToSubmit}`);
       const result = await ApiService.evaluateTechnicalAnswer({
         session_id: session.session_id,
         question_id: currentQ.question_id,
@@ -477,19 +483,18 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
         code_snippet: isCodingQ ? payloadCode || undefined : undefined,
         diagram_data: payloadDiag || undefined,
         time_taken_seconds: timeSpentSeconds,
-        attempt_number: currentAttemptCount,
+        attempt_number: attemptToSubmit,
       });
 
       const evalData = result.currentEvaluation;
-      const isAccepted = evalData.score >= 50 || evalData.verbal_status === 'CORRECT' || evalData.verbal_status === 'PARTIALLY CORRECT';
-      const isInsufficient = !isAccepted && currentAttemptCount < 2;
+      // An answer is accepted if score >= 50 and verbal_status is not INCORRECT
+      const isAccepted = evalData.score >= 50 && evalData.verbal_status !== 'INCORRECT';
+      const isFirstAttemptFailed = !isAccepted && attemptToSubmit < 2;
 
       setLatestEval(evalData);
-      if (isInsufficient) {
-        // Do not advance session; keep candidate on the same question for attempt 2
+      if (isFirstAttemptFailed) {
         setPendingNextSession(null);
       } else {
-        // Passed or completed max 2 attempts
         setPendingNextSession(result.session);
       }
       setShowStepFeedbackModal(true);
@@ -498,8 +503,8 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       if (isAudioFeedbackEnabled && evalData?.spoken_response) {
         setIsSpeakingInterviewer(true);
         SpeechService.speak(
-          isInsufficient
-            ? "Your answer is too short or does not correctly explain the concept. Please explain the concept in a meaningful sentence and try again."
+          isFirstAttemptFailed
+            ? "Your answer is insufficient or needs improvement. Please review the feedback and use your re-attempt."
             : evalData.spoken_response,
           () => setIsSpeakingInterviewer(false),
           () => setIsSpeakingInterviewer(true)
@@ -518,7 +523,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
     setIsSpeakingInterviewer(false);
     setShowStepFeedbackModal(false);
     setLatestEval(null);
-    setCurrentAttemptCount(1);
+    console.log(`[DEBUG] handleProceedNext called.`);
     setShowRetryModal(false);
     setRetryInfo(null);
 
@@ -527,6 +532,26 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
       const next = pendingNextSession;
       setPendingNextSession(null);
       setSession(next);
+
+      // Prepare state immediately for the upcoming question
+      const nextQ = next.questions[next.current_question_index];
+      if (nextQ) {
+        setAttemptCounts((prev) => ({ ...prev, [nextQ.question_id]: 1 }));
+        setTextResponse('');
+        setCodeSnippet(nextQ.code_template || '');
+        setDiagramDescription('');
+        setShowHint(false);
+        setQuestionStartTime(Date.now());
+        activeQuestionIdRef.current = nextQ.question_id;
+        if (nextQ.type === 'coding') {
+          setResponseMode('code');
+        } else {
+          setResponseMode('voice');
+        }
+        if (isAudioFeedbackEnabled) {
+          speakInterviewerQuestion(nextQ.question);
+        }
+      }
 
       // If completed and passed, celebrate with confetti
       if (next.status === 'COMPLETED') {
@@ -540,13 +565,15 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
   // Re-attempt current question handler
   const handleReAttemptQuestion = () => {
-    if (currentAttemptCount >= 2) return;
+    const currentQ = session?.questions?.[session?.current_question_index ?? 0];
+    if (!currentQ || (attemptCounts[currentQ.question_id] || 1) >= 2) return;
     SpeechService.stopSpeaking();
     setIsSpeakingInterviewer(false);
     setShowStepFeedbackModal(false);
     setLatestEval(null);
     setPendingNextSession(null);
-    setCurrentAttemptCount(2);
+    setAttemptCounts((prev) => ({ ...prev, [currentQ.question_id]: 2 }));
+    console.log(`[DEBUG] Re-attempt triggered for Q:${currentQ.question_id}, Attempt:2`);
   };
 
   // Unique categories for filtering
@@ -1343,7 +1370,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
               </div>
 
               {/* Re-attempt Notice Banner when candidate is on Attempt 2 */}
-              {currentAttemptCount === 2 && (
+              {(attemptCounts[currentQ?.question_id || ''] || 1) === 2 && (
                 <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-between gap-3 text-xs animate-in fade-in">
                   <div className="flex items-center space-x-2 text-amber-800 dark:text-amber-200 font-medium">
                     <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -1485,7 +1512,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
 
                 <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
                   <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                    {currentAttemptCount === 2 ? 'Attempt 2 of 2' : 'Attempt 1 of 2'}
+                    {(attemptCounts[currentQ?.question_id || ''] || 1) === 2 ? 'Attempt 2 of 2' : 'Attempt 1 of 2'}
                   </span>
                   <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                     {currentIdx < 29 ? `Next: Q${currentIdx + 2}` : 'Final Submission'}
@@ -1497,10 +1524,10 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
               <div className="flex items-center justify-end">
                 <button
                   id="btn-submit-answer"
-                  onClick={handleSubmitAnswer}
+                  onClick={() => handleSubmitAnswer()}
                   disabled={isSubmitting}
                   className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm text-white shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 shrink-0 cursor-pointer ${
-                    currentAttemptCount === 2
+                    (attemptCounts[currentQ?.question_id || ''] || 1) === 2
                       ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 shadow-amber-600/20'
                       : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-600/20'
                   } hover:scale-[1.02] active:scale-[0.98]`}
@@ -1510,7 +1537,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       <span>Evaluating Answer...</span>
                     </>
-                  ) : currentAttemptCount === 2 ? (
+                  ) : (attemptCounts[currentQ?.question_id || ''] || 1) === 2 ? (
                     <>
                       <span>Submit & View Explanation</span>
                       <Send className="w-4 h-4" />
@@ -1602,17 +1629,33 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
                 </div>
               </div>
 
-              <span
-                className={`self-start sm:self-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                  currentAttemptCount === 2 || latestEval.attempt_number === 2
-                    ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                    : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                }`}
-              >
-                {currentAttemptCount === 2 || latestEval.attempt_number === 2
-                  ? 'Explanation Provided After Re-attempt'
-                  : 'Validated on Attempt 1'}
-              </span>
+              {(() => {
+                const currentQAttempt = attemptCounts[currentQ?.question_id || ''] || 1;
+                const isModalAccepted = latestEval.score >= 50 && latestEval.verbal_status !== 'INCORRECT';
+                const isFirstAttemptFailed = !isModalAccepted && currentQAttempt < 2;
+
+                return (
+                  <span
+                    className={`self-start sm:self-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                      isFirstAttemptFailed
+                        ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                        : currentQAttempt >= 2
+                        ? isModalAccepted
+                          ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                          : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                        : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                    }`}
+                  >
+                    {isFirstAttemptFailed
+                      ? 'Attempt 1 Needs Improvement — Re-attempt Available'
+                      : currentQAttempt >= 2
+                      ? isModalAccepted
+                        ? 'Accepted on Attempt 2'
+                        : 'Model Answer & Explanation Provided (Attempt 2/2)'
+                      : 'Accepted on Attempt 1'}
+                  </span>
+                );
+              })()}
             </div>
 
             {/* Natural Interviewer Spoken Reaction */}
@@ -1685,14 +1728,7 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
             </div>
 
             {/* Correct Answer & Explanation Card */}
-            {(latestEval.score >= 50 || latestEval.verbal_status !== 'INCORRECT') ? (
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-900 text-cyan-300 font-sans text-xs space-y-1 border border-cyan-800/40">
-                <div className="text-[10px] sm:text-[11px] uppercase font-bold text-slate-400 tracking-wider">
-                  Senior Engineer Model Answer:
-                </div>
-                <p className="text-slate-200 leading-relaxed">{latestEval.improved_answer || currentQ?.improved_answer}</p>
-              </div>
-            ) : currentAttemptCount >= 2 ? (
+            {((attemptCounts[currentQ?.question_id || ''] || 1) >= 2) ? (
               <div className="p-4 rounded-2xl bg-amber-950/90 border-2 border-amber-500/80 text-amber-200 font-sans text-xs space-y-2.5 shadow-xl animate-in fade-in">
                 <div className="flex items-center gap-2 text-amber-300 font-extrabold uppercase text-[11px] tracking-wider">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -1715,42 +1751,50 @@ export const TechnicalInterviewView: React.FC<TechnicalInterviewViewProps> = ({
             ) : null}
 
             {/* Action Bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                {latestEval.score < 50 && latestEval.verbal_status === 'INCORRECT' && currentAttemptCount < 2
-                  ? 'Your answer needs improvement. You have 1 re-attempt remaining for this question.'
-                  : latestEval.score < 50 && latestEval.verbal_status === 'INCORRECT' && currentAttemptCount >= 2
-                  ? 'Maximum attempts reached (2/2). Review the correct answer above and proceed to the next question.'
-                  : pendingNextSession?.status === 'COMPLETED'
-                  ? 'All questions evaluated. Click Proceed to Next Question to view your final scorecard.'
-                  : 'Answer accepted! Click Proceed to Next Question when ready.'}
-              </span>
-              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-                {latestEval.score < 50 && latestEval.verbal_status === 'INCORRECT' && currentAttemptCount < 2 ? (
-                  <button
-                    id="btn-modal-reattempt"
-                    onClick={handleReAttemptQuestion}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md transition flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    <span>Re-attempt</span>
-                  </button>
-                ) : (
-                  <button
-                    id="btn-proceed-feedback-next"
-                    onClick={handleProceedNext}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md transition flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
-                  >
-                    <span>
-                      {pendingNextSession?.status === 'COMPLETED' || currentIdx >= 29
-                        ? 'Proceed to Next Question'
-                        : `Proceed to Next Question`}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
+            {(() => {
+              const currentQAttempt = attemptCounts[currentQ?.question_id || ''] || 1;
+              const isModalAccepted = latestEval.score >= 50 && latestEval.verbal_status !== 'INCORRECT';
+              const isFirstAttemptFailed = !isModalAccepted && currentQAttempt < 2;
+
+              return (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {isFirstAttemptFailed
+                      ? 'Your answer needs improvement. You have 1 re-attempt remaining for this question.'
+                      : currentQAttempt >= 2 && !isModalAccepted
+                      ? 'Maximum attempts reached (2/2). Review the correct answer above and proceed to the next question.'
+                      : pendingNextSession?.status === 'COMPLETED' || currentIdx >= 29
+                      ? 'All questions evaluated. Click Proceed to Next Question to view your final scorecard.'
+                      : 'Answer accepted! Click Proceed to Next Question when ready.'}
+                  </span>
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                    {isFirstAttemptFailed ? (
+                      <button
+                        id="btn-modal-reattempt"
+                        onClick={handleReAttemptQuestion}
+                        className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md transition flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        <span>Re-attempt</span>
+                      </button>
+                    ) : (
+                      <button
+                        id="btn-proceed-feedback-next"
+                        onClick={handleProceedNext}
+                        className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md transition flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
+                      >
+                        <span>
+                          {pendingNextSession?.status === 'COMPLETED' || currentIdx >= 29
+                            ? 'Proceed to Next Question'
+                            : 'Proceed to Next Question'}
+                        </span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
